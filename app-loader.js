@@ -1,6 +1,7 @@
 (async () => {
+  const base = "https://raw.githubusercontent.com/philosopherkk/hk-transit/main/";
   const files = ["c1.js", "c2.js", "c3.js", "c4.js", "c5.js"];
-  const parts = await Promise.all(files.map((f) => fetch(f).then((r) => {
+  const parts = await Promise.all(files.map((f) => fetch(base + f).then((r) => {
     if (!r.ok) throw new Error("Missing " + f);
     return r.text();
   })));
