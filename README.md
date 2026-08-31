@@ -1,2 +1,5 @@
-# philosopherkk.github.io
-Published website for philosopherkk, including HK Transit.
+# HK Transit
+
+Published at https://philosopherkk.github.io/
+
+Source repo: https://github.com/philosopherkk/hk-transit
