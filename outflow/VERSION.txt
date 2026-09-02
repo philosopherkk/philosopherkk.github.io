@@ -1,6 +1,8 @@
 Outflow
-Version: 2.0.1
+Version: 2.1.4
 Updated: 2026-09-02 (HKT)
 Pages: https://philosopherkk.github.io/outflow/
-Vault: AES-GCM + PBKDF2, local only
-Cache: network-first shell (outflow-shell-v2.0.1-net)
+Unlock: Face ID / device biometrics, no password
+FX: daily HKD base (USD TWD CAD EUR)
+Subs: empty Due & Subs tracker (on-device JSON import only)
+Cache: network-first shell (outflow-shell-v2.1.4)

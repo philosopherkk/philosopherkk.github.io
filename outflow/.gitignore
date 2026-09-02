@@ -1,0 +1,10 @@
+# Private on-device data — never commit
+*.csv
+*.xlsx
+*.xls
+ledger*.json
+*vault*.json
+passphrase*
+outflow-backup*
+backup*.json
+export*.json

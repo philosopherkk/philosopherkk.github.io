@@ -9,40 +9,30 @@
   <meta name="apple-mobile-web-app-title" content="Outflow" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="referrer" content="no-referrer" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; font-src 'none'; form-action 'none'; base-uri 'self'; frame-ancestors 'none'" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="icon.svg" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://open.er-api.com https://cdn.jsdelivr.net; manifest-src 'self'; worker-src 'self'; font-src 'none'; form-action 'none'; base-uri 'self'; frame-ancestors 'none'" />
+  <base href="/outflow/" />
+  <link rel="manifest" href="/outflow/manifest.webmanifest" />
+  <link rel="icon" href="/outflow/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/outflow/icon.svg" />
+  <link rel="stylesheet" href="/outflow/styles.css" />
   <title>Outflow</title>
 </head>
 <body>
   <div class="gate" id="gate">
     <div class="gate-card card">
-      <h1>Outflow<b id="verLine">Outflow 2.0.0 · 2026-09-02</b></h1>
-      <p class="hint">Private income and spending ledger. Stored only on this device. Nothing is uploaded.</p>
-      <div id="setupBox">
-        <label>Create passphrase</label>
-        <input id="pass1" type="password" autocomplete="new-password" />
-        <label>Confirm passphrase</label>
-        <input id="pass2" type="password" autocomplete="new-password" />
-        <p class="hint">Clearing Safari data, or opening this page in another browser, starts an empty ledger. Export a backup after you add rows.</p>
-        <button class="primary" id="createBtn" style="margin-top:12px">Create vault</button>
-      </div>
-      <div id="unlockBox" class="hidden">
-        <label>Passphrase</label>
-        <input id="unlockPass" type="password" autocomplete="current-password" />
-        <button class="primary" id="unlockBtn" style="margin-top:12px">Unlock</button>
-      </div>
+      <h1>Outflow<b id="verLine">Outflow 2.1.4 · 2026-09-02</b></h1>
+      <p class="hint" id="gateHint">Use Face ID to open the ledger. No password to remember. Nothing is uploaded.</p>
+      <button class="primary" id="bioBtn">Unlock with Face ID</button>
+      <button class="btn hidden" id="skipBioBtn" style="margin-top:8px">Continue without Face ID</button>
       <p class="err" id="gateErr"></p>
-      <p class="hint">iPhone: Safari Share → Add to Home Screen.</p>
+      <p class="hint">iPhone: Safari Share → Add to Home Screen, then Face ID works from the icon.</p>
     </div>
   </div>
   <main>
     <section id="home">
       <div class="top">
-        <h1>Outflow<b id="verFoot">Outflow 2.0.0 · updated 2026-09-02</b></h1>
-        <button class="ghost" id="lockBtn">Lock</button>
+        <h1>Outflow<b id="verFoot">Outflow 2.1.4 · updated 2026-09-02</b></h1>
+        <button class="ghost hidden" id="lockBtn">Lock</button>
       </div>
       <div class="card hero">
         <div class="k" id="rangeLabel">This month</div>
@@ -51,6 +41,7 @@
           <div class="hint">Income <b class="ok" id="sumIn">0</b></div>
           <div class="hint">Outflow <b class="bad" id="sumOut">0</b></div>
         </div>
+        <p class="fx-stamp" id="fxStamp">Loading HKD rates…</p>
       </div>
       <div class="chips">
         <button class="chip on" data-range="this">This month</button>
@@ -77,36 +68,73 @@
       </div>
       <div class="card list" id="list" style="margin-top:10px"></div>
     </section>
-    <section id="due" class="hidden">
-      <h1>Due</h1>
-      <p class="hint">Recurring rent, salary, and other next-due dates.</p>
+
+    <section id="bills" class="hidden">
+      <div class="top">
+        <h1>Due &amp; Subs<b>Recurring subscriptions · empty until you import JSON</b></h1>
+      </div>
+      <p class="hint">Optional on-device import of a subscription JSON array. Starts empty — no seed merchants or amounts. Nothing is uploaded.</p>
+      <div class="card" id="subImportCard">
+        <label>Paste subscription JSON</label>
+        <textarea id="subPaste" rows="5" placeholder='[{"merchant":"…","amount":null,"currency":"HKD","cadence":"monthly","last_charge_date_hkt":null,"status":"active"}]'></textarea>
+        <div class="row2" style="margin-top:8px">
+          <button class="primary" id="subPasteBtn">Import paste</button>
+          <button class="btn" id="subFileBtn">Choose JSON file</button>
+        </div>
+        <input id="subFile" type="file" accept="application/json,.json,text/plain" class="hidden" />
+        <div id="subDrop" class="dropzone" tabindex="0">Drop JSON file here</div>
+        <p class="err" id="subImportErr"></p>
+        <p class="hint" id="subImportMeta"></p>
+        <button class="danger" id="subClearBtn" style="margin-top:8px">Clear imported bills</button>
+      </div>
+      <div class="chips" id="subFilters" style="margin-top:10px">
+        <button class="chip on" data-sub-filter="all">All</button>
+        <button class="chip" data-sub-filter="known">Known amount</button>
+        <button class="chip" data-sub-filter="unknown">Amount unknown</button>
+        <button class="chip" data-sub-filter="active">Active</button>
+        <button class="chip" data-sub-filter="refunded">Refunded</button>
+      </div>
+      <div class="card hero" id="subSummary" style="margin-top:4px">
+        <div class="k">Imported bills</div>
+        <div class="n" id="subCount">0</div>
+        <div class="hint" id="subSummaryHint" style="margin-top:8px">No subscriptions yet. Empty by default.</div>
+      </div>
+      <div class="card list" id="subList" style="margin-top:10px"></div>
+      <h1 style="margin-top:18px">Ledger dues</h1>
+      <p class="hint">Recurring rent, salary, and other next-due dates from Home rows.</p>
       <div class="card" id="dueBox"></div>
     </section>
+
     <section id="set" class="hidden">
       <h1>Settings</h1>
       <div class="card">
-        <label>Display currency</label>
-        <select id="cur">
-          <option>HKD</option><option>USD</option><option>EUR</option><option>JPY</option><option>TWD</option>
-        </select>
+        <label>Base currency</label>
+        <p class="hint" id="baseNote">HKD. Totals convert into HKD with the daily rates below.</p>
+        <div class="fx-box" id="fxBox">
+          <p class="hint" id="fxDetail">Rates load on this page.</p>
+        </div>
+        <button class="btn" id="refreshFx" style="margin-top:8px">Refresh today’s rates</button>
         <label>Outflow categories (one per line)</label>
         <textarea id="catEdit" rows="6"></textarea>
         <label>Income categories</label>
         <textarea id="catEditIn" rows="5"></textarea>
         <button class="btn" id="saveCats" style="margin-top:8px">Save categories</button>
-        <p class="hint" style="margin-top:12px">Encrypted backup stays locked with your passphrase. Keep a copy off the phone.</p>
-        <button class="btn" id="exportBtn">Export encrypted backup</button>
-        <button class="btn" id="importBtn">Import encrypted backup</button>
+        <label style="margin-top:12px">Face ID</label>
+        <p class="hint" id="bioNote">Use Face ID so you do not need a password.</p>
+        <button class="btn" id="bioToggle">Turn on Face ID</button>
+        <p class="hint" style="margin-top:12px">Backup is a JSON file on this device. Nothing is uploaded. An older locked vault can still be imported here.</p>
+        <button class="btn" id="exportBtn">Export backup</button>
+        <button class="btn" id="importBtn">Import backup</button>
         <input id="importFile" type="file" accept="application/json,.json" class="hidden" />
         <button class="btn" id="undoBtn">Undo last change</button>
-        <button class="danger" id="wipeBtn">Erase this device vault</button>
+        <button class="danger" id="wipeBtn">Erase this device ledger</button>
       </div>
     </section>
   </main>
   <button class="addfab" id="addBtn" aria-label="Add">+</button>
   <nav class="dock">
     <button data-p="home" class="on">Home</button>
-    <button data-p="due">Due</button>
+    <button data-p="bills">Due &amp; Subs</button>
     <button data-p="set">Settings</button>
   </nav>
   <div id="sheet" class="sheet hidden">
@@ -121,8 +149,19 @@
     </select>
     <div class="row2">
       <div><label>Amount</label><input id="fAmt" type="number" min="0" step="0.1" inputmode="decimal" /></div>
-      <div><label>Date</label><input id="fDate" type="date" /></div>
+      <div>
+        <label>Currency</label>
+        <select id="fCur">
+          <option value="HKD">HKD</option>
+          <option value="USD">USD</option>
+          <option value="TWD">TWD</option>
+          <option value="CAD">CAD</option>
+          <option value="EUR">EUR</option>
+        </select>
+      </div>
     </div>
+    <p class="hint" id="fxHint">Converted to HKD on save using today’s rate.</p>
+    <div><label>Date</label><input id="fDate" type="date" /></div>
     <label>Category</label>
     <select id="fCat"></select>
     <label>Note</label>
@@ -141,6 +180,6 @@
     <button class="primary" id="saveRow" style="margin-top:12px">Save</button>
   </div>
   <div id="toast" class="toast hidden"></div>
-  <script src="app.js"></script>
+  <script src="/outflow/app.js"></script>
 </body>
 </html>
