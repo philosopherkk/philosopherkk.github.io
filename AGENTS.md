@@ -4,7 +4,7 @@ Hong Kong timezone (HKT) for dates and version notes.
 
 ## Hard rules
 
-1. **Root `index.html` is the hub only.** Never replace it with Transit, Purple, or Outflow.
+1. **Root `index.html` is a minimal personal stub only.** Never replace it with Transit, Purple, or Outflow. Do not restore a three-app hub that lists those apps as a suite.
 2. A change for one app may **only** touch files under that app’s folder:
    - Outflow → `outflow/`
    - HK Transit → `transit/`
@@ -23,17 +23,19 @@ Hong Kong timezone (HKT) for dates and version notes.
    - https://philosopherkk.github.io/outflow/
    - https://philosopherkk.github.io/transit/
    - https://philosopherkk.github.io/purple/
-6. Hub (do not overwrite with an app): https://philosopherkk.github.io/
+6. Root stub (do not overwrite with an app): https://philosopherkk.github.io/
+
+These are separate sites under one Pages repo. They are not a product suite.
 
 ## Before you push
 
-Run the hub guard locally:
+Run the root guard locally:
 
 ```bash
 bash scripts/check-hub.sh
 ```
 
-It fails if root `index.html` no longer looks like the hub (for example after a Transit publish landed on `/`).
+It fails if root `index.html` looks like an app shell (for example after a Transit publish landed on `/`) or like a three-app hub.
 
 ## Outflow service worker
 
@@ -41,6 +43,6 @@ It fails if root `index.html` no longer looks like the hub (for example after a 
 
 ## Source repos
 
-- Outflow live files are under `outflow/` in this repo (`outflow-app` may 404).
+- Outflow source: https://github.com/philosopherkk/outflow-app (may be private; publish static shell into `outflow/` here)
 - Transit source: https://github.com/philosopherkk/hk-transit
 - Purple source: https://github.com/philosopherkk/purple-sectors

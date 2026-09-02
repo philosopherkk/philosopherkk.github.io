@@ -3,47 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>philosopherkk — apps</title>
-  <meta name="description" content="Hub for Outflow, HK Transit, and Purple Sectors. Each app lives in its own folder." />
+  <title>philosopherkk</title>
+  <meta name="description" content="philosopherkk — personal site." />
   <meta name="theme-color" content="#0e1116" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <style>
-    :root { --bg:#0e1116; --card:#161b22; --line:#2b3444; --text:#e8edf5; --muted:#8b97a8; --accent:#6ee7b7; }
+    :root { --bg:#0e1116; --text:#e8edf5; --muted:#8b97a8; }
     * { box-sizing: border-box; }
-    body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,sans-serif; padding:28px 18px 64px; }
-    h1 { font-size:1.6rem; margin:0 0 6px; }
-    .sub { color:var(--muted); margin:0 0 22px; max-width:42rem; line-height:1.45; }
-    .grid { display:grid; gap:14px; max-width:720px; }
-    a.card { display:block; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 18px 16px; color:inherit; text-decoration:none; }
-    a.card:hover { border-color:#3d4b60; }
-    .k { font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
-    .t { font-size:1.25rem; font-weight:700; margin:4px 0 6px; }
-    .d { color:var(--muted); font-size:.92rem; line-height:1.45; }
-    .url { margin-top:10px; font-size:.8rem; color:var(--accent); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      padding: 28px 18px;
+    }
+    main { text-align: center; max-width: 28rem; }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.75rem, 4vw, 2.25rem);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    p { margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.45; }
   </style>
 </head>
 <body>
-  <h1>philosopherkk</h1>
-  <p class="sub">Three separate apps. Root <code>index.html</code> is this hub only — never publish Transit, Purple, or Outflow here.</p>
-  <div class="grid">
-    <a class="card" href="./outflow/">
-      <div class="k">Budget</div>
-      <div class="t">Outflow</div>
-      <div class="d">Private on-device income and outflow ledger. Passphrase vault stays on this device.</div>
-      <div class="url">philosopherkk.github.io/outflow/</div>
-    </a>
-    <a class="card" href="./transit/">
-      <div class="k">Hong Kong</div>
-      <div class="t">HK Transit</div>
-      <div class="d">MTR, bus and minibus planner. Shortest trip, cheapest trip, live ETA.</div>
-      <div class="url">philosopherkk.github.io/transit/</div>
-    </a>
-    <a class="card" href="./purple/">
-      <div class="k">Sim racing</div>
-      <div class="t">Purple Sectors</div>
-      <div class="d">iRacing weekly board, track dossiers, favourite series.</div>
-      <div class="url">philosopherkk.github.io/purple/</div>
-    </a>
-  </div>
+  <main>
+    <h1>philosopherkk</h1>
+    <p>Personal site.</p>
+  </main>
 </body>
 </html>

@@ -10,5 +10,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Guard root hub
+      - name: Guard root is not an app or suite hub
         run: bash scripts/check-hub.sh
