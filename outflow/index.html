@@ -1,108 +1,339 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant" data-theme="dark" data-fs="m">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0e1116" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Outflow" />
-  <title>Outflow — budget planner</title>
+  <title>Outflow</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.mini.min.js"></script>
   <style>
-    :root{--bg:#0e1116;--card:#161b22;--line:#2b3444;--text:#e8edf5;--muted:#8b97a8;--ok:#34d399;--bad:#fb7185;--accent:#6ee7b7}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:18px 14px 48px}
-    h1{font-size:1.15rem;margin:0}
-    h1 span{display:block;color:var(--muted);font-size:.78rem;font-weight:500}
-    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-    .cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-    .k{color:var(--muted);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
-    .n{font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums}
-    .ok{color:var(--ok)}.bad{color:var(--bad)}
-    label{display:block;color:var(--muted);font-size:.75rem;margin:8px 0 4px}
-    input,select,button{font:inherit;width:100%}
-    input,select{background:#0b1220;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    button{border:0;border-radius:10px;padding:11px;font-weight:700;cursor:pointer}
-    .in{background:#0f3d32;color:var(--ok);margin-top:10px}
-    .out{background:#3a151c;color:var(--bad);margin-top:10px}
-    .list{margin-top:14px}
-    .tx{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.92rem}
-    .tx button{width:auto;background:transparent;color:var(--muted);padding:0 6px}
-    .bar{height:8px;background:#1c2330;border-radius:99px;overflow:hidden;margin-top:8px}
-    .bar>i{display:block;height:100%;background:var(--ok)}
+    :root, html[data-theme="dark"] {
+      --bg:#0e1116; --card:#161b22; --line:#2b3444; --text:#e8edf5; --muted:#8b97a8;
+      --ok:#34d399; --bad:#fb7185; --accent:#6ee7b7; --inbg:#0f3d32; --outbg:#3a151c; --dock:#12171f;
+    }
+    html[data-theme="day"] {
+      --bg:#f4efe4; --card:#fffaf1; --line:#d7cbb6; --text:#1a140c; --muted:#6b5e4e;
+      --ok:#0f7a4a; --bad:#c0364a; --accent:#0f7a4a; --inbg:#d9f2e4; --outbg:#f8d7dc; --dock:#efe6d6;
+    }
+    html[data-fs="s"] { font-size: 14px; }
+    html[data-fs="m"] { font-size: 16px; }
+    html[data-fs="l"] { font-size: 18px; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
+      padding: 16px 14px 88px;
+    }
+    h1 { font-size: 1.15rem; margin: 0 0 12px; }
+    h1 span { display: block; color: var(--muted); font-size: .78rem; font-weight: 500; }
+    .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .k { color: var(--muted); font-size: .72rem; letter-spacing: .04em; }
+    .n { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .ok { color: var(--ok); } .bad { color: var(--bad); }
+    label { display: block; color: var(--muted); font-size: .75rem; margin: 8px 0 4px; }
+    input, select, button, textarea { font: inherit; }
+    input, select, textarea {
+      width: 100%; background: var(--bg); border: 1px solid var(--line);
+      color: var(--text); border-radius: 10px; padding: 10px;
+    }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    button { border: 0; border-radius: 10px; padding: 11px; font-weight: 700; cursor: pointer; color: var(--text); }
+    .btn { background: var(--card); border: 1px solid var(--line); width: 100%; }
+    .in { background: var(--inbg); color: var(--ok); }
+    .out { background: var(--outbg); color: var(--bad); }
+    .danger { background: var(--outbg); color: var(--bad); width: 100%; }
+    .hidden { display: none !important; }
+    .tx { display: flex; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .tx button { width: auto; background: transparent; color: var(--muted); padding: 0 6px; }
+    .dock {
+      position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4,1fr);
+      background: var(--dock); border-top: 1px solid var(--line); padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+    }
+    .dock button { background: transparent; color: var(--muted); padding: 8px 4px; font-size: .78rem; }
+    .dock button.on { color: var(--accent); }
+    canvas { width: 100%; height: 180px; display: block; }
+    .hint { color: var(--muted); font-size: .82rem; line-height: 1.45; }
+    .stack { display: grid; gap: 8px; }
   </style>
 </head>
 <body>
-  <div class="top">
-    <h1>Outflow<span>This page only. Not the hub.</span></h1>
-  </div>
+  <h1 id="title">Outflow<span id="sub">HKD · this iPhone only</span></h1>
   <div class="cards">
-    <div class="card"><div class="k">Income</div><div class="n ok" id="inc">0</div></div>
-    <div class="card"><div class="k">Outflow</div><div class="n bad" id="exp">0</div></div>
-    <div class="card"><div class="k">Remaining</div><div class="n" id="rem">0</div></div>
-    <div class="card"><div class="k">Save goal</div><div class="n" id="goalN">0</div><div class="bar"><i id="bar"></i></div></div>
+    <div class="card"><div class="k" id="kInc">Income</div><div class="n ok" id="inc">0</div></div>
+    <div class="card"><div class="k" id="kExp">Expense</div><div class="n bad" id="exp">0</div></div>
+    <div class="card"><div class="k" id="kRem">Left</div><div class="n" id="rem">0</div></div>
   </div>
-  <div class="card">
-    <label>Save goal (HKD)</label>
-    <input id="goal" type="number" min="0" step="1" placeholder="e.g. 5000" />
-    <div class="row">
-      <div><label>Amount</label><input id="amt" type="number" min="0" step="0.1" placeholder="0" /></div>
-      <div>
-        <label>Type</label>
-        <select id="cat">
-          <option>Salary</option><option>Bonus</option><option>Rent</option>
-          <option>MTR</option><option>Octopus</option><option>Wet market</option>
-          <option>Dining</option><option>Utilities</option><option>Other</option>
-        </select>
-      </div>
+
+  <section id="p-in" class="card">
+    <div class="grid2">
+      <div><label id="lAmtI">Amount</label><input id="amtI" type="number" min="0" step="0.1" /></div>
+      <div><label id="lDateI">Date</label><input id="dateI" type="date" /></div>
     </div>
-    <label>Note</label>
-    <input id="note" placeholder="optional" />
-    <div class="row">
-      <button class="in" id="addIn">+ Income</button>
-      <button class="out" id="addOut">− Expense</button>
+    <label id="lCatI">Type</label>
+    <select id="catI"></select>
+    <label id="lNoteI">Note</label>
+    <input id="noteI" />
+    <button class="in" id="addIn" style="width:100%;margin-top:10px">+ Income</button>
+    <div id="listI"></div>
+  </section>
+
+  <section id="p-out" class="card hidden">
+    <div class="grid2">
+      <div><label id="lAmtO">Amount</label><input id="amtO" type="number" min="0" step="0.1" /></div>
+      <div><label id="lDateO">Date</label><input id="dateO" type="date" /></div>
     </div>
-  </div>
-  <div class="list" id="list"></div>
+    <label id="lCatO">Type</label>
+    <select id="catO"></select>
+    <label id="lNoteO">Note</label>
+    <input id="noteO" />
+    <button class="out" id="addOut" style="width:100%;margin-top:10px">− Expense</button>
+    <div id="listO"></div>
+  </section>
+
+  <section id="p-sum" class="hidden">
+    <div class="card">
+      <div class="k" id="chartTitle">This month · HKD</div>
+      <canvas id="chart" width="640" height="180"></canvas>
+    </div>
+    <div id="sumList" class="card" style="margin-top:10px"></div>
+  </section>
+
+  <section id="p-set" class="card hidden stack">
+    <label id="lTheme">Theme</label>
+    <select id="theme"><option value="dark">Dark</option><option value="day">Day</option></select>
+    <label id="lLang">Language</label>
+    <select id="lang"><option value="zh">繁體中文</option><option value="en">English</option></select>
+    <label id="lFs">Font size</label>
+    <select id="fs"><option value="s">S</option><option value="m">M</option><option value="l">L</option></select>
+    <button class="btn" id="expXls">Export Excel</button>
+    <button class="btn" id="impBtn">Import Excel</button>
+    <input id="impFile" type="file" accept=".xlsx,.xls" class="hidden" />
+    <button class="danger" id="reset">Reset all data</button>
+    <p class="hint" id="setHint">Excel columns: Date, Type, Category, Amount, Note. Type = Income or Expense.</p>
+  </section>
+
+  <nav class="dock">
+    <button data-p="in" class="on" id="tIn">Income</button>
+    <button data-p="out" id="tOut">Expense</button>
+    <button data-p="sum" id="tSum">Summary</button>
+    <button data-p="set" id="tSet">Setting</button>
+  </nav>
+
   <script>
   const KEY = "outflow.hosted.v1";
+  const IN_CATS = ["Salary","Bonus","Allowance","Refund","Interest","Other income"];
+  const OUT_CATS = ["Rent","MTR","Octopus","Wet market","Dining","Utilities","Phone","Medical","Shopping","Other"];
+  const I18N = {
+    en: {
+      title:"Outflow", sub:"HKD · this iPhone only",
+      kInc:"Income", kExp:"Expense", kRem:"Left",
+      tIn:"Income", tOut:"Expense", tSum:"Summary", tSet:"Setting",
+      lAmt:"Amount", lDate:"Date", lCat:"Type", lNote:"Note",
+      addIn:"+ Income", addOut:"− Expense",
+      chart:"This month · HKD",
+      lTheme:"Theme", lLang:"Language", lFs:"Font size",
+      expXls:"Export Excel", impBtn:"Import Excel", reset:"Reset all data",
+      hint:"Excel columns: Date, Type, Category, Amount, Note. Type = Income or Expense.",
+      empty:"No rows yet.", del:"x"
+    },
+    zh: {
+      title:"流出", sub:"港元 · 只存在這部手機",
+      kInc:"收入", kExp:"支出", kRem:"結餘",
+      tIn:"收入", tOut:"支出", tSum:"摘要", tSet:"設定",
+      lAmt:"金額", lDate:"日期", lCat:"類別", lNote:"備註",
+      addIn:"+ 收入", addOut:"− 支出",
+      chart:"本月 · 港元",
+      lTheme:"外觀", lLang:"語言", lFs:"字型大小",
+      expXls:"匯出 Excel", impBtn:"匯入 Excel", reset:"重設全部資料",
+      hint:"Excel 欄位：Date, Type, Category, Amount, Note。Type 填 Income 或 Expense。",
+      empty:"尚未有記錄。", del:"刪"
+    }
+  };
   const $ = (id) => document.getElementById(id);
-  let state = { goal: 0, rows: [] };
-  try { state = JSON.parse(localStorage.getItem(KEY)) || state; } catch (e) {}
+  const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Hong_Kong" });
+  let state = { rows: [], theme: "dark", lang: "zh", fs: "m" };
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (raw) state = Object.assign(state, raw);
+  } catch (e) {}
   if (!Array.isArray(state.rows)) state.rows = [];
+  delete state.goal;
+
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
   const hkd = (n) => Number(n || 0).toLocaleString("en-HK", { maximumFractionDigits: 1 });
-  function render() {
-    const inc = state.rows.filter(r => r.t === "in").reduce((a,b)=>a+b.a,0);
-    const exp = state.rows.filter(r => r.t === "out").reduce((a,b)=>a+b.a,0);
-    const rem = inc - exp;
-    $("inc").textContent = hkd(inc);
-    $("exp").textContent = hkd(exp);
-    $("rem").textContent = hkd(rem);
-    $("rem").className = "n " + (rem >= 0 ? "ok" : "bad");
-    $("goal").value = state.goal || "";
-    $("goalN").textContent = hkd(state.goal || 0);
-    const pct = state.goal > 0 ? Math.max(0, Math.min(100, (Math.max(0, rem) / state.goal) * 100)) : 0;
-    $("bar").style.width = pct + "%";
-    $("list").innerHTML = state.rows.slice().reverse().map((r,i,arr) => {
-      const idx = arr.length - 1 - i;
-      return "<div class='tx'><div><b>"+r.cat+"</b><div class='k'>"+r.note+"</div></div><div><span class='"+(r.t==="in"?"ok":"bad")+"'>"+(r.t==="in"?"+":"-")+hkd(r.a)+"</span> <button data-i='"+idx+"'>x</button></div></div>";
-    }).join("") || "<p class='k'>No rows yet on this phone.</p>";
-    $("list").querySelectorAll("button[data-i]").forEach(b => {
-      b.onclick = () => { state.rows.splice(+b.dataset.i,1); save(); render(); };
+  const t = (k) => (I18N[state.lang] || I18N.zh)[k];
+  const monthKey = (d) => String(d || "").slice(0,7);
+  const thisMonth = today().slice(0,7);
+
+  function fillCats() {
+    $("catI").innerHTML = IN_CATS.map((c) => `<option>${c}</option>`).join("");
+    $("catO").innerHTML = OUT_CATS.map((c) => `<option>${c}</option>`).join("");
+  }
+  function applyChrome() {
+    document.documentElement.dataset.theme = state.theme === "day" ? "day" : "dark";
+    document.documentElement.dataset.fs = state.fs || "m";
+    document.documentElement.lang = state.lang === "en" ? "en" : "zh-Hant";
+    $("title").firstChild.nodeValue = t("title");
+    $("sub").textContent = t("sub");
+    $("kInc").textContent = t("kInc");
+    $("kExp").textContent = t("kExp");
+    $("kRem").textContent = t("kRem");
+    $("tIn").textContent = t("tIn");
+    $("tOut").textContent = t("tOut");
+    $("tSum").textContent = t("tSum");
+    $("tSet").textContent = t("tSet");
+    ["lAmtI","lAmtO"].forEach((id) => $(id).textContent = t("lAmt"));
+    ["lDateI","lDateO"].forEach((id) => $(id).textContent = t("lDate"));
+    ["lCatI","lCatO"].forEach((id) => $(id).textContent = t("lCat"));
+    ["lNoteI","lNoteO"].forEach((id) => $(id).textContent = t("lNote"));
+    $("addIn").textContent = t("addIn");
+    $("addOut").textContent = t("addOut");
+    $("chartTitle").textContent = t("chart");
+    $("lTheme").textContent = t("lTheme");
+    $("lLang").textContent = t("lLang");
+    $("lFs").textContent = t("lFs");
+    $("expXls").textContent = t("expXls");
+    $("impBtn").textContent = t("impBtn");
+    $("reset").textContent = t("reset");
+    $("setHint").textContent = t("hint");
+    $("theme").value = state.theme === "day" ? "day" : "dark";
+    $("lang").value = state.lang === "en" ? "en" : "zh";
+    $("fs").value = state.fs || "m";
+  }
+  function rowHtml(r, i) {
+    return `<div class="tx"><div><b>${r.cat}</b><div class="k">${r.d} · ${r.note || ""}</div></div><div><span class="${r.t==="in"?"ok":"bad"}">${r.t==="in"?"+":"−"}${hkd(r.a)}</span> <button data-i="${i}">${t("del")}</button></div></div>`;
+  }
+  function bindDel(box) {
+    box.querySelectorAll("button[data-i]").forEach((b) => {
+      b.onclick = () => { state.rows.splice(+b.dataset.i, 1); save(); render(); };
     });
   }
-  function add(t) {
-    const a = Number($("amt").value);
+  function drawChart() {
+    const c = $("chart");
+    const ctx = c.getContext("2d");
+    const w = c.width, h = c.height;
+    ctx.clearRect(0,0,w,h);
+    const y = Number(thisMonth.slice(0,4)), m = Number(thisMonth.slice(5,7));
+    const days = new Date(y, m, 0).getDate();
+    const inc = Array(days).fill(0), exp = Array(days).fill(0);
+    state.rows.forEach((r) => {
+      if (monthKey(r.d) !== thisMonth) return;
+      const day = Number(String(r.d).slice(8,10));
+      if (!day) return;
+      if (r.t === "in") inc[day-1] += r.a; else exp[day-1] += r.a;
+    });
+    const max = Math.max(1, ...inc, ...exp);
+    const pad = 28, plotW = w - pad * 2, plotH = h - 36;
+    const xAt = (i) => pad + (i / Math.max(1, days-1)) * plotW;
+    const yAt = (v) => 12 + plotH - (v / max) * plotH;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "#2b3444";
+    ctx.beginPath(); ctx.moveTo(pad,12); ctx.lineTo(pad,12+plotH); ctx.lineTo(w-pad,12+plotH); ctx.stroke();
+    function line(arr, color) {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      arr.forEach((v,i) => { const x=xAt(i), yy=yAt(v); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
+      ctx.stroke();
+    }
+    line(inc, "#34d399");
+    line(exp, "#fb7185");
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+    ctx.font = "11px sans-serif";
+    ctx.fillText("1", pad, h-6);
+    ctx.fillText(String(days), w-pad-10, h-6);
+  }
+  function render() {
+    applyChrome();
+    const inc = state.rows.filter((r)=>r.t==="in").reduce((a,b)=>a+b.a,0);
+    const exp = state.rows.filter((r)=>r.t==="out").reduce((a,b)=>a+b.a,0);
+    $("inc").textContent = hkd(inc);
+    $("exp").textContent = hkd(exp);
+    $("rem").textContent = hkd(inc-exp);
+    $("rem").className = "n " + (inc-exp>=0 ? "ok" : "bad");
+    const ins = state.rows.map((r,i)=>({r,i})).filter((x)=>x.r.t==="in").reverse();
+    const outs = state.rows.map((r,i)=>({r,i})).filter((x)=>x.r.t==="out").reverse();
+    $("listI").innerHTML = ins.map((x)=>rowHtml(x.r,x.i)).join("") || `<p class="hint">${t("empty")}</p>`;
+    $("listO").innerHTML = outs.map((x)=>rowHtml(x.r,x.i)).join("") || `<p class="hint">${t("empty")}</p>`;
+    bindDel($("listI")); bindDel($("listO"));
+    const monthRows = state.rows.filter((r)=>monthKey(r.d)===thisMonth);
+    const mi = monthRows.filter((r)=>r.t==="in").reduce((a,b)=>a+b.a,0);
+    const mo = monthRows.filter((r)=>r.t==="out").reduce((a,b)=>a+b.a,0);
+    $("sumList").innerHTML = `<div class="k">${thisMonth}</div><div class="tx"><span class="ok">${t("kInc")} ${hkd(mi)}</span><span class="bad">${t("kExp")} ${hkd(mo)}</span></div>`;
+    drawChart();
+  }
+  function add(tcode) {
+    const isIn = tcode === "in";
+    const a = Number($(isIn?"amtI":"amtO").value);
     if (!a) return;
-    state.rows.push({ t, a, cat: $("cat").value, note: $("note").value, d: Date.now() });
-    $("amt").value = ""; $("note").value = "";
+    state.rows.push({
+      t: tcode, a,
+      cat: $(isIn?"catI":"catO").value,
+      note: $(isIn?"noteI":"noteO").value,
+      d: $(isIn?"dateI":"dateO").value || today()
+    });
+    $(isIn?"amtI":"amtO").value = "";
+    $(isIn?"noteI":"noteO").value = "";
     save(); render();
   }
+  function show(p) {
+    ["in","out","sum","set"].forEach((k) => {
+      $("p-"+k).classList.toggle("hidden", k!==p);
+      document.querySelector(`.dock [data-p="${k}"]`).classList.toggle("on", k===p);
+    });
+    if (p === "sum") drawChart();
+  }
+  function exportXls() {
+    if (typeof XLSX === "undefined") { alert("Excel library failed to load"); return; }
+    const rows = [["Date","Type","Category","Amount","Note"]].concat(
+      state.rows.map((r) => [r.d, r.t==="in"?"Income":"Expense", r.cat, r.a, r.note || ""])
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Outflow");
+    XLSX.writeFile(wb, "outflow.xlsx");
+  }
+  function importXls(file) {
+    if (typeof XLSX === "undefined") { alert("Excel library failed to load"); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: "array", cellDates: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const next = [];
+      data.slice(1).forEach((row) => {
+        if (!row || !row.length) return;
+        const type = String(row[1] || "").toLowerCase();
+        const amt = Number(row[3]);
+        if (!amt) return;
+        let d = row[0];
+        if (d instanceof Date) d = d.toISOString().slice(0,10);
+        else d = String(d || today()).slice(0,10);
+        const isIn = type.indexOf("in") === 0 || type.indexOf("收") >= 0;
+        next.push({ t: isIn ? "in" : "out", a: amt, cat: String(row[2] || "Other"), note: String(row[4] || ""), d });
+      });
+      if (!next.length) { alert("No rows found"); return; }
+      state.rows = state.rows.concat(next);
+      save(); render();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  $("dateI").value = today();
+  $("dateO").value = today();
+  fillCats();
   $("addIn").onclick = () => add("in");
   $("addOut").onclick = () => add("out");
-  $("goal").onchange = () => { state.goal = Number($("goal").value)||0; save(); render(); };
+  document.querySelectorAll(".dock button").forEach((b) => b.onclick = () => show(b.dataset.p));
+  $("theme").onchange = () => { state.theme = $("theme").value; save(); applyChrome(); drawChart(); };
+  $("lang").onchange = () => { state.lang = $("lang").value; save(); render(); };
+  $("fs").onchange = () => { state.fs = $("fs").value; save(); applyChrome(); };
+  $("expXls").onclick = exportXls;
+  $("impBtn").onclick = () => $("impFile").click();
+  $("impFile").onchange = (e) => { const f = e.target.files[0]; if (f) importXls(f); e.target.value = ""; };
+  $("reset").onclick = () => {
+    if (!confirm(state.lang === "en" ? "Delete every row on this phone?" : "刪除此手機上的全部記錄？")) return;
+    state.rows = []; save(); render();
+  };
   render();
   </script>
 </body>
