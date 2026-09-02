@@ -1,14 +1,16 @@
 # philosopherkk.github.io
 
-Hub only. Three apps live in separate folders so they cannot overwrite each other.
+Personal GitHub Pages site. Root `/` is a minimal stub — not a product hub and not any of the apps below.
 
-| App | Folder | URL |
+Apps are separate sites in their own folders:
+
+| Site | Folder | URL |
 |---|---|---|
 | Outflow (budget) | `outflow/` | https://philosopherkk.github.io/outflow/ |
 | HK Transit | `transit/` | https://philosopherkk.github.io/transit/ |
 | Purple Sectors | `purple/` | https://philosopherkk.github.io/purple/ |
 
-Hub: https://philosopherkk.github.io/
+Root: https://philosopherkk.github.io/
 
 ## Agent / publish loop
 
@@ -17,7 +19,7 @@ Hub: https://philosopherkk.github.io/
 3. Wait 1–2 minutes for GitHub Pages.
 4. Review the matching public URL above.
 
-Root `index.html` must stay the hub. Never publish Transit, Purple, or Outflow to `/`.
+Never publish Transit, Purple, or Outflow to `/`. Do not turn root into a three-app suite index.
 
 Before pushing, run:
 
@@ -33,6 +35,6 @@ Never commit Outflow ledger JSON/CSV, vault files, or passphrase material. Ledge
 
 ## Source repos
 
-- https://github.com/philosopherkk/outflow-app (may 404; live files are in `outflow/` here)
+- https://github.com/philosopherkk/outflow-app (may be private; live static shell is published under `outflow/` here)
 - https://github.com/philosopherkk/hk-transit
 - https://github.com/philosopherkk/purple-sectors
