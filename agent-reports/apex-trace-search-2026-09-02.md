@@ -98,3 +98,13 @@ Grok Built / `grok-export` activity appears only around **eyesinfo** (Vercel fai
 - No fake Apex Trace scaffold created.
 - No secrets, SimHub credentials, or live join codes committed.
 - Hub root and existing app folders untouched by this report PR.
+
+## Re-check (2026-09-02 17:20 HKT)
+
+User asked to proceed now. Re-ran discovery:
+
+- Same 6 public `philosopherkk/*` repos; no new Apex Trace repo.
+- Candidate repo names still 404.
+- No new public PushEvents for an Apex Trace project.
+- Origin still unauthenticated.
+- Still **cannot publish** without source. No fake scaffold.
