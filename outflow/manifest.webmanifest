@@ -1,7 +1,7 @@
 {
   "name": "Outflow",
   "short_name": "Outflow",
-  "description": "Outflow 2.1.4. Empty Due & Subs tracker. Local ledger with Face ID. Income and outflow in HKD, USD, TWD, CAD, EUR. Base HKD.",
+  "description": "Outflow 2.1.3. Local ledger with Face ID. Income and outflow in HKD, USD, TWD, CAD, EUR. Base HKD.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
