@@ -3,47 +3,188 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>philosopherkk — apps</title>
-  <meta name="description" content="Hub for Outflow, HK Transit, and Purple Sectors. Each app lives in its own folder." />
+  <title>philosopherkk — hub</title>
+  <meta name="description" content="Hub of links only: EyesInfo, HK Transit, Purple Sectors, Apex Trace (pending), and Outflow. Each app stays in its own folder or external site." />
   <meta name="theme-color" content="#0e1116" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <style>
-    :root { --bg:#0e1116; --card:#161b22; --line:#2b3444; --text:#e8edf5; --muted:#8b97a8; --accent:#6ee7b7; }
+    :root {
+      --bg: #0e1116;
+      --card: #161b22;
+      --line: #2b3444;
+      --text: #e8edf5;
+      --muted: #8b97a8;
+      --accent: #6ee7b7;
+      --pending: #9aa3b2;
+      --pending-bg: #12161c;
+    }
     * { box-sizing: border-box; }
-    body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,sans-serif; padding:28px 18px 64px; }
-    h1 { font-size:1.6rem; margin:0 0 6px; }
-    .sub { color:var(--muted); margin:0 0 22px; max-width:42rem; line-height:1.45; }
-    .grid { display:grid; gap:14px; max-width:720px; }
-    a.card { display:block; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 18px 16px; color:inherit; text-decoration:none; }
-    a.card:hover { border-color:#3d4b60; }
-    .k { font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
-    .t { font-size:1.25rem; font-weight:700; margin:4px 0 6px; }
-    .d { color:var(--muted); font-size:.92rem; line-height:1.45; }
-    .url { margin-top:10px; font-size:.8rem; color:var(--accent); }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(900px 420px at 12% -10%, #1a2433 0%, transparent 55%),
+        radial-gradient(700px 380px at 95% 8%, #182018 0%, transparent 50%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      padding: 28px 18px 64px;
+    }
+    h1 { font-size: 1.7rem; margin: 0 0 6px; letter-spacing: -0.02em; }
+    .sub { color: var(--muted); margin: 0 0 26px; max-width: 44rem; line-height: 1.5; }
+    .sub code {
+      font-size: 0.86em;
+      background: #1b2230;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.08em 0.35em;
+    }
+    .grid {
+      display: grid;
+      gap: 16px;
+      max-width: 720px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 18px 16px;
+    }
+    .card.pending {
+      background: var(--pending-bg);
+      border-style: dashed;
+      opacity: 0.92;
+    }
+    .k {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .t {
+      font-size: 1.28rem;
+      font-weight: 700;
+      margin: 5px 0 7px;
+      letter-spacing: -0.01em;
+    }
+    .d {
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.45;
+      margin: 0 0 14px;
+    }
+    .meta {
+      display: grid;
+      gap: 8px;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+    .meta dt {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .meta dd { margin: 2px 0 0; }
+    .meta a {
+      color: var(--accent);
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .meta a:hover { text-decoration: underline; }
+    .pending-live {
+      color: var(--pending);
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
   <h1>philosopherkk</h1>
-  <p class="sub">Three separate apps. Root <code>index.html</code> is this hub only — never publish Transit, Purple, or Outflow here.</p>
+  <p class="sub">
+    Five projects — links only. Root <code>index.html</code> is this hub;
+    never publish an app into root. Each GitHub Pages app stays in its own folder
+    (<code>transit/</code>, <code>purple/</code>, <code>outflow/</code>).
+  </p>
   <div class="grid">
-    <a class="card" href="./outflow/">
-      <div class="k">Budget</div>
-      <div class="t">Outflow</div>
-      <div class="d">Private on-device income and outflow ledger. Passphrase vault stays on this device.</div>
-      <div class="url">philosopherkk.github.io/outflow/</div>
-    </a>
-    <a class="card" href="./transit/">
-      <div class="k">Hong Kong</div>
+    <article class="card">
+      <div class="k">1 · Patient education</div>
+      <div class="t">EyesInfo</div>
+      <p class="d">護眼學堂 — patient education site. Hub links out only; not hosted on github.io.</p>
+      <dl class="meta">
+        <div>
+          <dt>Work repo</dt>
+          <dd><a href="https://github.com/philosopherkk/eyesinfo">github.com/philosopherkk/eyesinfo</a></dd>
+        </div>
+        <div>
+          <dt>Live</dt>
+          <dd><a href="https://eyesinfo.org">eyesinfo.org</a></dd>
+        </div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <div class="k">2 · Hong Kong</div>
       <div class="t">HK Transit</div>
-      <div class="d">MTR, bus and minibus planner. Shortest trip, cheapest trip, live ETA.</div>
-      <div class="url">philosopherkk.github.io/transit/</div>
-    </a>
-    <a class="card" href="./purple/">
-      <div class="k">Sim racing</div>
+      <p class="d">MTR / bus / minibus planner — shortest vs cheapest, live ETA.</p>
+      <dl class="meta">
+        <div>
+          <dt>Work repo</dt>
+          <dd><a href="https://github.com/philosopherkk/hk-transit">github.com/philosopherkk/hk-transit</a></dd>
+        </div>
+        <div>
+          <dt>Live</dt>
+          <dd><a href="https://philosopherkk.github.io/transit/">philosopherkk.github.io/transit/</a></dd>
+        </div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <div class="k">3 · Sim racing · board</div>
       <div class="t">Purple Sectors</div>
-      <div class="d">iRacing weekly board, track dossiers, favourite series.</div>
-      <div class="url">philosopherkk.github.io/purple/</div>
-    </a>
+      <p class="d">Weekly sim-racing board for Gran Turismo 7 &amp; iRacing.</p>
+      <dl class="meta">
+        <div>
+          <dt>Work repo</dt>
+          <dd><a href="https://github.com/philosopherkk/purple-sectors">github.com/philosopherkk/purple-sectors</a></dd>
+        </div>
+        <div>
+          <dt>Live</dt>
+          <dd><a href="https://philosopherkk.github.io/purple/">philosopherkk.github.io/purple/</a></dd>
+        </div>
+      </dl>
+    </article>
+
+    <article class="card pending">
+      <div class="k">4 · Sim racing · telemetry</div>
+      <div class="t">Simracing web — Apex Trace</div>
+      <p class="d">iRacing / SimHub telemetry. Not Purple Sectors. Awaiting KK handoff — do not scaffold.</p>
+      <dl class="meta">
+        <div>
+          <dt>Work repo</dt>
+          <dd><span class="pending-live">PENDING — no repo linked until handoff</span></dd>
+        </div>
+        <div>
+          <dt>Live</dt>
+          <dd><span class="pending-live">PENDING</span></dd>
+        </div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <div class="k">5 · Budget</div>
+      <div class="t">Outflow</div>
+      <p class="d">On-device income and outflow ledger (empty public shell; vault stays on device).</p>
+      <dl class="meta">
+        <div>
+          <dt>Work repo</dt>
+          <dd><a href="https://github.com/philosopherkk/outflow-app">github.com/philosopherkk/outflow-app</a> <span class="pending-live">(private; may 404)</span></dd>
+        </div>
+        <div>
+          <dt>Live</dt>
+          <dd><a href="https://philosopherkk.github.io/outflow/">philosopherkk.github.io/outflow/</a></dd>
+        </div>
+      </dl>
+    </article>
   </div>
 </body>
 </html>

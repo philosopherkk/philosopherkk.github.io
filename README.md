@@ -1,23 +1,32 @@
 # philosopherkk.github.io
 
-Hub only. Three apps live in separate folders so they cannot overwrite each other.
+Hub only — root `index.html` is a page of **links**. Never dump an app into `/`.
 
-| App | Folder | URL |
-|---|---|---|
-| Outflow (budget) | `outflow/` | https://philosopherkk.github.io/outflow/ |
-| HK Transit | `transit/` | https://philosopherkk.github.io/transit/ |
-| Purple Sectors | `purple/` | https://philosopherkk.github.io/purple/ |
+| # | Project | Folder / host | Live | Work repo |
+|---|---|---|---|---|
+| 1 | EyesInfo (護眼學堂) | external only | https://eyesinfo.org | https://github.com/philosopherkk/eyesinfo |
+| 2 | HK Transit | `transit/` | https://philosopherkk.github.io/transit/ | https://github.com/philosopherkk/hk-transit |
+| 3 | Purple Sectors | `purple/` | https://philosopherkk.github.io/purple/ | https://github.com/philosopherkk/purple-sectors |
+| 4 | Simracing web — Apex Trace | *none yet* | **PENDING** | PENDING until KK handoff |
+| 5 | Outflow | `outflow/` | https://philosopherkk.github.io/outflow/ | https://github.com/philosopherkk/outflow-app (private; may 404) |
 
 Hub: https://philosopherkk.github.io/
 
-## Agent / publish loop
+## Hard rules
 
-1. Edit **only** the app folder (`outflow/`, `transit/`, or `purple/`).
-2. Open a PR → merge.
+- Root is hub only. Each GitHub Pages app stays in its own folder (`transit/`, `purple/`, `outflow/`).
+- EyesInfo: hub links out only. Do **not** copy eyesinfo.org onto this repo.
+- Apex Trace: no scaffold, no `/apex/` or `/simracing/` placeholder until handoff.
+- Never commit Outflow ledger JSON/CSV, vault files, or passphrase material.
+
+## Agent / publish loop (one Pages app)
+
+1. Edit **only** that app’s folder (`outflow/`, `transit/`, or `purple/`).
+2. Open a PR → merge (human).
 3. Wait 1–2 minutes for GitHub Pages.
 4. Review the matching public URL above.
 
-Root `index.html` must stay the hub. Never publish Transit, Purple, or Outflow to `/`.
+Hub-only changes edit root hub files (`index.html`, this README, `AGENTS.md`, `scripts/check-hub.sh`) — not the app folders.
 
 Before pushing, run:
 
@@ -26,13 +35,3 @@ bash scripts/check-hub.sh
 ```
 
 Full rules for coding agents: [AGENTS.md](./AGENTS.md).
-
-## Private data
-
-Never commit Outflow ledger JSON/CSV, vault files, or passphrase material. Ledgers stay on-device only.
-
-## Source repos
-
-- https://github.com/philosopherkk/outflow-app (may 404; live files are in `outflow/` here)
-- https://github.com/philosopherkk/hk-transit
-- https://github.com/philosopherkk/purple-sectors
