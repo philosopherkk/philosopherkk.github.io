@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0e1116" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Outflow" />
-  <title>Outflow</title>
+  <meta name="apple-mobile-web-app-title" content="make money great again" />
+  <title>make money great again</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.mini.min.js"></script>
   <style>
     :root, html[data-theme="dark"] {
@@ -21,13 +21,8 @@
     html[data-fs="m"] { font-size: 16px; }
     html[data-fs="l"] { font-size: 18px; }
     * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
-      padding: 16px 14px 88px;
-    }
-    h1 { font-size: 1.15rem; margin: 0 0 12px; }
-    h1 span { display: block; color: var(--muted); font-size: .78rem; font-weight: 500; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 16px 14px 88px; }
+    h1 { font-size: 1.15rem; margin: 0 0 12px; letter-spacing: -0.02em; }
     .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
     .k { color: var(--muted); font-size: .72rem; letter-spacing: .04em; }
@@ -35,10 +30,7 @@
     .ok { color: var(--ok); } .bad { color: var(--bad); }
     label { display: block; color: var(--muted); font-size: .75rem; margin: 8px 0 4px; }
     input, select, button, textarea { font: inherit; }
-    input, select, textarea {
-      width: 100%; background: var(--bg); border: 1px solid var(--line);
-      color: var(--text); border-radius: 10px; padding: 10px;
-    }
+    input, select, textarea { width: 100%; background: var(--bg); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     button { border: 0; border-radius: 10px; padding: 11px; font-weight: 700; cursor: pointer; color: var(--text); }
     .btn { background: var(--card); border: 1px solid var(--line); width: 100%; }
@@ -48,10 +40,7 @@
     .hidden { display: none !important; }
     .tx { display: flex; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
     .tx button { width: auto; background: transparent; color: var(--muted); padding: 0 6px; }
-    .dock {
-      position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4,1fr);
-      background: var(--dock); border-top: 1px solid var(--line); padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
-    }
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4,1fr); background: var(--dock); border-top: 1px solid var(--line); padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); }
     .dock button { background: transparent; color: var(--muted); padding: 8px 4px; font-size: .78rem; }
     .dock button.on { color: var(--accent); }
     canvas { width: 100%; height: 180px; display: block; }
@@ -60,47 +49,39 @@
   </style>
 </head>
 <body>
-  <h1 id="title">Outflow<span id="sub">HKD · this iPhone only</span></h1>
+  <h1 id="title">make money great again</h1>
   <div class="cards">
     <div class="card"><div class="k" id="kInc">Income</div><div class="n ok" id="inc">0</div></div>
     <div class="card"><div class="k" id="kExp">Expense</div><div class="n bad" id="exp">0</div></div>
     <div class="card"><div class="k" id="kRem">Left</div><div class="n" id="rem">0</div></div>
   </div>
-
   <section id="p-in" class="card">
     <div class="grid2">
       <div><label id="lAmtI">Amount</label><input id="amtI" type="number" min="0" step="0.1" /></div>
       <div><label id="lDateI">Date</label><input id="dateI" type="date" /></div>
     </div>
-    <label id="lCatI">Type</label>
-    <select id="catI"></select>
-    <label id="lNoteI">Note</label>
-    <input id="noteI" />
+    <label id="lCatI">Type</label><select id="catI"></select>
+    <label id="lNoteI">Note</label><input id="noteI" />
     <button class="in" id="addIn" style="width:100%;margin-top:10px">+ Income</button>
     <div id="listI"></div>
   </section>
-
   <section id="p-out" class="card hidden">
     <div class="grid2">
       <div><label id="lAmtO">Amount</label><input id="amtO" type="number" min="0" step="0.1" /></div>
       <div><label id="lDateO">Date</label><input id="dateO" type="date" /></div>
     </div>
-    <label id="lCatO">Type</label>
-    <select id="catO"></select>
-    <label id="lNoteO">Note</label>
-    <input id="noteO" />
+    <label id="lCatO">Type</label><select id="catO"></select>
+    <label id="lNoteO">Note</label><input id="noteO" />
     <button class="out" id="addOut" style="width:100%;margin-top:10px">− Expense</button>
     <div id="listO"></div>
   </section>
-
   <section id="p-sum" class="hidden">
     <div class="card">
-      <div class="k" id="chartTitle">This month · HKD</div>
+      <div class="k" id="chartTitle">This month</div>
       <canvas id="chart" width="640" height="180"></canvas>
     </div>
     <div id="sumList" class="card" style="margin-top:10px"></div>
   </section>
-
   <section id="p-set" class="card hidden stack">
     <label id="lTheme">Theme</label>
     <select id="theme"><option value="dark">Dark</option><option value="day">Day</option></select>
@@ -108,66 +89,55 @@
     <select id="lang"><option value="zh">繁體中文</option><option value="en">English</option></select>
     <label id="lFs">Font size</label>
     <select id="fs"><option value="s">S</option><option value="m">M</option><option value="l">L</option></select>
+    <label id="lCur">Currency</label>
+    <select id="cur">
+      <option value="HKD">HKD</option>
+      <option value="USD">USD</option>
+      <option value="EUR">EURO</option>
+      <option value="JPY">JPY</option>
+    </select>
     <button class="btn" id="expXls">Export Excel</button>
     <button class="btn" id="impBtn">Import Excel</button>
     <input id="impFile" type="file" accept=".xlsx,.xls" class="hidden" />
     <button class="danger" id="reset">Reset all data</button>
-    <p class="hint" id="setHint">Excel columns: Date, Type, Category, Amount, Note. Type = Income or Expense.</p>
+    <p class="hint" id="setHint"></p>
   </section>
-
   <nav class="dock">
     <button data-p="in" class="on" id="tIn">Income</button>
     <button data-p="out" id="tOut">Expense</button>
     <button data-p="sum" id="tSum">Summary</button>
     <button data-p="set" id="tSet">Setting</button>
   </nav>
-
   <script>
   const KEY = "outflow.hosted.v1";
   const IN_CATS = ["Salary","Bonus","Allowance","Refund","Interest","Other income"];
   const OUT_CATS = ["Rent","MTR","Octopus","Wet market","Dining","Utilities","Phone","Medical","Shopping","Other"];
   const I18N = {
-    en: {
-      title:"Outflow", sub:"HKD · this iPhone only",
-      kInc:"Income", kExp:"Expense", kRem:"Left",
-      tIn:"Income", tOut:"Expense", tSum:"Summary", tSet:"Setting",
-      lAmt:"Amount", lDate:"Date", lCat:"Type", lNote:"Note",
-      addIn:"+ Income", addOut:"− Expense",
-      chart:"This month · HKD",
-      lTheme:"Theme", lLang:"Language", lFs:"Font size",
-      expXls:"Export Excel", impBtn:"Import Excel", reset:"Reset all data",
-      hint:"Excel columns: Date, Type, Category, Amount, Note. Type = Income or Expense.",
-      empty:"No rows yet.", del:"x"
-    },
-    zh: {
-      title:"流出", sub:"港元 · 只存在這部手機",
-      kInc:"收入", kExp:"支出", kRem:"結餘",
-      tIn:"收入", tOut:"支出", tSum:"摘要", tSet:"設定",
-      lAmt:"金額", lDate:"日期", lCat:"類別", lNote:"備註",
-      addIn:"+ 收入", addOut:"− 支出",
-      chart:"本月 · 港元",
-      lTheme:"外觀", lLang:"語言", lFs:"字型大小",
-      expXls:"匯出 Excel", impBtn:"匯入 Excel", reset:"重設全部資料",
-      hint:"Excel 欄位：Date, Type, Category, Amount, Note。Type 填 Income 或 Expense。",
-      empty:"尚未有記錄。", del:"刪"
-    }
+    en: { kInc:"Income", kExp:"Expense", kRem:"Left", tIn:"Income", tOut:"Expense", tSum:"Summary", tSet:"Setting", lAmt:"Amount", lDate:"Date", lCat:"Type", lNote:"Note", addIn:"+ Income", addOut:"− Expense", chart:"This month", lTheme:"Theme", lLang:"Language", lFs:"Font size", lCur:"Currency", expXls:"Export Excel", impBtn:"Import Excel", reset:"Reset all data", hint:"Excel columns: Date, Type, Category, Amount, Note, Currency.", empty:"No rows yet.", del:"x" },
+    zh: { kInc:"收入", kExp:"支出", kRem:"結餘", tIn:"收入", tOut:"支出", tSum:"摘要", tSet:"設定", lAmt:"金額", lDate:"日期", lCat:"類別", lNote:"備註", addIn:"+ 收入", addOut:"− 支出", chart:"本月", lTheme:"外觀", lLang:"語言", lFs:"字型大小", lCur:"貨幣", expXls:"匯出 Excel", impBtn:"匯入 Excel", reset:"重設全部資料", hint:"Excel 欄位：Date, Type, Category, Amount, Note, Currency。", empty:"尚未有記錄。", del:"刪" }
   };
   const $ = (id) => document.getElementById(id);
   const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Hong_Kong" });
-  let state = { rows: [], theme: "dark", lang: "zh", fs: "m" };
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY) || "null");
-    if (raw) state = Object.assign(state, raw);
-  } catch (e) {}
+  const FX = { HKD: 1, USD: 7.8, EUR: 8.5, JPY: 0.052 };
+  const CUR_LABEL = { HKD: "HKD", USD: "USD", EUR: "EURO", JPY: "JPY" };
+  let state = { rows: [], theme: "dark", lang: "zh", fs: "m", cur: "HKD" };
+  try { const raw = JSON.parse(localStorage.getItem(KEY) || "null"); if (raw) state = Object.assign(state, raw); } catch (e) {}
   if (!Array.isArray(state.rows)) state.rows = [];
   delete state.goal;
-
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
-  const hkd = (n) => Number(n || 0).toLocaleString("en-HK", { maximumFractionDigits: 1 });
+  function money(n) {
+    const code = state.cur || "HKD";
+    const d = code === "JPY" ? 0 : 1;
+    return (CUR_LABEL[code] || code) + " " + Number(n || 0).toLocaleString("en-HK", { maximumFractionDigits: d });
+  }
+  function toBook(n, from) {
+    const src = FX[from] || FX.HKD;
+    const dst = FX[state.cur || "HKD"] || 1;
+    return Number(n || 0) * src / dst;
+  }
   const t = (k) => (I18N[state.lang] || I18N.zh)[k];
   const monthKey = (d) => String(d || "").slice(0,7);
   const thisMonth = today().slice(0,7);
-
   function fillCats() {
     $("catI").innerHTML = IN_CATS.map((c) => `<option>${c}</option>`).join("");
     $("catO").innerHTML = OUT_CATS.map((c) => `<option>${c}</option>`).join("");
@@ -176,54 +146,35 @@
     document.documentElement.dataset.theme = state.theme === "day" ? "day" : "dark";
     document.documentElement.dataset.fs = state.fs || "m";
     document.documentElement.lang = state.lang === "en" ? "en" : "zh-Hant";
-    $("title").firstChild.nodeValue = t("title");
-    $("sub").textContent = t("sub");
-    $("kInc").textContent = t("kInc");
-    $("kExp").textContent = t("kExp");
-    $("kRem").textContent = t("kRem");
-    $("tIn").textContent = t("tIn");
-    $("tOut").textContent = t("tOut");
-    $("tSum").textContent = t("tSum");
-    $("tSet").textContent = t("tSet");
+    $("title").textContent = "make money great again";
+    $["kInc","kExp","kRem","tIn","tOut","tSum","tSet","addIn","addOut","chartTitle","lTheme","lLang","lFs","lCur","expXls","impBtn","reset","setHint"].forEach((id) => { const map={kInc:"kInc",kExp:"kExp",kRem:"kRem",tIn:"tIn",tOut:"tOut",tSum:"tSum",tSet:"tSet",addIn:"addIn",addOut:"addOut",chartTitle:"chart",lTheme:"lTheme",lLang:"lLang",lFs:"lFs",lCur:"lCur",expXls:"expXls",impBtn:"impBtn",reset:"reset",setHint:"hint"}; $(id).textContent = t(map[id]); });
     ["lAmtI","lAmtO"].forEach((id) => $(id).textContent = t("lAmt"));
     ["lDateI","lDateO"].forEach((id) => $(id).textContent = t("lDate"));
     ["lCatI","lCatO"].forEach((id) => $(id).textContent = t("lCat"));
     ["lNoteI","lNoteO"].forEach((id) => $(id).textContent = t("lNote"));
-    $("addIn").textContent = t("addIn");
-    $("addOut").textContent = t("addOut");
-    $("chartTitle").textContent = t("chart");
-    $("lTheme").textContent = t("lTheme");
-    $("lLang").textContent = t("lLang");
-    $("lFs").textContent = t("lFs");
-    $("expXls").textContent = t("expXls");
-    $("impBtn").textContent = t("impBtn");
-    $("reset").textContent = t("reset");
-    $("setHint").textContent = t("hint");
     $("theme").value = state.theme === "day" ? "day" : "dark";
     $("lang").value = state.lang === "en" ? "en" : "zh";
     $("fs").value = state.fs || "m";
+    $("cur").value = ["HKD","USD","EUR","JPY"].includes(state.cur) ? state.cur : "HKD";
   }
   function rowHtml(r, i) {
-    return `<div class="tx"><div><b>${r.cat}</b><div class="k">${r.d} · ${r.note || ""}</div></div><div><span class="${r.t==="in"?"ok":"bad"}">${r.t==="in"?"+":"−"}${hkd(r.a)}</span> <button data-i="${i}">${t("del")}</button></div></div>`;
+    const shown = money(toBook(r.a, r.cur || state.cur || "HKD"));
+    return `<div class="tx"><div><b>${r.cat}</b><div class="k">${r.d} · ${r.cur || state.cur || "HKD"} · ${r.note || ""}</div></div><div><span class="${r.t==="in"?"ok":"bad"}">${r.t==="in"?"+":"−"}${shown}</span> <button data-i="${i}">${t("del")}</button></div></div>`;
   }
   function bindDel(box) {
-    box.querySelectorAll("button[data-i]").forEach((b) => {
-      b.onclick = () => { state.rows.splice(+b.dataset.i, 1); save(); render(); };
-    });
+    box.querySelectorAll("button[data-i]").forEach((b) => { b.onclick = () => { state.rows.splice(+b.dataset.i, 1); save(); render(); }; });
   }
   function drawChart() {
-    const c = $("chart");
-    const ctx = c.getContext("2d");
-    const w = c.width, h = c.height;
+    const c = $("chart"); const ctx = c.getContext("2d"); const w = c.width, h = c.height;
     ctx.clearRect(0,0,w,h);
     const y = Number(thisMonth.slice(0,4)), m = Number(thisMonth.slice(5,7));
     const days = new Date(y, m, 0).getDate();
     const inc = Array(days).fill(0), exp = Array(days).fill(0);
     state.rows.forEach((r) => {
       if (monthKey(r.d) !== thisMonth) return;
-      const day = Number(String(r.d).slice(8,10));
-      if (!day) return;
-      if (r.t === "in") inc[day-1] += r.a; else exp[day-1] += r.a;
+      const day = Number(String(r.d).slice(8,10)); if (!day) return;
+      const v = toBook(r.a, r.cur || state.cur || "HKD");
+      if (r.t === "in") inc[day-1] += v; else exp[day-1] += v;
     });
     const max = Math.max(1, ...inc, ...exp);
     const pad = 28, plotW = w - pad * 2, plotH = h - 36;
@@ -231,25 +182,16 @@
     const yAt = (v) => 12 + plotH - (v / max) * plotH;
     ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "#2b3444";
     ctx.beginPath(); ctx.moveTo(pad,12); ctx.lineTo(pad,12+plotH); ctx.lineTo(w-pad,12+plotH); ctx.stroke();
-    function line(arr, color) {
-      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
-      arr.forEach((v,i) => { const x=xAt(i), yy=yAt(v); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
-      ctx.stroke();
-    }
-    line(inc, "#34d399");
-    line(exp, "#fb7185");
+    function line(arr, color) { ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); arr.forEach((v,i) => { const x=xAt(i), yy=yAt(v); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); }); ctx.stroke(); }
+    line(inc, "#34d399"); line(exp, "#fb7185");
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
-    ctx.font = "11px sans-serif";
-    ctx.fillText("1", pad, h-6);
-    ctx.fillText(String(days), w-pad-10, h-6);
+    ctx.font = "11px sans-serif"; ctx.fillText("1", pad, h-6); ctx.fillText(String(days), w-pad-10, h-6);
   }
   function render() {
     applyChrome();
-    const inc = state.rows.filter((r)=>r.t==="in").reduce((a,b)=>a+b.a,0);
-    const exp = state.rows.filter((r)=>r.t==="out").reduce((a,b)=>a+b.a,0);
-    $("inc").textContent = hkd(inc);
-    $("exp").textContent = hkd(exp);
-    $("rem").textContent = hkd(inc-exp);
+    const inc = state.rows.filter((r)=>r.t==="in").reduce((a,b)=>a+toBook(b.a, b.cur || state.cur || "HKD"),0);
+    const exp = state.rows.filter((r)=>r.t==="out").reduce((a,b)=>a+toBook(b.a, b.cur || state.cur || "HKD"),0);
+    $("inc").textContent = money(inc); $("exp").textContent = money(exp); $("rem").textContent = money(inc-exp);
     $("rem").className = "n " + (inc-exp>=0 ? "ok" : "bad");
     const ins = state.rows.map((r,i)=>({r,i})).filter((x)=>x.r.t==="in").reverse();
     const outs = state.rows.map((r,i)=>({r,i})).filter((x)=>x.r.t==="out").reverse();
@@ -257,83 +199,55 @@
     $("listO").innerHTML = outs.map((x)=>rowHtml(x.r,x.i)).join("") || `<p class="hint">${t("empty")}</p>`;
     bindDel($("listI")); bindDel($("listO"));
     const monthRows = state.rows.filter((r)=>monthKey(r.d)===thisMonth);
-    const mi = monthRows.filter((r)=>r.t==="in").reduce((a,b)=>a+b.a,0);
-    const mo = monthRows.filter((r)=>r.t==="out").reduce((a,b)=>a+b.a,0);
-    $("sumList").innerHTML = `<div class="k">${thisMonth}</div><div class="tx"><span class="ok">${t("kInc")} ${hkd(mi)}</span><span class="bad">${t("kExp")} ${hkd(mo)}</span></div>`;
+    const mi = monthRows.filter((r)=>r.t==="in").reduce((a,b)=>a+toBook(b.a, b.cur || state.cur || "HKD"),0);
+    const mo = monthRows.filter((r)=>r.t==="out").reduce((a,b)=>a+toBook(b.a, b.cur || state.cur || "HKD"),0);
+    $("sumList").innerHTML = `<div class="k">${thisMonth} · ${CUR_LABEL[state.cur] || "HKD"}</div><div class="tx"><span class="ok">${t("kInc")} ${money(mi)}</span><span class="bad">${t("kExp")} ${money(mo)}</span></div>`;
     drawChart();
   }
   function add(tcode) {
-    const isIn = tcode === "in";
-    const a = Number($(isIn?"amtI":"amtO").value);
-    if (!a) return;
-    state.rows.push({
-      t: tcode, a,
-      cat: $(isIn?"catI":"catO").value,
-      note: $(isIn?"noteI":"noteO").value,
-      d: $(isIn?"dateI":"dateO").value || today()
-    });
-    $(isIn?"amtI":"amtO").value = "";
-    $(isIn?"noteI":"noteO").value = "";
-    save(); render();
+    const isIn = tcode === "in"; const a = Number($(isIn?"amtI":"amtO").value); if (!a) return;
+    state.rows.push({ t: tcode, a, cur: state.cur || "HKD", cat: $(isIn?"catI":"catO").value, note: $(isIn?"noteI":"noteO").value, d: $(isIn?"dateI":"dateO").value || today() });
+    $(isIn?"amtI":"amtO").value = ""; $(isIn?"noteI":"noteO").value = ""; save(); render();
   }
   function show(p) {
-    ["in","out","sum","set"].forEach((k) => {
-      $("p-"+k).classList.toggle("hidden", k!==p);
-      document.querySelector(`.dock [data-p="${k}"]`).classList.toggle("on", k===p);
-    });
+    ["in","out","sum","set"].forEach((k) => { $("p-"+k).classList.toggle("hidden", k!==p); document.querySelector(`.dock [data-p="${k}"]`).classList.toggle("on", k===p); });
     if (p === "sum") drawChart();
   }
   function exportXls() {
     if (typeof XLSX === "undefined") { alert("Excel library failed to load"); return; }
-    const rows = [["Date","Type","Category","Amount","Note"]].concat(
-      state.rows.map((r) => [r.d, r.t==="in"?"Income":"Expense", r.cat, r.a, r.note || ""])
-    );
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Outflow");
-    XLSX.writeFile(wb, "outflow.xlsx");
+    const rows = [["Date","Type","Category","Amount","Note","Currency"]].concat(state.rows.map((r) => [r.d, r.t==="in"?"Income":"Expense", r.cat, r.a, r.note || "", r.cur || state.cur || "HKD"]));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Outflow"); XLSX.writeFile(wb, "outflow.xlsx");
   }
   function importXls(file) {
     if (typeof XLSX === "undefined") { alert("Excel library failed to load"); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
       const wb = XLSX.read(e.target.result, { type: "array", cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
       const next = [];
       data.slice(1).forEach((row) => {
         if (!row || !row.length) return;
-        const type = String(row[1] || "").toLowerCase();
-        const amt = Number(row[3]);
-        if (!amt) return;
-        let d = row[0];
-        if (d instanceof Date) d = d.toISOString().slice(0,10);
-        else d = String(d || today()).slice(0,10);
+        const type = String(row[1] || "").toLowerCase(); const amt = Number(row[3]); if (!amt) return;
+        let d = row[0]; if (d instanceof Date) d = d.toISOString().slice(0,10); else d = String(d || today()).slice(0,10);
         const isIn = type.indexOf("in") === 0 || type.indexOf("收") >= 0;
-        next.push({ t: isIn ? "in" : "out", a: amt, cat: String(row[2] || "Other"), note: String(row[4] || ""), d });
+        let cur = String(row[5] || state.cur || "HKD").toUpperCase(); if (cur === "EURO") cur = "EUR"; if (!FX[cur]) cur = state.cur || "HKD";
+        next.push({ t: isIn ? "in" : "out", a: amt, cat: String(row[2] || "Other"), note: String(row[4] || ""), d, cur });
       });
       if (!next.length) { alert("No rows found"); return; }
-      state.rows = state.rows.concat(next);
-      save(); render();
+      state.rows = state.rows.concat(next); save(); render();
     };
     reader.readAsArrayBuffer(file);
   }
-
-  $("dateI").value = today();
-  $("dateO").value = today();
-  fillCats();
-  $("addIn").onclick = () => add("in");
-  $("addOut").onclick = () => add("out");
+  $("dateI").value = today(); $("dateO").value = today(); fillCats();
+  $("addIn").onclick = () => add("in"); $("addOut").onclick = () => add("out");
   document.querySelectorAll(".dock button").forEach((b) => b.onclick = () => show(b.dataset.p));
   $("theme").onchange = () => { state.theme = $("theme").value; save(); applyChrome(); drawChart(); };
   $("lang").onchange = () => { state.lang = $("lang").value; save(); render(); };
   $("fs").onchange = () => { state.fs = $("fs").value; save(); applyChrome(); };
-  $("expXls").onclick = exportXls;
-  $("impBtn").onclick = () => $("impFile").click();
+  $("cur").onchange = () => { state.cur = $("cur").value; save(); render(); };
+  $("expXls").onclick = exportXls; $("impBtn").onclick = () => $("impFile").click();
   $("impFile").onchange = (e) => { const f = e.target.files[0]; if (f) importXls(f); e.target.value = ""; };
-  $("reset").onclick = () => {
-    if (!confirm(state.lang === "en" ? "Delete every row on this phone?" : "刪除此手機上的全部記錄？")) return;
-    state.rows = []; save(); render();
-  };
+  $("reset").onclick = () => { if (!confirm(state.lang === "en" ? "Delete every row on this phone?" : "刪除此手機上的全部記錄？")) return; state.rows = []; save(); render(); };
   render();
   </script>
 </body>
