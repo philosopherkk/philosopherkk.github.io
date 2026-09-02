@@ -13,7 +13,7 @@ fail() {
 [[ -f "$INDEX" ]] || fail "missing root index.html"
 
 # Hub must list the three GitHub Pages app entry points (paths or full URLs).
-for path in 'transit/' 'purple/' 'outflow/'; do
+for path in 'transit/' 'purple/' 'outflow/' 'waiting/'; do
   grep -Fq "$path" "$INDEX" || fail "root index.html must link to $path"
 done
 

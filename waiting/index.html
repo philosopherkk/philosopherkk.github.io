@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HK specialist waiting times</title>
+  <meta name="description" content="Hospital Authority specialist outpatient waiting times by cluster, elective surgery waits, and private hospital fee ranges. EN / 繁." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1220'/%3E%3Crect x='6' y='8' width='4' height='16' rx='1' fill='%233dd6c6'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#0b1220; --bg2:#121a2b; --panel:#162033; --line:#2a3a55; --text:#e8eef8; --muted:#93a0b8; --accent:#3dd6c6; --accent2:#7aa2ff; --warn:#f0b429; --bad:#ff6b6b; --ok:#3ddc97; --chip:#1d2b44; --input:#0e1728; }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family:"IBM Plex Sans","Noto Sans TC",system-ui,sans-serif; line-height:1.45; }
+    header { padding:24px 20px 16px; border-bottom:1px solid var(--line); background:var(--bg2); }
+    .inner { max-width:1280px; margin:0 auto; }
+    .headrow { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:flex-start; }
+    h1 { font-size:26px; margin:0 0 8px; letter-spacing:-0.02em; }
+    .sub { color:var(--muted); max-width:980px; font-size:14px; }
+    .meta { margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; }
+    .pill { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12px; background:var(--chip); border:1px solid var(--line); color:var(--accent); padding:4px 8px; border-radius:999px; }
+    .lang { display:flex; background:var(--input); border:1px solid var(--line); border-radius:8px; padding:4px; }
+    .lang button { min-height:44px; min-width:44px; border:0; background:transparent; color:var(--muted); font:inherit; font-weight:600; border-radius:6px; }
+    .lang button.on { background:var(--accent); color:var(--bg); }
+    .wrap { padding:20px 20px 60px; max-width:1280px; margin:0 auto; }
+    .grid { display:grid; grid-template-columns:280px 1fr; gap:18px; }
+    @media (max-width:920px) { .grid { grid-template-columns:1fr; } }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+    label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+    select { width:100%; background:var(--input); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; margin-bottom:12px; min-height:44px; }
+    .hosp-list { font-size:13px; color:var(--muted); }
+    nav.tabs { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 14px; }
+    nav.tabs button { background:var(--input); color:var(--muted); border:1px solid var(--line); border-radius:8px; padding:10px 12px; min-height:44px; cursor:pointer; font:inherit; }
+    nav.tabs button.active { color:var(--bg); background:var(--accent); border-color:var(--accent); font-weight:600; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.03em; }
+    .num { font-family:"IBM Plex Mono",ui-monospace,monospace; white-space:nowrap; }
+    .hot { color:var(--bad); font-weight:600; }
+    .mid { color:var(--warn); }
+    .cool { color:var(--ok); }
+    .note { color:var(--muted); font-size:12.5px; margin-top:10px; }
+    h2 { font-size:18px; margin:0 0 8px; }
+    h3 { font-size:15px; margin:18px 0 8px; }
+    .kpi { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+    @media (max-width:800px) { .kpi { grid-template-columns:1fr 1fr; } }
+    .kpi .v { font-size:22px; font-weight:700; font-family:"IBM Plex Mono",monospace; }
+    .kpi .l { color:var(--muted); font-size:12px; }
+    footer { color:var(--muted); font-size:12px; padding-top:18px; }
+    a { color:var(--accent2); }
+    .hidden { display:none; }
+    .ov { overflow-x:auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="inner">
+      <div class="headrow">
+        <h1 data-i="title"></h1>
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" id="btn-en">EN</button>
+          <button type="button" id="btn-zh">繁</button>
+        </div>
+      </div>
+      <p class="sub" data-i="subtitle"></p>
+      <div class="meta" id="meta"></div>
+    </div>
+  </header>
+  <div class="wrap">
+    <div class="grid">
+      <aside class="card">
+        <label for="cluster" data-i="cluster"></label>
+        <select id="cluster"></select>
+        <label for="specialty" data-i="specialty"></label>
+        <select id="specialty"></select>
+        <div class="hosp-list" id="hospitals"></div>
+        <p class="note" data-i="mergeNote"></p>
+      </aside>
+      <main>
+        <nav class="tabs" id="tabs"></nav>
+        <section id="tab-sop"></section>
+        <section id="tab-surgery" class="hidden"></section>
+        <section id="tab-invest" class="hidden"></section>
+        <section id="tab-private" class="hidden"></section>
+      </main>
+    </div>
+    <footer id="footer"></footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
