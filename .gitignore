@@ -1,0 +1,10 @@
+# Outflow ledgers and vault material stay on-device only.
+**/ledger*.json
+**/ledger*.csv
+**/*vault*.json
+**/*vault*.csv
+**/passphrase*
+**/outflow-backup*
+outflow/*.csv
+outflow/backup*.json
+outflow/export*.json

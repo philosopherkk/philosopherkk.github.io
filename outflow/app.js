@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "2.0.0";
+  const VERSION = "2.0.1";
   const UPDATED = "2026-09-02";
   const VAULT_KEY = "outflow.v3.vault";
   const ITER = 210000;
@@ -254,5 +254,7 @@
   $("hideBanner").onclick = () => $("iosBanner").classList.add("hidden");
   $("verLine").textContent = "Outflow " + VERSION + " · " + UPDATED;
   showGate();
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {});
+  }
 })();
