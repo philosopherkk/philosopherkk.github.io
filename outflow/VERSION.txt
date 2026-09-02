@@ -1,0 +1,5 @@
+Outflow
+Version: 2.0.0
+Updated: 2026-09-02 (HKT)
+Pages: https://philosopherkk.github.io/outflow/
+Vault: AES-GCM + PBKDF2, local only
