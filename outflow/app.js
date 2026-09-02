@@ -1,9 +1,11 @@
 (() => {
-  const VERSION = "2.1.3";
+  const VERSION = "2.1.6";
   const UPDATED = "2026-09-02";
   const LEDGER_KEY = "outflow.v4.ledger";
   const OLD_VAULT_KEY = "outflow.v3.vault";
   const BIO_KEY = "outflow.v4.bio";
+  const UI_KEY = "outflow.v4.ui";
+  const FONT_SCALES = { small: 0.9, medium: 1, large: 1.15 };
   const FX_KEY = "outflow.fx.v1";
   const IDLE_MS = 120000;
   const FALLBACK_FX = {
@@ -50,6 +52,40 @@
     catch (e) { return { enabled: false, skipped: false, credId: "", userId: "" }; }
   }
   function saveBio(cfg) { localStorage.setItem(BIO_KEY, JSON.stringify(cfg)); }
+  function loadUiPrefs() {
+    try { return Object.assign({ theme: "auto", font: "medium" }, JSON.parse(localStorage.getItem(UI_KEY) || "{}")); }
+    catch (e) { return { theme: "auto", font: "medium" }; }
+  }
+  function saveUiPrefs(prefs) { localStorage.setItem(UI_KEY, JSON.stringify(prefs)); }
+  function themeColorFor(theme) {
+    if (theme === "light") return "#f3efe6";
+    if (theme === "dark") return "#0e1116";
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "#f3efe6" : "#0e1116";
+  }
+  function applyUiPrefs() {
+    const prefs = loadUiPrefs();
+    const theme = prefs.theme === "light" || prefs.theme === "dark" ? prefs.theme : "auto";
+    const font = FONT_SCALES[prefs.font] ? prefs.font : "medium";
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.style.setProperty("--font-scale", String(FONT_SCALES[font]));
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", themeColorFor(theme));
+    document.querySelectorAll("#themeChips .chip").forEach((c) => c.classList.toggle("on", c.dataset.theme === theme));
+    document.querySelectorAll("#fontChips .chip").forEach((c) => c.classList.toggle("on", c.dataset.font === font));
+  }
+  function setTheme(theme) {
+    const prefs = loadUiPrefs();
+    prefs.theme = theme === "light" || theme === "dark" ? theme : "auto";
+    saveUiPrefs(prefs);
+    applyUiPrefs();
+  }
+  function setFontSize(font) {
+    const prefs = loadUiPrefs();
+    prefs.font = FONT_SCALES[font] ? font : "medium";
+    saveUiPrefs(prefs);
+    applyUiPrefs();
+  }
+  applyUiPrefs();
   async function bioAvailable() {
     if (!window.PublicKeyCredential) return false;
     try {
@@ -535,6 +571,11 @@
     db.categories.income = $("catEditIn").value.split("\n").map((s) => s.trim()).filter(Boolean);
     persist(); toast("Categories saved");
   };
+  document.querySelectorAll("#themeChips .chip").forEach((c) => c.onclick = () => setTheme(c.dataset.theme));
+  document.querySelectorAll("#fontChips .chip").forEach((c) => c.onclick = () => setFontSize(c.dataset.font));
+  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+    if (loadUiPrefs().theme === "auto") applyUiPrefs();
+  });
   $("exportBtn").onclick = exportLedger;
   $("importBtn").onclick = () => $("importFile").click();
   $("importFile").onchange = (e) => { const f = e.target.files[0]; if (f) importLedger(f); e.target.value = ""; };
