@@ -1,6 +1,7 @@
 Outflow
-Version: 2.0.1
+Version: 2.1.0
 Updated: 2026-09-02 (HKT)
 Pages: https://philosopherkk.github.io/outflow/
 Vault: AES-GCM + PBKDF2, local only
-Cache: network-first shell (outflow-shell-v2.0.1-net)
+Bills: Ledger subscription JSON import (on-device)
+Cache: network-first shell (outflow-shell-v2.1.0-net)

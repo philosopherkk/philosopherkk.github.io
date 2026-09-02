@@ -1,4 +1,4 @@
-const CACHE = "outflow-shell-v2.0.1-net";
+const CACHE = "outflow-shell-v2.1.0-net";
 const SHELL = ["./", "./index.html", "./app.js", "./styles.css", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
