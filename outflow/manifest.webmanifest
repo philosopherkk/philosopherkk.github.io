@@ -1,7 +1,7 @@
 {
   "name": "Outflow",
   "short_name": "Outflow",
-  "description": "Outflow 2.0.0. Private ledger. Data stays on this device.",
+  "description": "Outflow 2.0.1. Private ledger. Data stays on this device.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

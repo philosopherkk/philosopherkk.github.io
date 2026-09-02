@@ -1,0 +1,14 @@
+name: Check hub
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Guard root hub
+        run: bash scripts/check-hub.sh
