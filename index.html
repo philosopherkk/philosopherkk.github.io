@@ -7,11 +7,11 @@
   <meta name="theme-color" content="#071018" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="HK Transit" />
-  <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="extra.css" />
 </head>
 <body>
   <div class="app">
@@ -41,7 +41,7 @@
           <div class="suggest-list" id="destSuggest"></div>
         </div>
         <div class="chips" id="destChips"></div>
-        <div class="hint" id="t-hint">Tap a suggestion, a place chip, or the map.</div>
+        <div class="hint" id="t-hint">Tap a suggestion, a place chip, or pin A/B on the map.</div>
         <button class="primary" id="planBtn">Plan shortest & cheapest</button>
         <div class="empty" id="loadNote"></div>
         <div id="nearby"></div>
@@ -61,7 +61,7 @@
           <button class="tab" id="pinOrigin">Pin A</button>
           <button class="tab" id="pinDest">Pin B</button>
         </div>
-        <a class="gopen" id="gopen" target="_blank" rel="noopener">Open in Google Maps</a>
+        <a class="gopen" id="gopen" href="https://www.google.com/maps/dir/?api=1&travelmode=transit" target="_blank" rel="noopener">Open in Google Maps</a>
         <div><span class="live-dot"></span><span id="t-live">Live arrivals refresh every 20s</span></div>
         <div id="clock"></div>
       </div>
@@ -70,5 +70,32 @@
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="app-loader.js"></script>
+  <script>
+  (function () {
+    var g = document.getElementById("gmap");
+    var a = document.getElementById("gopen");
+    function on(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener("click", fn); }
+    on("tabGoogle", function () {
+      g.classList.add("on");
+      document.getElementById("tabGoogle").classList.add("on");
+      document.getElementById("tabLeaflet").classList.remove("on");
+      var o = document.getElementById("originInput").value;
+      var d = document.getElementById("destInput").value;
+      var q = (o && d) ? (o + " to " + d + " Hong Kong") : ((d || o || "Hong Kong") + " Hong Kong");
+      g.src = "https://maps.google.com/maps?q=" + encodeURIComponent(q) + "&hl=en&z=14&output=embed";
+      a.href = "https://www.google.com/maps/dir/?api=1&origin=" + encodeURIComponent(o || "My location") + "&destination=" + encodeURIComponent(d || "Hong Kong") + "&travelmode=transit";
+    });
+    on("tabLeaflet", function () {
+      g.classList.remove("on");
+      document.getElementById("tabLeaflet").classList.add("on");
+      document.getElementById("tabGoogle").classList.remove("on");
+    });
+    on("gopen", function () {
+      var o = document.getElementById("originInput").value;
+      var d = document.getElementById("destInput").value;
+      this.href = "https://www.google.com/maps/dir/?api=1&origin=" + encodeURIComponent(o || "My location") + "&destination=" + encodeURIComponent((d || "Central") + ", Hong Kong") + "&travelmode=transit";
+    });
+  })();
+  </script>
 </body>
 </html>
