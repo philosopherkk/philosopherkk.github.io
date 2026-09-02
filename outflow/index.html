@@ -9,33 +9,23 @@
   <title>make money great again</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.mini.min.js"></script>
   <style>
-    :root, html[data-theme="dark"] {
-      --bg:#0e1116; --card:#161b22; --line:#2b3444; --text:#e8edf5; --muted:#8b97a8;
-      --ok:#34d399; --bad:#fb7185; --accent:#6ee7b7; --inbg:#0f3d32; --outbg:#3a151c; --dock:#12171f;
-    }
-    html[data-theme="day"] {
-      --bg:#f4efe4; --card:#fffaf1; --line:#d7cbb6; --text:#1a140c; --muted:#6b5e4e;
-      --ok:#0f7a4a; --bad:#c0364a; --accent:#0f7a4a; --inbg:#d9f2e4; --outbg:#f8d7dc; --dock:#efe6d6;
-    }
-    html[data-fs="s"] { font-size: 14px; }
-    html[data-fs="m"] { font-size: 16px; }
-    html[data-fs="l"] { font-size: 18px; }
+    :root, html[data-theme="dark"] { --bg:#0e1116; --card:#161b22; --line:#2b3444; --text:#e8edf5; --muted:#8b97a8; --ok:#34d399; --bad:#fb7185; --accent:#6ee7b7; --inbg:#0f3d32; --outbg:#3a151c; --dock:#12171f; }
+    html[data-theme="day"] { --bg:#f4efe4; --card:#fffaf1; --line:#d7cbb6; --text:#1a140c; --muted:#6b5e4e; --ok:#0f7a4a; --bad:#c0364a; --accent:#0f7a4a; --inbg:#d9f2e4; --outbg:#f8d7dc; --dock:#efe6d6; }
+    html[data-fs="s"] { font-size: 14px; } html[data-fs="m"] { font-size: 16px; } html[data-fs="l"] { font-size: 18px; }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 16px 14px 88px; }
     h1 { font-size: 1.15rem; margin: 0 0 12px; letter-spacing: -0.02em; }
     .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
-    .k { color: var(--muted); font-size: .72rem; letter-spacing: .04em; }
-    .n { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .k { color: var(--muted); font-size: .72rem; } .n { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .ok { color: var(--ok); } .bad { color: var(--bad); }
     label { display: block; color: var(--muted); font-size: .75rem; margin: 8px 0 4px; }
-    input, select, button, textarea { font: inherit; }
-    input, select, textarea { width: 100%; background: var(--bg); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px; }
+    input, select, button { font: inherit; }
+    input, select { width: 100%; background: var(--bg); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     button { border: 0; border-radius: 10px; padding: 11px; font-weight: 700; cursor: pointer; color: var(--text); }
     .btn { background: var(--card); border: 1px solid var(--line); width: 100%; }
-    .in { background: var(--inbg); color: var(--ok); }
-    .out { background: var(--outbg); color: var(--bad); }
+    .in { background: var(--inbg); color: var(--ok); } .out { background: var(--outbg); color: var(--bad); }
     .danger { background: var(--outbg); color: var(--bad); width: 100%; }
     .hidden { display: none !important; }
     .tx { display: flex; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -58,8 +48,9 @@
   <section id="p-in" class="card">
     <div class="grid2">
       <div><label id="lAmtI">Amount</label><input id="amtI" type="number" min="0" step="0.1" /></div>
-      <div><label id="lDateI">Date</label><input id="dateI" type="date" /></div>
+      <div><label id="lCurI">Currency</label><select id="curI"></select></div>
     </div>
+    <label id="lDateI">Date</label><input id="dateI" type="date" />
     <label id="lCatI">Type</label><select id="catI"></select>
     <label id="lNoteI">Note</label><input id="noteI" />
     <button class="in" id="addIn" style="width:100%;margin-top:10px">+ Income</button>
@@ -68,18 +59,16 @@
   <section id="p-out" class="card hidden">
     <div class="grid2">
       <div><label id="lAmtO">Amount</label><input id="amtO" type="number" min="0" step="0.1" /></div>
-      <div><label id="lDateO">Date</label><input id="dateO" type="date" /></div>
+      <div><label id="lCurO">Currency</label><select id="curO"></select></div>
     </div>
+    <label id="lDateO">Date</label><input id="dateO" type="date" />
     <label id="lCatO">Type</label><select id="catO"></select>
     <label id="lNoteO">Note</label><input id="noteO" />
     <button class="out" id="addOut" style="width:100%;margin-top:10px">− Expense</button>
     <div id="listO"></div>
   </section>
   <section id="p-sum" class="hidden">
-    <div class="card">
-      <div class="k" id="chartTitle">This month</div>
-      <canvas id="chart" width="640" height="180"></canvas>
-    </div>
+    <div class="card"><div class="k" id="chartTitle">This month</div><canvas id="chart" width="640" height="180"></canvas></div>
     <div id="sumList" class="card" style="margin-top:10px"></div>
   </section>
   <section id="p-set" class="card hidden stack">
@@ -89,13 +78,12 @@
     <select id="lang"><option value="zh">繁體中文</option><option value="en">English</option></select>
     <label id="lFs">Font size</label>
     <select id="fs"><option value="s">S</option><option value="m">M</option><option value="l">L</option></select>
-    <label id="lCur">Currency</label>
+    <label id="lCur">Show totals in</label>
     <select id="cur">
-      <option value="HKD">HKD</option>
-      <option value="USD">USD</option>
-      <option value="EUR">EURO</option>
-      <option value="JPY">JPY</option>
+      <option value="HKD">HKD</option><option value="USD">USD</option><option value="EUR">EURO</option><option value="JPY">JPY</option><option value="TWD">TWD</option>
     </select>
+    <p class="hint" id="fxNote">Rates: loading…</p>
+    <button class="btn" id="fxBtn">Refresh rates</button>
     <button class="btn" id="expXls">Export Excel</button>
     <button class="btn" id="impBtn">Import Excel</button>
     <input id="impFile" type="file" accept=".xlsx,.xls" class="hidden" />
@@ -113,142 +101,157 @@
   const IN_CATS = ["Salary","Bonus","Allowance","Refund","Interest","Other income"];
   const OUT_CATS = ["Rent","MTR","Octopus","Wet market","Dining","Utilities","Phone","Medical","Shopping","Other"];
   const I18N = {
-    en: { kInc:"Income", kExp:"Expense", kRem:"Left", tIn:"Income", tOut:"Expense", tSum:"Summary", tSet:"Setting", lAmt:"Amount", lDate:"Date", lCat:"Type", lNote:"Note", addIn:"+ Income", addOut:"− Expense", chart:"This month", lTheme:"Theme", lLang:"Language", lFs:"Font size", lCur:"Currency", expXls:"Export Excel", impBtn:"Import Excel", reset:"Reset all data", hint:"Excel columns: Date, Type, Category, Amount, Note, Currency.", empty:"No rows yet.", del:"x" },
-    zh: { kInc:"收入", kExp:"支出", kRem:"結餘", tIn:"收入", tOut:"支出", tSum:"摘要", tSet:"設定", lAmt:"金額", lDate:"日期", lCat:"類別", lNote:"備註", addIn:"+ 收入", addOut:"− 支出", chart:"本月", lTheme:"外觀", lLang:"語言", lFs:"字型大小", lCur:"貨幣", expXls:"匯出 Excel", impBtn:"匯入 Excel", reset:"重設全部資料", hint:"Excel 欄位：Date, Type, Category, Amount, Note, Currency。", empty:"尚未有記錄。", del:"刪" }
+    en: { kInc:"Income", kExp:"Expense", kRem:"Left", tIn:"Income", tOut:"Expense", tSum:"Summary", tSet:"Setting", lAmt:"Amount", lDate:"Date", lCat:"Type", lNote:"Note", addIn:"+ Income", addOut:"− Expense", chart:"This month", lTheme:"Theme", lLang:"Language", lFs:"Font size", lCur:"Show totals in", fxBtn:"Refresh rates", fxWait:"Rates: loading…", fxOk:"Rates updated", fxFail:"Rates offline — using last saved", expXls:"Export Excel", impBtn:"Import Excel", reset:"Reset all data", hint:"Excel columns: Date, Type, Category, Amount, Note, Currency.", empty:"No rows yet.", del:"x" },
+    zh: { kInc:"收入", kExp:"支出", kRem:"結餘", tIn:"收入", tOut:"支出", tSum:"摘要", tSet:"設定", lAmt:"金額", lDate:"日期", lCat:"類別", lNote:"備註", addIn:"+ 收入", addOut:"− 支出", chart:"本月", lTheme:"外觀", lLang:"語言", lFs:"字型大小", lCur:"總額顯示貨幣", fxBtn:"更新匯率", fxWait:"匯率載入中…", fxOk:"匯率已更新", fxFail:"未能連線，沿用上次匯率", expXls:"匯出 Excel", impBtn:"匯入 Excel", reset:"重設全部資料", hint:"Excel 欄位：Date, Type, Category, Amount, Note, Currency。", empty:"尚未有記錄。", del:"刪" }
   };
   const $ = (id) => document.getElementById(id);
   const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Hong_Kong" });
-  const FX = { HKD: 1, USD: 7.8, EUR: 8.5, JPY: 0.052 };
-  const CUR_LABEL = { HKD: "HKD", USD: "USD", EUR: "EURO", JPY: "JPY" };
-  let state = { rows: [], theme: "dark", lang: "zh", fs: "m", cur: "HKD" };
+  const CODES = ["HKD","USD","EUR","JPY","TWD"];
+  const CUR_LABEL = { HKD:"HKD", USD:"USD", EUR:"EURO", JPY:"JPY", TWD:"TWD" };
+  const FX_FALLBACK = { USD:1, HKD:7.84, EUR:0.86, JPY:160, TWD:31.7 };
+  const FX_KEY = "outflow.fx.v1";
+  let fx = { base:"USD", rates: Object.assign({}, FX_FALLBACK), at:"", day:"" };
+  try { const cached = JSON.parse(localStorage.getItem(FX_KEY) || "null"); if (cached && cached.rates) fx = Object.assign(fx, cached); } catch (e) {}
+  let state = { rows: [], theme:"dark", lang:"zh", fs:"m", cur:"HKD" };
   try { const raw = JSON.parse(localStorage.getItem(KEY) || "null"); if (raw) state = Object.assign(state, raw); } catch (e) {}
   if (!Array.isArray(state.rows)) state.rows = [];
-  delete state.goal;
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
-  function money(n) {
-    const code = state.cur || "HKD";
-    const d = code === "JPY" ? 0 : 1;
-    return (CUR_LABEL[code] || code) + " " + Number(n || 0).toLocaleString("en-HK", { maximumFractionDigits: d });
+  function money(n) { const code = state.cur || "HKD"; const d = code === "JPY" ? 0 : 1; return (CUR_LABEL[code]||code) + " " + Number(n||0).toLocaleString("en-HK", { maximumFractionDigits: d }); }
+  function rateOf(code) { const r = (fx.rates && fx.rates[code]) || FX_FALLBACK[code] || 1; return r > 0 ? r : 1; }
+  function toBook(n, from) { return Number(n||0) / rateOf(from||"HKD") * rateOf(state.cur||"HKD"); }
+  function curOptions(selected) { const sel = selected || state.cur || "HKD"; return CODES.map((c)=>`<option value="${c}"${c===sel?" selected":""}>${CUR_LABEL[c]}</option>`).join(""); }
+  function fillCurrencies() {
+    $("curI").innerHTML = curOptions($("curI").value || state.cur);
+    $("curO").innerHTML = curOptions($("curO").value || state.cur);
+    const keep = $("cur").value;
+    $("cur").innerHTML = curOptions(CODES.includes(keep)?keep:state.cur);
   }
-  function toBook(n, from) {
-    const src = FX[from] || FX.HKD;
-    const dst = FX[state.cur || "HKD"] || 1;
-    return Number(n || 0) * src / dst;
+  async function pullRates(force) {
+    const day = today();
+    if (!force && fx.day === day && fx.rates && fx.rates.HKD) { paintFx(); return; }
+    $("fxNote").textContent = t("fxWait");
+    try {
+      const res = await fetch("https://open.er-api.com/v6/latest/USD");
+      const data = await res.json();
+      if (data.result !== "success" || !data.rates) throw new Error("bad");
+      const rates = { USD: 1 };
+      CODES.forEach((c) => { if (data.rates[c]) rates[c] = data.rates[c]; });
+      fx = { base:"USD", rates, at: data.time_last_update_utc || new Date().toUTCString(), day };
+      localStorage.setItem(FX_KEY, JSON.stringify(fx));
+    } catch (err) {}
+    paintFx(); render();
+  }
+  function paintFx() {
+    const ok = fx.at ? (t("fxOk") + " · " + fx.at) : t("fxFail");
+    $("fxNote").textContent = ok + " · 1 USD = " + rateOf("HKD").toFixed(3) + " HKD / " + rateOf("TWD").toFixed(2) + " TWD / " + rateOf("JPY").toFixed(1) + " JPY / " + rateOf("EUR").toFixed(3) + " EUR";
   }
   const t = (k) => (I18N[state.lang] || I18N.zh)[k];
-  const monthKey = (d) => String(d || "").slice(0,7);
+  const monthKey = (d) => String(d||"").slice(0,7);
   const thisMonth = today().slice(0,7);
   function fillCats() {
-    $("catI").innerHTML = IN_CATS.map((c) => `<option>${c}</option>`).join("");
-    $("catO").innerHTML = OUT_CATS.map((c) => `<option>${c}</option>`).join("");
+    $("catI").innerHTML = IN_CATS.map((c)=>`<option>${c}</option>`).join("");
+    $("catO").innerHTML = OUT_CATS.map((c)=>`<option>${c}</option>`).join("");
   }
   function applyChrome() {
     document.documentElement.dataset.theme = state.theme === "day" ? "day" : "dark";
     document.documentElement.dataset.fs = state.fs || "m";
     document.documentElement.lang = state.lang === "en" ? "en" : "zh-Hant";
     $("title").textContent = "make money great again";
-    $["kInc","kExp","kRem","tIn","tOut","tSum","tSet","addIn","addOut","chartTitle","lTheme","lLang","lFs","lCur","expXls","impBtn","reset","setHint"].forEach((id) => { const map={kInc:"kInc",kExp:"kExp",kRem:"kRem",tIn:"tIn",tOut:"tOut",tSum:"tSum",tSet:"tSet",addIn:"addIn",addOut:"addOut",chartTitle:"chart",lTheme:"lTheme",lLang:"lLang",lFs:"lFs",lCur:"lCur",expXls:"expXls",impBtn:"impBtn",reset:"reset",setHint:"hint"}; $(id).textContent = t(map[id]); });
-    ["lAmtI","lAmtO"].forEach((id) => $(id).textContent = t("lAmt"));
-    ["lDateI","lDateO"].forEach((id) => $(id).textContent = t("lDate"));
-    ["lCatI","lCatO"].forEach((id) => $(id).textContent = t("lCat"));
-    ["lNoteI","lNoteO"].forEach((id) => $(id).textContent = t("lNote"));
+    ["kInc","kExp","kRem","tIn","tOut","tSum","tSet","addIn","addOut","chartTitle","lTheme","lLang","lFs","lCur","expXls","impBtn","reset","setHint"].forEach((id) => {
+      const map = {kInc:"kInc",kExp:"kExp",kRem:"kRem",tIn:"tIn",tOut:"tOut",tSum:"tSum",tSet:"tSet",addIn:"addIn",addOut:"addOut",chartTitle:"chart",lTheme:"lTheme",lLang:"lLang",lFs:"lFs",lCur:"lCur",expXls:"expXls",impBtn:"impBtn",reset:"reset",setHint:"hint"};
+      $(id).textContent = t(map[id]);
+    });
+    ["lAmtI","lAmtO"].forEach((id)=>$(id).textContent=t("lAmt"));
+    ["lCurI","lCurO"].forEach((id)=>$(id).textContent=state.lang==="en"?"Currency":"貨幣");
+    $("fxBtn").textContent = t("fxBtn");
+    ["lDateI","lDateO"].forEach((id)=>$(id).textContent=t("lDate"));
+    ["lCatI","lCatO"].forEach((id)=>$(id).textContent=t("lCat"));
+    ["lNoteI","lNoteO"].forEach((id)=>$(id).textContent=t("lNote"));
     $("theme").value = state.theme === "day" ? "day" : "dark";
     $("lang").value = state.lang === "en" ? "en" : "zh";
     $("fs").value = state.fs || "m";
-    $("cur").value = ["HKD","USD","EUR","JPY"].includes(state.cur) ? state.cur : "HKD";
+    $("cur").value = CODES.includes(state.cur) ? state.cur : "HKD";
   }
-  function rowHtml(r, i) {
-    const shown = money(toBook(r.a, r.cur || state.cur || "HKD"));
-    return `<div class="tx"><div><b>${r.cat}</b><div class="k">${r.d} · ${r.cur || state.cur || "HKD"} · ${r.note || ""}</div></div><div><span class="${r.t==="in"?"ok":"bad"}">${r.t==="in"?"+":"−"}${shown}</span> <button data-i="${i}">${t("del")}</button></div></div>`;
+  function rowHtml(r,i) {
+    const code = r.cur || state.cur || "HKD";
+    const raw = Number(r.a||0).toLocaleString("en-HK", { maximumFractionDigits: code==="JPY"?0:1 });
+    const conv = (code === (state.cur||"HKD")) ? "" : (" · " + money(toBook(r.a, code)));
+    return `<div class="tx"><div><b>${r.cat}</b><div class="k">${r.d} · ${r.note||""}</div></div><div><span class="${r.t==="in"?"ok":"bad"}">${r.t==="in"?"+":"−"}${raw} ${CUR_LABEL[code]||code}${conv}</span> <button data-i="${i}">${t("del")}</button></div></div>`;
   }
-  function bindDel(box) {
-    box.querySelectorAll("button[data-i]").forEach((b) => { b.onclick = () => { state.rows.splice(+b.dataset.i, 1); save(); render(); }; });
-  }
+  function bindDel(box) { box.querySelectorAll("button[data-i]").forEach((b)=>{ b.onclick=()=>{ state.rows.splice(+b.dataset.i,1); save(); render(); }; }); }
   function drawChart() {
-    const c = $("chart"); const ctx = c.getContext("2d"); const w = c.width, h = c.height;
-    ctx.clearRect(0,0,w,h);
-    const y = Number(thisMonth.slice(0,4)), m = Number(thisMonth.slice(5,7));
-    const days = new Date(y, m, 0).getDate();
-    const inc = Array(days).fill(0), exp = Array(days).fill(0);
-    state.rows.forEach((r) => {
-      if (monthKey(r.d) !== thisMonth) return;
-      const day = Number(String(r.d).slice(8,10)); if (!day) return;
-      const v = toBook(r.a, r.cur || state.cur || "HKD");
-      if (r.t === "in") inc[day-1] += v; else exp[day-1] += v;
-    });
-    const max = Math.max(1, ...inc, ...exp);
-    const pad = 28, plotW = w - pad * 2, plotH = h - 36;
-    const xAt = (i) => pad + (i / Math.max(1, days-1)) * plotW;
-    const yAt = (v) => 12 + plotH - (v / max) * plotH;
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "#2b3444";
+    const c=$("chart"), ctx=c.getContext("2d"), w=c.width, h=c.height; ctx.clearRect(0,0,w,h);
+    const y=Number(thisMonth.slice(0,4)), m=Number(thisMonth.slice(5,7)), days=new Date(y,m,0).getDate();
+    const inc=Array(days).fill(0), exp=Array(days).fill(0);
+    state.rows.forEach((r)=>{ if(monthKey(r.d)!==thisMonth) return; const day=Number(String(r.d).slice(8,10)); if(!day) return; const v=toBook(r.a, r.cur||state.cur||"HKD"); if(r.t==="in") inc[day-1]+=v; else exp[day-1]+=v; });
+    const max=Math.max(1,...inc,...exp), pad=28, plotW=w-pad*2, plotH=h-36;
+    const xAt=(i)=>pad+(i/Math.max(1,days-1))*plotW, yAt=(v)=>12+plotH-(v/max)*plotH;
+    ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--line").trim()||"#2b3444";
     ctx.beginPath(); ctx.moveTo(pad,12); ctx.lineTo(pad,12+plotH); ctx.lineTo(w-pad,12+plotH); ctx.stroke();
-    function line(arr, color) { ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); arr.forEach((v,i) => { const x=xAt(i), yy=yAt(v); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); }); ctx.stroke(); }
-    line(inc, "#34d399"); line(exp, "#fb7185");
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
-    ctx.font = "11px sans-serif"; ctx.fillText("1", pad, h-6); ctx.fillText(String(days), w-pad-10, h-6);
+    function line(arr,color){ ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath(); arr.forEach((v,i)=>{ const x=xAt(i), yy=yAt(v); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); }); ctx.stroke(); }
+    line(inc,"#34d399"); line(exp,"#fb7185");
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--muted").trim(); ctx.font="11px sans-serif"; ctx.fillText("1",pad,h-6); ctx.fillText(String(days),w-pad-10,h-6);
   }
   function render() {
     applyChrome();
-    const inc = state.rows.filter((r)=>r.t==="in").reduce((a,b)=>a+toBook(b.a, b.cur || state.cur || "HKD"),0);
-    const exp = state.rows.filter((r)=>r.t==="out").reduce((a,b)=>a+toBook(b.a, b.cur || state.cur || "HKD"),0);
-    $("inc").textContent = money(inc); $("exp").textContent = money(exp); $("rem").textContent = money(inc-exp);
-    $("rem").className = "n " + (inc-exp>=0 ? "ok" : "bad");
-    const ins = state.rows.map((r,i)=>({r,i})).filter((x)=>x.r.t==="in").reverse();
-    const outs = state.rows.map((r,i)=>({r,i})).filter((x)=>x.r.t==="out").reverse();
-    $("listI").innerHTML = ins.map((x)=>rowHtml(x.r,x.i)).join("") || `<p class="hint">${t("empty")}</p>`;
-    $("listO").innerHTML = outs.map((x)=>rowHtml(x.r,x.i)).join("") || `<p class="hint">${t("empty")}</p>`;
+    const inc=state.rows.filter((r)=>r.t==="in").reduce((a,b)=>a+toBook(b.a,b.cur||state.cur||"HKD"),0);
+    const exp=state.rows.filter((r)=>r.t==="out").reduce((a,b)=>a+toBook(b.a,b.cur||state.cur||"HKD"),0);
+    $("inc").textContent=money(inc); $("exp").textContent=money(exp); $("rem").textContent=money(inc-exp);
+    $("rem").className="n "+(inc-exp>=0?"ok":"bad");
+    const ins=state.rows.map((r,i)=>({r,i})).filter((x)=>x.r.t==="in").reverse();
+    const outs=state.rows.map((r,i)=>({r,i})).filter((x)=>x.r.t==="out").reverse();
+    $("listI").innerHTML=ins.map((x)=>rowHtml(x.r,x.i)).join("")||`<p class="hint">${t("empty")}</p>`;
+    $("listO").innerHTML=outs.map((x)=>rowHtml(x.r,x.i)).join("")||`<p class="hint">${t("empty")}</p>`;
     bindDel($("listI")); bindDel($("listO"));
-    const monthRows = state.rows.filter((r)=>monthKey(r.d)===thisMonth);
-    const mi = monthRows.filter((r)=>r.t==="in").reduce((a,b)=>a+toBook(b.a, b.cur || state.cur || "HKD"),0);
-    const mo = monthRows.filter((r)=>r.t==="out").reduce((a,b)=>a+toBook(b.a, b.cur || state.cur || "HKD"),0);
-    $("sumList").innerHTML = `<div class="k">${thisMonth} · ${CUR_LABEL[state.cur] || "HKD"}</div><div class="tx"><span class="ok">${t("kInc")} ${money(mi)}</span><span class="bad">${t("kExp")} ${money(mo)}</span></div>`;
+    const monthRows=state.rows.filter((r)=>monthKey(r.d)===thisMonth);
+    const mi=monthRows.filter((r)=>r.t==="in").reduce((a,b)=>a+toBook(b.a,b.cur||state.cur||"HKD"),0);
+    const mo=monthRows.filter((r)=>r.t==="out").reduce((a,b)=>a+toBook(b.a,b.cur||state.cur||"HKD"),0);
+    $("sumList").innerHTML=`<div class="k">${thisMonth} · ${CUR_LABEL[state.cur]||"HKD"}</div><div class="tx"><span class="ok">${t("kInc")} ${money(mi)}</span><span class="bad">${t("kExp")} ${money(mo)}</span></div>`;
     drawChart();
   }
-  function add(tcode) {
-    const isIn = tcode === "in"; const a = Number($(isIn?"amtI":"amtO").value); if (!a) return;
-    state.rows.push({ t: tcode, a, cur: state.cur || "HKD", cat: $(isIn?"catI":"catO").value, note: $(isIn?"noteI":"noteO").value, d: $(isIn?"dateI":"dateO").value || today() });
-    $(isIn?"amtI":"amtO").value = ""; $(isIn?"noteI":"noteO").value = ""; save(); render();
+  function add(kind) {
+    const isIn=kind==="in"; const a=Number($(isIn?"amtI":"amtO").value); if(!a) return;
+    state.rows.push({ t:kind, a, cur: $(isIn?"curI":"curO").value||state.cur||"HKD", cat: $(isIn?"catI":"catO").value, note: $(isIn?"noteI":"noteO").value, d: $(isIn?"dateI":"dateO").value||today() });
+    $(isIn?"amtI":"amtO").value=""; $(isIn?"noteI":"noteO").value=""; save(); render();
   }
-  function show(p) {
-    ["in","out","sum","set"].forEach((k) => { $("p-"+k).classList.toggle("hidden", k!==p); document.querySelector(`.dock [data-p="${k}"]`).classList.toggle("on", k===p); });
-    if (p === "sum") drawChart();
-  }
+  function show(p) { ["in","out","sum","set"].forEach((k)=>{ $("p-"+k).classList.toggle("hidden",k!==p); document.querySelector(`.dock [data-p="${k}"]`).classList.toggle("on",k===p); }); if(p==="sum") drawChart(); }
   function exportXls() {
-    if (typeof XLSX === "undefined") { alert("Excel library failed to load"); return; }
-    const rows = [["Date","Type","Category","Amount","Note","Currency"]].concat(state.rows.map((r) => [r.d, r.t==="in"?"Income":"Expense", r.cat, r.a, r.note || "", r.cur || state.cur || "HKD"]));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Outflow"); XLSX.writeFile(wb, "outflow.xlsx");
+    if (typeof XLSX==="undefined") { alert("Excel library failed to load"); return; }
+    const rows=[["Date","Type","Category","Amount","Note","Currency"]].concat(state.rows.map((r)=>[r.d,r.t==="in"?"Income":"Expense",r.cat,r.a,r.note||"",r.cur||state.cur||"HKD"]));
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),"Outflow"); XLSX.writeFile(wb,"outflow.xlsx");
   }
   function importXls(file) {
-    if (typeof XLSX === "undefined") { alert("Excel library failed to load"); return; }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const wb = XLSX.read(e.target.result, { type: "array", cellDates: true });
-      const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-      const next = [];
-      data.slice(1).forEach((row) => {
-        if (!row || !row.length) return;
-        const type = String(row[1] || "").toLowerCase(); const amt = Number(row[3]); if (!amt) return;
-        let d = row[0]; if (d instanceof Date) d = d.toISOString().slice(0,10); else d = String(d || today()).slice(0,10);
-        const isIn = type.indexOf("in") === 0 || type.indexOf("收") >= 0;
-        let cur = String(row[5] || state.cur || "HKD").toUpperCase(); if (cur === "EURO") cur = "EUR"; if (!FX[cur]) cur = state.cur || "HKD";
-        next.push({ t: isIn ? "in" : "out", a: amt, cat: String(row[2] || "Other"), note: String(row[4] || ""), d, cur });
+    if (typeof XLSX==="undefined") { alert("Excel library failed to load"); return; }
+    const reader=new FileReader();
+    reader.onload=(e)=>{
+      const wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
+      const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+      const next=[];
+      data.slice(1).forEach((row)=>{
+        if(!row||!row.length) return;
+        const type=String(row[1]||"").toLowerCase(); const amt=Number(row[3]); if(!amt) return;
+        let d=row[0]; if(d instanceof Date) d=d.toISOString().slice(0,10); else d=String(d||today()).slice(0,10);
+        const isIn=type.indexOf("in")===0||type.indexOf("收")>=0;
+        let cur=String(row[5]||state.cur||"HKD").toUpperCase(); if(cur==="EURO") cur="EUR"; if(!CODES.includes(cur)) cur=state.cur||"HKD";
+        next.push({ t:isIn?"in":"out", a:amt, cat:String(row[2]||"Other"), note:String(row[4]||""), d, cur });
       });
-      if (!next.length) { alert("No rows found"); return; }
-      state.rows = state.rows.concat(next); save(); render();
+      if(!next.length){ alert("No rows found"); return; }
+      state.rows=state.rows.concat(next); save(); render();
     };
     reader.readAsArrayBuffer(file);
   }
-  $("dateI").value = today(); $("dateO").value = today(); fillCats();
-  $("addIn").onclick = () => add("in"); $("addOut").onclick = () => add("out");
-  document.querySelectorAll(".dock button").forEach((b) => b.onclick = () => show(b.dataset.p));
-  $("theme").onchange = () => { state.theme = $("theme").value; save(); applyChrome(); drawChart(); };
-  $("lang").onchange = () => { state.lang = $("lang").value; save(); render(); };
-  $("fs").onchange = () => { state.fs = $("fs").value; save(); applyChrome(); };
-  $("cur").onchange = () => { state.cur = $("cur").value; save(); render(); };
-  $("expXls").onclick = exportXls; $("impBtn").onclick = () => $("impFile").click();
-  $("impFile").onchange = (e) => { const f = e.target.files[0]; if (f) importXls(f); e.target.value = ""; };
-  $("reset").onclick = () => { if (!confirm(state.lang === "en" ? "Delete every row on this phone?" : "刪除此手機上的全部記錄？")) return; state.rows = []; save(); render(); };
-  render();
+  $("dateI").value=today(); $("dateO").value=today(); fillCats(); fillCurrencies();
+  $("addIn").onclick=()=>add("in"); $("addOut").onclick=()=>add("out");
+  document.querySelectorAll(".dock button").forEach((b)=>b.onclick=()=>show(b.dataset.p));
+  $("theme").onchange=()=>{ state.theme=$("theme").value; save(); applyChrome(); drawChart(); };
+  $("lang").onchange=()=>{ state.lang=$("lang").value; save(); render(); };
+  $("fs").onchange=()=>{ state.fs=$("fs").value; save(); applyChrome(); };
+  $("cur").onchange=()=>{ state.cur=$("cur").value; save(); fillCurrencies(); render(); };
+  $("fxBtn").onclick=()=>pullRates(true);
+  $("expXls").onclick=exportXls; $("impBtn").onclick=()=>$("impFile").click();
+  $("impFile").onchange=(e)=>{ const f=e.target.files[0]; if(f) importXls(f); e.target.value=""; };
+  $("reset").onclick=()=>{ if(!confirm(state.lang==="en"?"Delete every row on this phone?":"刪除此手機上的全部記錄？")) return; state.rows=[]; save(); render(); };
+  render(); pullRates(false);
   </script>
 </body>
 </html>
