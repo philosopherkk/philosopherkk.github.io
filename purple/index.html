@@ -64,13 +64,13 @@
   <div class="wrap">
     <section id="calendar">
       <h2>Calendar</h2>
-      <div class="weekbar" id="weekbar">
+      <div class="weekbar">
         <label>Issue week</label>
         <select id="weekSelect"></select>
         <button type="button" id="liveBtn">Today’s issue</button>
         <span id="clock" style="color:var(--muted)"></span>
       </div>
-      <p class="note">Weeks flip Tuesday 00:00 GMT. Season 3 2026 is stored in this file (16 Jun – 8 Sep).</p>
+      <p class="note">Weeks flip Tuesday 00:00 GMT.</p>
       <p class="ios-note" id="iosNote"></p>
       <div id="calTable"></div>
     </section>
@@ -81,10 +81,23 @@
     <h2 id="archive">Every S3 circuit, in full</h2>
     <div id="archiveBox"></div>
   </div>
-  <footer>Purple Sectors · not affiliated with iRacing or Gran Turismo</footer>
+  <footer>Purple Sectors</footer>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://raw.githubusercontent.com/philosopherkk/purple-sectors/main/data-series.js"></script>
-  <script src="https://raw.githubusercontent.com/philosopherkk/purple-sectors/main/data-tracks.js"></script>
-  <script src="https://raw.githubusercontent.com/philosopherkk/purple-sectors/main/data-app.js"></script>
+  <script>
+  (async () => {
+    const base = "https://raw.githubusercontent.com/philosopherkk/purple-sectors/main/";
+    for (const f of ["data-series.js", "data-tracks.js", "data-app.js"]) {
+      const t = await fetch(base + f).then((r) => {
+        if (!r.ok) throw new Error(f + " " + r.status);
+        return r.text();
+      });
+      const s = document.createElement("script");
+      s.textContent = t;
+      document.body.appendChild(s);
+    }
+  })().catch((err) => {
+    document.body.insertAdjacentHTML("afterbegin", "<p style='padding:16px'>Failed to load Purple Sectors: "+err.message+"</p>");
+  });
+  </script>
 </body>
 </html>
