@@ -8,18 +8,102 @@
   <meta name="apple-mobile-web-app-title" content="Outflow" />
   <title>Outflow — budget planner</title>
   <style>
-    body{margin:0;background:#0e1116;color:#e8edf5;font-family:system-ui,-apple-system,sans-serif;padding:28px 18px;line-height:1.5}
-    a{color:#6ee7b7}
-    .logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#34d399,#22d3ee);display:grid;place-items:center;font-weight:800;color:#042018}
-    code{color:#67e8f9}
+    :root{--bg:#0e1116;--card:#161b22;--line:#2b3444;--text:#e8edf5;--muted:#8b97a8;--ok:#34d399;--bad:#fb7185;--accent:#6ee7b7}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:18px 14px 48px}
+    h1{font-size:1.15rem;margin:0}
+    h1 span{display:block;color:var(--muted);font-size:.78rem;font-weight:500}
+    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+    .k{color:var(--muted);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
+    .n{font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums}
+    .ok{color:var(--ok)}.bad{color:var(--bad)}
+    label{display:block;color:var(--muted);font-size:.75rem;margin:8px 0 4px}
+    input,select,button{font:inherit;width:100%}
+    input,select{background:#0b1220;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    button{border:0;border-radius:10px;padding:11px;font-weight:700;cursor:pointer}
+    .in{background:#0f3d32;color:var(--ok);margin-top:10px}
+    .out{background:#3a151c;color:var(--bad);margin-top:10px}
+    .list{margin-top:14px}
+    .tx{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+    .tx button{width:auto;background:transparent;color:var(--muted);padding:0 6px}
+    .bar{height:8px;background:#1c2330;border-radius:99px;overflow:hidden;margin-top:8px}
+    .bar>i{display:block;height:100%;background:var(--ok)}
   </style>
 </head>
 <body>
-  <div class="logo">OF</div>
-  <h1>Outflow</h1>
-  <p>This folder is the published budget app. The ledger itself stays in your browser — not in GitHub.</p>
-  <p>The full app files are <code>index.html</code> + <code>app.js</code> in the project folder. Copy them into this <code>outflow/</code> folder on <code>philosopherkk.github.io</code> to replace this note.</p>
-  <p>Until that copy lands, open the project <code>index.html</code> on a computer, then Safari → Add to Home Screen after it is on https.</p>
-  <p><a href="../">All three apps</a></p>
+  <div class="top">
+    <h1>Outflow<span>This page only. Not the hub.</span></h1>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="k">Income</div><div class="n ok" id="inc">0</div></div>
+    <div class="card"><div class="k">Outflow</div><div class="n bad" id="exp">0</div></div>
+    <div class="card"><div class="k">Remaining</div><div class="n" id="rem">0</div></div>
+    <div class="card"><div class="k">Save goal</div><div class="n" id="goalN">0</div><div class="bar"><i id="bar"></i></div></div>
+  </div>
+  <div class="card">
+    <label>Save goal (HKD)</label>
+    <input id="goal" type="number" min="0" step="1" placeholder="e.g. 5000" />
+    <div class="row">
+      <div><label>Amount</label><input id="amt" type="number" min="0" step="0.1" placeholder="0" /></div>
+      <div>
+        <label>Type</label>
+        <select id="cat">
+          <option>Salary</option><option>Bonus</option><option>Rent</option>
+          <option>MTR</option><option>Octopus</option><option>Wet market</option>
+          <option>Dining</option><option>Utilities</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <label>Note</label>
+    <input id="note" placeholder="optional" />
+    <div class="row">
+      <button class="in" id="addIn">+ Income</button>
+      <button class="out" id="addOut">− Expense</button>
+    </div>
+  </div>
+  <div class="list" id="list"></div>
+  <script>
+  const KEY = "outflow.hosted.v1";
+  const $ = (id) => document.getElementById(id);
+  let state = { goal: 0, rows: [] };
+  try { state = JSON.parse(localStorage.getItem(KEY)) || state; } catch (e) {}
+  if (!Array.isArray(state.rows)) state.rows = [];
+  const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+  const hkd = (n) => Number(n || 0).toLocaleString("en-HK", { maximumFractionDigits: 1 });
+  function render() {
+    const inc = state.rows.filter(r => r.t === "in").reduce((a,b)=>a+b.a,0);
+    const exp = state.rows.filter(r => r.t === "out").reduce((a,b)=>a+b.a,0);
+    const rem = inc - exp;
+    $("inc").textContent = hkd(inc);
+    $("exp").textContent = hkd(exp);
+    $("rem").textContent = hkd(rem);
+    $("rem").className = "n " + (rem >= 0 ? "ok" : "bad");
+    $("goal").value = state.goal || "";
+    $("goalN").textContent = hkd(state.goal || 0);
+    const pct = state.goal > 0 ? Math.max(0, Math.min(100, (Math.max(0, rem) / state.goal) * 100)) : 0;
+    $("bar").style.width = pct + "%";
+    $("list").innerHTML = state.rows.slice().reverse().map((r,i,arr) => {
+      const idx = arr.length - 1 - i;
+      return "<div class='tx'><div><b>"+r.cat+"</b><div class='k'>"+r.note+"</div></div><div><span class='"+(r.t==="in"?"ok":"bad")+"'>"+(r.t==="in"?"+":"-")+hkd(r.a)+"</span> <button data-i='"+idx+"'>x</button></div></div>";
+    }).join("") || "<p class='k'>No rows yet on this phone.</p>";
+    $("list").querySelectorAll("button[data-i]").forEach(b => {
+      b.onclick = () => { state.rows.splice(+b.dataset.i,1); save(); render(); };
+    });
+  }
+  function add(t) {
+    const a = Number($("amt").value);
+    if (!a) return;
+    state.rows.push({ t, a, cat: $("cat").value, note: $("note").value, d: Date.now() });
+    $("amt").value = ""; $("note").value = "";
+    save(); render();
+  }
+  $("addIn").onclick = () => add("in");
+  $("addOut").onclick = () => add("out");
+  $("goal").onchange = () => { state.goal = Number($("goal").value)||0; save(); render(); };
+  render();
+  </script>
 </body>
 </html>
