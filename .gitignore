@@ -6,5 +6,9 @@
 **/passphrase*
 **/outflow-backup*
 outflow/*.csv
+outflow/*.xlsx
+outflow/*.xls
+**/*.xlsx
+**/*.xls
 outflow/backup*.json
 outflow/export*.json
