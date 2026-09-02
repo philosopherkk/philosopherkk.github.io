@@ -1,0 +1,12 @@
+# Private vault / ledger material — never publish
+*.csv
+backup*.json
+export*.json
+subscriptions*.json
+fixture*.json
+*-import*.json
+_tmp_sub_fixture.json
+ledger*.json
+*vault*.json
+passphrase*
+outflow-backup*

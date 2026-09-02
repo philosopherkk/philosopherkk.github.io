@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "2.0.1";
+  const VERSION = "2.1.0";
   const UPDATED = "2026-09-02";
   const VAULT_KEY = "outflow.v3.vault";
   const ITER = 210000;
@@ -7,6 +7,8 @@
   const CODES = ["HKD", "USD", "EUR", "JPY", "TWD"];
   const IN_CATS = ["Salary", "Bonus", "Allowance", "Refund", "Interest", "Other"];
   const OUT_CATS = ["Rent", "Food", "Transport", "Utilities", "Phone", "Medical", "Shopping", "Other"];
+  const CADENCES = ["monthly", "yearly", "unknown"];
+  const STATUSES = ["active", "refunded", "unknown"];
   const $ = (id) => document.getElementById(id);
   const te = new TextEncoder();
   const td = new TextDecoder();
@@ -20,9 +22,26 @@
     clearTimeout(toast._t);
     toast._t = setTimeout(() => el.classList.add("hidden"), 2200);
   };
-  let key = null, idle = null, undo = null, db = emptyDb(), range = "this", customFrom = "", customTo = "", filterType = "all", q = "", editing = null;
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let key = null, idle = null, undo = null, db = emptyDb(), range = "this", customFrom = "", customTo = "", filterType = "all", q = "", editing = null, subFilter = "all";
   function emptyDb() {
-    return { version: VERSION, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), currency: "HKD", categories: { income: IN_CATS.slice(), outflow: OUT_CATS.slice() }, entries: [] };
+    return {
+      version: VERSION,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      currency: "HKD",
+      categories: { income: IN_CATS.slice(), outflow: OUT_CATS.slice() },
+      entries: [],
+      subscriptions: [],
+      subscriptionsImportedAt: null
+    };
+  }
+  function normalizeDb(opened) {
+    const next = Object.assign(emptyDb(), opened || {});
+    if (!Array.isArray(next.entries)) next.entries = [];
+    if (!Array.isArray(next.subscriptions)) next.subscriptions = [];
+    if (!next.categories || typeof next.categories !== "object") next.categories = { income: IN_CATS.slice(), outflow: OUT_CATS.slice() };
+    return next;
   }
   function b64(buf) { const bytes = new Uint8Array(buf); let s = ""; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); }
   function unb64(s) { const raw = atob(s); const out = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; }
@@ -55,6 +74,19 @@
     const code = db.currency || "HKD";
     const d = code === "JPY" ? 0 : 1;
     return code + " " + Number(n || 0).toLocaleString("en-HK", { maximumFractionDigits: d });
+  }
+  function formatSubAmount(item) {
+    if (item.amount === null || item.amount === undefined || item.amount === "") {
+      return { text: "Amount unknown", missing: true };
+    }
+    const n = Number(item.amount);
+    if (Number.isNaN(n)) return { text: "Amount unknown", missing: true };
+    const code = String(item.currency || "").trim() || "—";
+    const digits = code === "JPY" ? 0 : 2;
+    return {
+      text: code + " " + n.toLocaleString("en-HK", { minimumFractionDigits: 0, maximumFractionDigits: digits }),
+      missing: false
+    };
   }
   function inRange(e) {
     const d = e.date || "";
@@ -93,8 +125,7 @@
     if (!blob) return;
     try {
       const opened = await openSeal(pass, blob);
-      db = Object.assign(emptyDb(), opened);
-      if (!Array.isArray(db.entries)) db.entries = [];
+      db = normalizeDb(opened);
       key = await derive(pass, unb64(blob.salt));
       $("unlockPass").value = "";
       openApp(false);
@@ -126,6 +157,172 @@
     return db.entries.filter((e) => e.recurring && e.recurring.nextDue && e.recurring.nextDue >= t)
       .sort((a, b) => a.recurring.nextDue.localeCompare(b.recurring.nextDue)).slice(0, 6);
   }
+  function normalizeCadence(v) {
+    const s = String(v || "").trim().toLowerCase();
+    return CADENCES.includes(s) ? s : "unknown";
+  }
+  function normalizeStatus(v) {
+    const s = String(v || "").trim().toLowerCase();
+    return STATUSES.includes(s) ? s : "unknown";
+  }
+  function normalizeDateHkt(v) {
+    if (v === null || v === undefined || v === "") return null;
+    const s = String(v).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    return s;
+  }
+  function normalizeAmount(v) {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  function normalizeSubscription(raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const merchant = String(raw.merchant || "").trim();
+    if (!merchant) return null;
+    return {
+      id: uid(),
+      merchant,
+      amount: normalizeAmount(raw.amount),
+      currency: String(raw.currency || "").trim() || "",
+      cadence: normalizeCadence(raw.cadence),
+      last_charge_date_hkt: normalizeDateHkt(raw.last_charge_date_hkt),
+      status: normalizeStatus(raw.status),
+      source_from: String(raw.source_from || "").trim(),
+      source_subject: String(raw.source_subject || "").trim(),
+      source_message_id: String(raw.source_message_id || "").trim(),
+      notes: String(raw.notes || "").trim()
+    };
+  }
+  function parseSubscriptionPayload(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (e) {
+      throw new Error("Not valid JSON.");
+    }
+    if (data && typeof data === "object" && !Array.isArray(data) && Array.isArray(data.subscriptions)) {
+      data = data.subscriptions;
+    }
+    if (!Array.isArray(data)) throw new Error("Expected a JSON array of subscription objects.");
+    const rows = [];
+    const errors = [];
+    data.forEach((item, i) => {
+      const row = normalizeSubscription(item);
+      if (!row) errors.push("Row " + (i + 1) + " needs a merchant.");
+      else rows.push(row);
+    });
+    if (!rows.length) throw new Error(errors[0] || "No subscription rows found.");
+    return { rows, skipped: errors.length };
+  }
+  function amountKnown(item) {
+    return item.amount !== null && item.amount !== undefined && !Number.isNaN(Number(item.amount));
+  }
+  function filteredSubscriptions() {
+    return (db.subscriptions || []).filter((s) => {
+      if (subFilter === "known") return amountKnown(s);
+      if (subFilter === "unknown") return !amountKnown(s);
+      if (subFilter === "active") return s.status === "active";
+      if (subFilter === "refunded") return s.status === "refunded";
+      return true;
+    });
+  }
+  function sortSubs(list) {
+    return list.slice().sort((a, b) => {
+      const ak = amountKnown(a) ? 0 : 1;
+      const bk = amountKnown(b) ? 0 : 1;
+      if (ak !== bk) return ak - bk;
+      const ad = a.last_charge_date_hkt || "";
+      const bd = b.last_charge_date_hkt || "";
+      if (ad !== bd) return bd.localeCompare(ad);
+      return String(a.merchant).localeCompare(String(b.merchant));
+    });
+  }
+  function statusPill(status) {
+    if (status === "active") return `<span class="pill ok">active</span>`;
+    if (status === "refunded") return `<span class="pill bad">refunded</span>`;
+    return `<span class="pill">unknown</span>`;
+  }
+  function renderSubRow(s) {
+    const amt = formatSubAmount(s);
+    const date = s.last_charge_date_hkt || "no charge date";
+    const noteBits = [];
+    if (s.notes) noteBits.push(s.notes);
+    if (s.source_subject) noteBits.push(s.source_subject);
+    const extra = noteBits.length ? `<div class="hint">${esc(noteBits.join(" · "))}</div>` : "";
+    return `<div class="tx">
+      <div>
+        <b>${esc(s.merchant)}</b>
+        <div class="hint">${esc(date)}${s.source_from ? " · " + esc(s.source_from) : ""}</div>
+        <div class="meta">
+          <span class="pill">${esc(s.cadence)}</span>
+          ${statusPill(s.status)}
+          ${amt.missing ? `<span class="pill warn">amount unknown</span>` : ""}
+        </div>
+        ${extra}
+      </div>
+      <div class="${amt.missing ? "amt-missing" : "bad"}">${esc(amt.text)}</div>
+    </div>`;
+  }
+  function renderSubscriptions() {
+    const all = db.subscriptions || [];
+    const known = all.filter(amountKnown).length;
+    const unknown = all.length - known;
+    const refunded = all.filter((s) => s.status === "refunded").length;
+    $("subCount").textContent = String(all.length);
+    if (!all.length) {
+      $("subSummaryHint").textContent = "No subscriptions yet. Paste or drop Ledger JSON.";
+    } else {
+      const when = db.subscriptionsImportedAt ? " · imported " + String(db.subscriptionsImportedAt).slice(0, 10) : "";
+      $("subSummaryHint").textContent = known + " with amount · " + unknown + " amount unknown · " + refunded + " refunded" + when;
+    }
+    $("subImportMeta").textContent = all.length
+      ? all.length + " bill" + (all.length === 1 ? "" : "s") + " in vault (on-device only)."
+      : "";
+    document.querySelectorAll("[data-sub-filter]").forEach((c) => c.classList.toggle("on", c.dataset.subFilter === subFilter));
+    const rows = sortSubs(filteredSubscriptions());
+    if (!all.length) {
+      $("subList").innerHTML = `<p class="hint">Importer accepts a JSON array with merchant, amount, currency, cadence, last_charge_date_hkt, status, and source fields. Amounts are never invented — null stays “Amount unknown”.</p>`;
+      return;
+    }
+    if (!rows.length) {
+      $("subList").innerHTML = `<p class="hint">Nothing in this filter.</p>`;
+      return;
+    }
+    const knownRows = rows.filter(amountKnown);
+    const unknownRows = rows.filter((s) => !amountKnown(s));
+    let html = "";
+    if (knownRows.length && (subFilter === "all" || subFilter === "known" || subFilter === "active" || subFilter === "refunded")) {
+      if (subFilter === "all") html += `<div class="sub-group">Known amounts</div>`;
+      html += knownRows.map(renderSubRow).join("");
+    }
+    if (unknownRows.length && (subFilter === "all" || subFilter === "unknown" || subFilter === "active" || subFilter === "refunded")) {
+      if (subFilter === "all") html += `<div class="sub-group">Amount unknown / reminder only</div>`;
+      html += unknownRows.map(renderSubRow).join("");
+    }
+    $("subList").innerHTML = html || `<p class="hint">Nothing in this filter.</p>`;
+  }
+  async function importSubscriptionsText(text) {
+    $("subImportErr").textContent = "";
+    let parsed;
+    try { parsed = parseSubscriptionPayload(text); }
+    catch (err) { $("subImportErr").textContent = err.message || "Import failed"; return; }
+    if ((db.subscriptions || []).length && !confirm("Replace the " + db.subscriptions.length + " imported bill(s) on this device?")) return;
+    db.subscriptions = parsed.rows;
+    db.subscriptionsImportedAt = new Date().toISOString();
+    await persist();
+    $("subPaste").value = "";
+    render();
+    const skip = parsed.skipped ? " · skipped " + parsed.skipped : "";
+    toast("Imported " + parsed.rows.length + " bill" + (parsed.rows.length === 1 ? "" : "s") + skip);
+  }
+  async function clearSubscriptions() {
+    if (!(db.subscriptions || []).length) { toast("No bills to clear"); return; }
+    if (!confirm("Clear imported bills from this device vault?")) return;
+    db.subscriptions = [];
+    db.subscriptionsImportedAt = null;
+    await persist();
+    render();
+    toast("Bills cleared");
+  }
   function render() {
     $("verFoot").textContent = "Outflow " + VERSION + " · updated " + UPDATED;
     $("cur").value = CODES.includes(db.currency) ? db.currency : "HKD";
@@ -144,14 +341,15 @@
     else $("list").innerHTML = rows.map((e) => {
       const sign = e.type === "income" ? "+" : "\u2212";
       const rec = e.recurring ? ` · due ${e.recurring.nextDue || ""}` : "";
-      return `<div class="tx"><div><b>${e.category}</b><div class="hint">${e.date}${rec}${e.note ? " · " + e.note : ""}</div></div><div><span class="${e.type === "income" ? "ok" : "bad"}">${sign}${money(e.amount)}</span> <button class="ghost" data-ed="${e.id}">Edit</button> <button class="ghost" data-del="${e.id}">Delete</button></div></div>`;
+      return `<div class="tx"><div><b>${esc(e.category)}</b><div class="hint">${esc(e.date)}${esc(rec)}${e.note ? " · " + esc(e.note) : ""}</div></div><div><span class="${e.type === "income" ? "ok" : "bad"}">${sign}${esc(money(e.amount))}</span> <button class="ghost" data-ed="${esc(e.id)}">Edit</button> <button class="ghost" data-del="${esc(e.id)}">Delete</button></div></div>`;
     }).join("");
     $("list").querySelectorAll("[data-ed]").forEach((b) => b.onclick = () => openEdit(b.dataset.ed));
     $("list").querySelectorAll("[data-del]").forEach((b) => b.onclick = () => removeRow(b.dataset.del));
-    $("dueBox").innerHTML = upcoming().map((e) => `<div class="hint">${e.category} · ${e.recurring.nextDue} · ${money(e.amount)}</div>`).join("") || `<div class="hint">No recurring due dates.</div>`;
+    $("dueBox").innerHTML = upcoming().map((e) => `<div class="hint">${esc(e.category)} · ${esc(e.recurring.nextDue)} · ${esc(money(e.amount))}</div>`).join("") || `<div class="hint">No recurring due dates.</div>`;
     $("catEdit").value = cats("outflow").join("\n");
     $("catEditIn").value = cats("income").join("\n");
     document.querySelectorAll("[data-range]").forEach((c) => c.classList.toggle("on", c.dataset.range === range));
+    renderSubscriptions();
   }
   function openSheet(show) { $("sheet").classList.toggle("hidden", !show); }
   function openAdd(type) {
@@ -194,7 +392,7 @@
     db.entries = undo; undo = null; persist(); render(); toast("Undone");
   }
   function showPage(name) {
-    ["home", "due", "set"].forEach((p) => {
+    ["home", "bills", "due", "set"].forEach((p) => {
       $(p).classList.toggle("hidden", p !== name);
       document.querySelector(`.dock [data-p="${p}"]`).classList.toggle("on", p === name);
     });
@@ -214,12 +412,25 @@
     try {
       const opened = await openSeal(pass, blob);
       if (!opened || !Array.isArray(opened.entries)) throw new Error("bad");
-      db = Object.assign(emptyDb(), opened);
+      db = normalizeDb(opened);
       const fresh = await seal(pass, db);
       localStorage.setItem(VAULT_KEY, JSON.stringify(fresh));
       key = await derive(pass, unb64(fresh.salt));
       render(); toast("Backup imported");
     } catch (err) { toast("Could not open backup"); }
+  }
+  function wireDropzone() {
+    const zone = $("subDrop");
+    const onDrag = (e) => { e.preventDefault(); e.stopPropagation(); zone.classList.add("drag"); };
+    const offDrag = (e) => { e.preventDefault(); e.stopPropagation(); zone.classList.remove("drag"); };
+    ["dragenter", "dragover"].forEach((ev) => zone.addEventListener(ev, onDrag));
+    ["dragleave", "dragend"].forEach((ev) => zone.addEventListener(ev, offDrag));
+    zone.addEventListener("drop", async (e) => {
+      offDrag(e);
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+      await importSubscriptionsText(await file.text());
+    });
   }
   $("createBtn").onclick = createVault;
   $("unlockBtn").onclick = unlockVault;
@@ -252,6 +463,19 @@
   };
   document.querySelectorAll(".dock button").forEach((b) => b.onclick = () => showPage(b.dataset.p));
   $("hideBanner").onclick = () => $("iosBanner").classList.add("hidden");
+  $("subPasteBtn").onclick = () => importSubscriptionsText($("subPaste").value);
+  $("subFileBtn").onclick = () => $("subFile").click();
+  $("subFile").onchange = async (e) => {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    await importSubscriptionsText(await f.text());
+  };
+  $("subClearBtn").onclick = clearSubscriptions;
+  document.querySelectorAll("[data-sub-filter]").forEach((c) => {
+    c.onclick = () => { subFilter = c.dataset.subFilter; renderSubscriptions(); };
+  });
+  wireDropzone();
   $("verLine").textContent = "Outflow " + VERSION + " · " + UPDATED;
   showGate();
   if ("serviceWorker" in navigator) {

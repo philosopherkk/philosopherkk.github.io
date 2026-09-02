@@ -19,7 +19,7 @@
 <body>
   <div class="gate" id="gate">
     <div class="gate-card card">
-      <h1>Outflow<b id="verLine">Outflow 2.0.0 · 2026-09-02</b></h1>
+      <h1>Outflow<b id="verLine">Outflow 2.1.0 · 2026-09-02</b></h1>
       <p class="hint">Private income and spending ledger. Stored only on this device. Nothing is uploaded.</p>
       <div id="setupBox">
         <label>Create passphrase</label>
@@ -41,7 +41,7 @@
   <main>
     <section id="home">
       <div class="top">
-        <h1>Outflow<b id="verFoot">Outflow 2.0.0 · updated 2026-09-02</b></h1>
+        <h1>Outflow<b id="verFoot">Outflow 2.1.0 · updated 2026-09-02</b></h1>
         <button class="ghost" id="lockBtn">Lock</button>
       </div>
       <div class="card hero">
@@ -77,6 +77,38 @@
       </div>
       <div class="card list" id="list" style="margin-top:10px"></div>
     </section>
+    <section id="bills" class="hidden">
+      <div class="top">
+        <h1>Bills<b>Recurring subscriptions from Ledger</b></h1>
+      </div>
+      <p class="hint">Import the JSON array Ledger exports from Gmail. Stored only in this device vault — nothing is uploaded.</p>
+      <div class="card" id="subImportCard">
+        <label>Paste subscription JSON</label>
+        <textarea id="subPaste" rows="5" placeholder='[{"merchant":"…","amount":null,"currency":"HKD","cadence":"monthly","last_charge_date_hkt":null,"status":"active","source_from":"","source_subject":"","source_message_id":"","notes":""}]'></textarea>
+        <div class="row2" style="margin-top:8px">
+          <button class="primary" id="subPasteBtn">Import paste</button>
+          <button class="btn" id="subFileBtn">Choose file</button>
+        </div>
+        <input id="subFile" type="file" accept="application/json,.json,text/plain" class="hidden" />
+        <div id="subDrop" class="dropzone" tabindex="0">Drop JSON file here</div>
+        <p class="err" id="subImportErr"></p>
+        <p class="hint" id="subImportMeta"></p>
+        <button class="danger" id="subClearBtn" style="margin-top:8px">Clear imported bills</button>
+      </div>
+      <div class="chips" id="subFilters" style="margin-top:10px">
+        <button class="chip on" data-sub-filter="all">All</button>
+        <button class="chip" data-sub-filter="known">Known amount</button>
+        <button class="chip" data-sub-filter="unknown">Amount unknown</button>
+        <button class="chip" data-sub-filter="active">Active</button>
+        <button class="chip" data-sub-filter="refunded">Refunded</button>
+      </div>
+      <div class="card hero" id="subSummary" style="margin-top:4px">
+        <div class="k">Imported bills</div>
+        <div class="n" id="subCount">0</div>
+        <div class="hint" id="subSummaryHint" style="margin-top:8px">No subscriptions yet. Paste or drop Ledger JSON.</div>
+      </div>
+      <div class="card list" id="subList" style="margin-top:10px"></div>
+    </section>
     <section id="due" class="hidden">
       <h1>Due</h1>
       <p class="hint">Recurring rent, salary, and other next-due dates.</p>
@@ -106,6 +138,7 @@
   <button class="addfab" id="addBtn" aria-label="Add">+</button>
   <nav class="dock">
     <button data-p="home" class="on">Home</button>
+    <button data-p="bills">Bills</button>
     <button data-p="due">Due</button>
     <button data-p="set">Settings</button>
   </nav>
