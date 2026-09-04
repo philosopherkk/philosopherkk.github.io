@@ -20,7 +20,7 @@
 <body>
   <div class="gate" id="gate">
     <div class="gate-card card">
-      <h1>Outflow<b id="verLine">Outflow 2.1.6 · 2026-09-02</b></h1>
+      <h1>Outflow<b id="verLine">Outflow 2.1.7 · 2026-09-04</b></h1>
       <p class="hint" id="gateHint">Use Face ID to open the ledger. No password to remember. Nothing is uploaded.</p>
       <button class="primary" id="bioBtn">Unlock with Face ID</button>
       <button class="btn hidden" id="skipBioBtn" style="margin-top:8px">Continue without Face ID</button>
@@ -31,7 +31,7 @@
   <main>
     <section id="home">
       <div class="top">
-        <h1>Outflow<b id="verFoot">Outflow 2.1.6 · updated 2026-09-02</b></h1>
+        <h1>Outflow<b id="verFoot">Outflow 2.1.7 · updated 2026-09-04</b></h1>
         <button class="ghost hidden" id="lockBtn">Lock</button>
       </div>
       <div class="card hero">
@@ -41,7 +41,6 @@
           <div class="hint">Income <b class="ok" id="sumIn">0</b></div>
           <div class="hint">Outflow <b class="bad" id="sumOut">0</b></div>
         </div>
-        <p class="fx-stamp" id="fxStamp">Loading HKD rates…</p>
       </div>
       <div class="chips">
         <button class="chip on" data-range="this">This month</button>
@@ -69,8 +68,8 @@
       <div class="card list" id="list" style="margin-top:10px"></div>
     </section>
     <section id="due" class="hidden">
-      <h1>Due</h1>
-      <p class="hint">Recurring rent, salary, and other next-due dates.</p>
+      <h1>Recurring expense</h1>
+      <p class="hint">Subscriptions and recurring bills — category, next due date, and amount.</p>
       <div class="card" id="dueBox"></div>
     </section>
     <section id="set" class="hidden">
@@ -116,7 +115,7 @@
   <button class="addfab" id="addBtn" aria-label="Add">+</button>
   <nav class="dock">
     <button data-p="home" class="on">Home</button>
-    <button data-p="due">Due</button>
+    <button data-p="due">Recurring</button>
     <button data-p="set">Settings</button>
   </nav>
   <div id="sheet" class="sheet hidden">

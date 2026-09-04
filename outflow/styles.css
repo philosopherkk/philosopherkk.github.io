@@ -45,6 +45,15 @@ button{border:0;border-radius:12px;padding:12px;font-weight:700;cursor:pointer}
 .addfab{position:fixed;right:16px;bottom:calc(72px + var(--safe-bot));width:56px;height:56px;border-radius:18px;background:#0f3d32;color:var(--accent);font-size:1.6rem;z-index:5}
 .list .tx{display:flex;justify-content:space-between;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
 .list .tx .amt{text-align:right;font-variant-numeric:tabular-nums}
+.list .tx-group{padding:10px 0;border-bottom:1px solid var(--line)}
+.list .tx-group-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
+.list .tx-group .tx{border-bottom:0;padding:6px 0 6px 6px}
+.list .tx-sub{font-size:.82rem}
+.list .tx-sub .hint{font-size:.78rem}
+.list .tx-sub .ghost{font-size:.78rem;padding:4px 6px}
+.due-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.due-row:last-child{border-bottom:0;padding-bottom:0}
+.due-row .amt{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 .setting-chips{margin:4px 0 10px}
 .chip{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;padding:7px 11px;font-size:.8rem}

@@ -1,6 +1,6 @@
 (() => {
-  const VERSION = "2.1.6";
-  const UPDATED = "2026-09-02";
+  const VERSION = "2.1.7";
+  const UPDATED = "2026-09-04";
   const LEDGER_KEY = "outflow.v4.ledger";
   const OLD_VAULT_KEY = "outflow.v3.vault";
   const BIO_KEY = "outflow.v4.bio";
@@ -19,8 +19,8 @@
   };
   const ITER = 210000;
   const CODES = ["HKD", "USD", "TWD", "CAD", "EUR"];
-  const IN_CATS = ["Salary", "Bonus", "Allowance", "Refund", "Interest", "Other"];
-  const OUT_CATS = ["Rent", "Food", "Transport", "Utilities", "Phone", "Medical", "Shopping", "Other"];
+  const IN_CATS = ["Salary", "Bonus", "Parttime", "Allowance", "Refund", "Interest", "Other"];
+  const OUT_CATS = ["Rent", "Food", "Transport", "Utilities", "Phone", "Medical", "Shopping", "Parents", "Taobao", "Amazon", "PDD", "Other"];
   const $ = (id) => document.getElementById(id);
   const te = new TextEncoder();
   const td = new TextDecoder();
@@ -244,15 +244,7 @@
     if (!per) return "1 " + code + " = — HKD";
     return "1 " + code + " = " + per.toLocaleString("en-HK", { maximumFractionDigits: 3 }) + " HKD";
   }
-  function fxStampText() {
-    if (!fx) return "HKD rates not loaded yet";
-    const parts = CODES.filter((c) => c !== "HKD").map(rateLine);
-    const src = fx.source === "fallback" ? "fallback table" : "updated " + formatStamp(fx.updatedAt);
-    return "Base HKD · " + src + " · " + parts.join(" · ");
-  }
   function renderFx() {
-    const stamp = fxStampText();
-    $("fxStamp").textContent = stamp;
     if (fx) {
       const rows = CODES.map((c) => `<tr><th>${c}</th><td>${c === "HKD" ? "base" : rateLine(c)}</td></tr>`).join("");
       $("fxDetail").innerHTML = `<p class="hint">Daily rates · ${formatStamp(fx.updatedAt)} · ${fx.source || "rates"}</p><table><thead><tr><th>Code</th><th>Into HKD</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -444,6 +436,55 @@
     if (code === "HKD") return hkd;
     return moneyOrig(e.amount, code) + " · " + hkd;
   }
+  function groupHomeEntries(rows) {
+    const groups = [];
+    const map = new Map();
+    rows.forEach((e) => {
+      const key = e.date + "\0" + e.type + "\0" + e.category;
+      let g = map.get(key);
+      if (!g) {
+        g = { date: e.date, type: e.type, category: e.category, items: [] };
+        map.set(key, g);
+        groups.push(g);
+      }
+      g.items.push(e);
+    });
+    groups.forEach((g) => {
+      g.items.sort((a, b) => {
+        const da = toHkd(b.amount, codeOf(b)) - toHkd(a.amount, codeOf(a));
+        if (da) return da;
+        return String(a.note || "").localeCompare(String(b.note || ""));
+      });
+    });
+    return groups;
+  }
+  function listRowHtml(e, mode) {
+    const sign = e.type === "income" ? "+" : "\u2212";
+    const rec = e.recurring ? ` · due ${e.recurring.nextDue || ""}` : "";
+    const amt = `<span class="${e.type === "income" ? "ok" : "bad"}">${sign}${rowAmount(e)}</span> <button class="ghost" data-ed="${e.id}">Edit</button> <button class="ghost" data-del="${e.id}">Delete</button>`;
+    if (mode === "grouped") {
+      const sub = (e.note || "—") + rec;
+      return `<div class="tx tx-sub"><div class="hint">${sub}</div><div class="amt">${amt}</div></div>`;
+    }
+    return `<div class="tx"><div><b>${e.category}</b><div class="hint">${e.date}${rec}${e.note ? " · " + e.note : ""}</div></div><div class="amt">${amt}</div></div>`;
+  }
+  function homeListHtml(rows) {
+    return groupHomeEntries(rows).map((g) => {
+      if (g.items.length === 1) return listRowHtml(g.items[0], "single");
+      const kind = g.type === "income" ? "Income" : "Outflow";
+      const head = `<div class="tx-group-h"><b>${g.category}</b><span class="hint">${g.date} · ${kind} · ${g.items.length}</span></div>`;
+      return `<div class="tx-group">${head}${g.items.map((e) => listRowHtml(e, "grouped")).join("")}</div>`;
+    }).join("");
+  }
+  function dueListHtml() {
+    const rows = upcoming();
+    if (!rows.length) return `<div class="hint">No subscriptions or recurring bills with a next due date.</div>`;
+    return rows.map((e) => {
+      const sign = e.type === "income" ? "+" : "\u2212";
+      const note = e.note ? ` · ${e.note}` : "";
+      return `<div class="due-row"><div><b>${e.category}</b><div class="hint">Next due ${e.recurring.nextDue}${note}</div></div><div class="amt ${e.type === "income" ? "ok" : "bad"}">${sign}${rowAmount(e)}</div></div>`;
+    }).join("");
+  }
   function render() {
     $("verFoot").textContent = "Outflow " + VERSION + " · updated " + UPDATED;
     const scoped = db.entries.filter(inRange);
@@ -459,14 +500,10 @@
     const rows = visibleEntries();
     if (!db.entries.length) $("list").innerHTML = `<p class="hint">No rows yet. Add first income, then first outflow.</p>`;
     else if (!rows.length) $("list").innerHTML = `<p class="hint">Nothing in this filter.</p>`;
-    else $("list").innerHTML = rows.map((e) => {
-      const sign = e.type === "income" ? "+" : "\u2212";
-      const rec = e.recurring ? ` · due ${e.recurring.nextDue || ""}` : "";
-      return `<div class="tx"><div><b>${e.category}</b><div class="hint">${e.date}${rec}${e.note ? " · " + e.note : ""}</div></div><div class="amt"><span class="${e.type === "income" ? "ok" : "bad"}">${sign}${rowAmount(e)}</span> <button class="ghost" data-ed="${e.id}">Edit</button> <button class="ghost" data-del="${e.id}">Delete</button></div></div>`;
-    }).join("");
+    else $("list").innerHTML = homeListHtml(rows);
     $("list").querySelectorAll("[data-ed]").forEach((b) => b.onclick = () => openEdit(b.dataset.ed));
     $("list").querySelectorAll("[data-del]").forEach((b) => b.onclick = () => removeRow(b.dataset.del));
-    $("dueBox").innerHTML = upcoming().map((e) => `<div class="hint">${e.category} · ${e.recurring.nextDue} · ${rowAmount(e)}</div>`).join("") || `<div class="hint">No recurring due dates.</div>`;
+    $("dueBox").innerHTML = dueListHtml();
     $("catEdit").value = cats("outflow").join("\n");
     $("catEditIn").value = cats("income").join("\n");
     document.querySelectorAll("[data-range]").forEach((c) => c.classList.toggle("on", c.dataset.range === range));
