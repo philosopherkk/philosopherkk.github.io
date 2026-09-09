@@ -41,6 +41,12 @@
     .mid { color:var(--warn); }
     .cool { color:var(--ok); }
     .note { color:var(--muted); font-size:12.5px; margin-top:10px; }
+    .merge-banner {
+      margin:0 0 14px; padding:10px 12px; border-radius:10px;
+      border:1px solid color-mix(in srgb, var(--warn) 45%, var(--line));
+      background:color-mix(in srgb, var(--warn) 12%, var(--panel));
+      color:var(--text); font-size:13px; line-height:1.4;
+    }
     h2 { font-size:18px; margin:0 0 8px; }
     h3 { font-size:15px; margin:18px 0 8px; }
     .kpi { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
@@ -70,6 +76,7 @@
   <div class="wrap">
     <div class="grid">
       <aside class="card">
+        <p class="merge-banner" data-i="mergeBanner" role="status"></p>
         <label for="cluster" data-i="cluster"></label>
         <select id="cluster"></select>
         <label for="specialty" data-i="specialty"></label>
