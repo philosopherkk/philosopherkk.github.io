@@ -1,6 +1,6 @@
 const SITE = {
-  version: "1.0.0",
-  lastUpdated: "2026-09-03",
+  version: "1.1.0",
+  lastUpdated: "2026-09-10",
   dataFrom: "2025-07-01",
   dataTo: "2026-06-30",
   waitlistAsAt: "2026-06-30",
@@ -23,8 +23,10 @@ const COPY = {
     hospitals: "Hospitals in this cluster",
     pickCluster:
       "Select a cluster to list its major HA hospitals. SOP waits are published at cluster level only.",
+    mergeBanner:
+      "Island hospitals: choose Hong Kong East or Hong Kong West until HA’s next open-data file (30 Oct 2026). From 1 Apr 2026 those clusters merged into Hong Kong Island Cluster, but this dataset still uses the old seven-cluster split.",
     mergeNote:
-      "From 1 Apr 2026, Hong Kong East and Hong Kong West merged into Hong Kong Island Cluster. HA still reports the old seven-cluster split in this dataset.",
+      "Picker still lists East / West — not the post-merger Island cluster name.",
     tabSop: "New-case SOP waits",
     tabSurgery: "Elective surgery",
     tabInvest: "Investigations",
@@ -104,8 +106,10 @@ const COPY = {
     specialty: "專科",
     hospitals: "此聯網主要醫院",
     pickCluster: "請先選擇聯網以顯示其主要公立醫院。專科門診輪候只按聯網公布。",
+    mergeBanner:
+      "港島醫院：在醫管局下次開放數據檔案（2026 年 10 月 30 日）前，請選港島東或港島西。由 2026 年 4 月 1 日起該兩聯網已合併為香港島醫院聯網，但本數據集仍沿用舊有七聯網劃分。",
     mergeNote:
-      "由 2026 年 4 月 1 日起，港島東與港島西已合併為香港島醫院聯網。本數據集仍沿用舊有七聯網劃分。",
+      "選單仍列出港島東／港島西，而非合併後的「香港島」聯網名稱。",
     tabSop: "專科門診新症",
     tabSurgery: "預約手術",
     tabInvest: "檢查",
@@ -341,6 +345,7 @@ function render() {
   const tt = t();
   document.querySelector("[data-i=title]").textContent = tt.title;
   document.querySelector("[data-i=subtitle]").textContent = tt.subtitle;
+  document.querySelector("[data-i=mergeBanner]").textContent = tt.mergeBanner;
   document.querySelector("[data-i=cluster]").textContent = tt.cluster;
   document.querySelector("[data-i=specialty]").textContent = tt.specialty;
   document.querySelector("[data-i=mergeNote]").textContent = tt.mergeNote;
