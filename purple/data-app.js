@@ -1,3 +1,10 @@
+/** Public content edition — bump on every publish (see VERSION + AGENTS.md). */
+const CONTENT_VERSION = '1.0';
+/** Last content update date, Hong Kong time (YYYY-MM-DD). */
+const CONTENT_UPDATED = '2026-09-19';
+const CHANGELOG_URL = 'https://github.com/philosopherkk/purple-sectors/blob/main/CHANGELOG.md';
+const COMMITS_URL = 'https://github.com/philosopherkk/purple-sectors/commits/main';
+
 const YT = {
   'Daytona Road Course':[['g8PBEncPir4','Sambo · MX-5 Daytona'],['Kz1SOQrNAME','Coach Dave · MX-5 Daytona'],['CBazw5hcspU','Sambo · Cayman GT4']],
   'Road Atlanta':[['rh2Z-VD_1Vc','Sambo · Porsche GT3'],['e5E3nvXjUhc','Coach Dave · Mustang GT3'],['FHy4Rwa09ps','HYMO · Road Atlanta']],
@@ -108,4 +115,9 @@ document.querySelectorAll('nav a[data-go]').forEach(a=>{
     if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
   });
 });
+(function stampHistory(){
+  const el = document.getElementById('histStamp');
+  if(!el) return;
+  el.innerHTML = 'Purple · Season 4 · v'+CONTENT_VERSION+' · updated '+CONTENT_UPDATED+' HKT · <a href="'+CHANGELOG_URL+'" target="_blank" rel="noopener">History</a> · <a href="'+COMMITS_URL+'" target="_blank" rel="noopener">Commits</a>';
+})();
 applyLive();
