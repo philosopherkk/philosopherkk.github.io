@@ -1,5 +1,5 @@
-const CACHE = "outflow-shell-v2.1.7";
-const SHELL = ["/outflow/", "/outflow/index.html", "/outflow/app.js", "/outflow/styles.css", "/outflow/manifest.webmanifest", "/outflow/icon.svg"];
+const CACHE = "outflow-shell-v2.1.8";
+const SHELL = ["/outflow/", "/outflow/index.html", "/outflow/app.js", "/outflow/app.payload.b64", "/outflow/styles.css", "/outflow/manifest.webmanifest", "/outflow/icon.svg"];
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
 });

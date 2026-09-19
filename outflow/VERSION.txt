@@ -1,5 +1,5 @@
 Outflow
-Version: 2.1.7
-Updated: 2026-09-04 (HKT)
+Version: 2.1.8
+Updated: 2026-09-19 (HKT)
 Pages: /outflow/
-Adds: Home groups same-day+category; hide home FX stamp; Recurring tab label; default cats Parents/Taobao/Amazon/PDD + Parttime; SW cache outflow-shell-v2.1.7.
+Adds: git CHANGELOG + History link (GitHub); publish bumps VERSION.txt + CHANGELOG then sync github.io /outflow/ via PR.
