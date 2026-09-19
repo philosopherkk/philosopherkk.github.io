@@ -47,7 +47,9 @@
     .ytbtn{display:inline-block;margin:8px 10px 0;background:#cc0000;color:#fff!important;text-decoration:none;font-weight:700;padding:8px 12px}
     table.cal{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:10px;display:block;overflow-x:auto}
     table.cal th,table.cal td{border-bottom:1px solid var(--rule);padding:7px 6px;text-align:left}
-    footer{text-align:center;padding:28px 12px 48px;border-top:4px double var(--ink);color:var(--muted)}
+    footer{text-align:center;padding:28px 12px 48px;border-top:4px double var(--ink);color:var(--muted);font-size:.82rem}
+    footer .hist{margin-top:8px;letter-spacing:.04em}
+    footer .hist a{color:var(--purple);text-decoration:none;border-bottom:1px solid var(--rule)}
   </style>
 </head>
 <body>
@@ -83,7 +85,10 @@
     <h2 id="archive">Every S4 circuit, in full</h2>
     <div id="archiveBox"></div>
   </div>
-  <footer>Purple Sectors · not affiliated with iRacing or Gran Turismo</footer>
+  <footer>
+    <div>Purple Sectors · not affiliated with iRacing or Gran Turismo</div>
+    <div class="hist" id="histStamp">Purple · Season 4 · History</div>
+  </footer>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="data-series.js"></script>
   <script src="data-tracks.js"></script>

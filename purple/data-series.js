@@ -1,4 +1,4 @@
-// lastUpdated: 2026-09-19 HKT — iRacing 2026 S4 schedules from official SeasonSchedule.pdf
+// lastUpdated: 2026-09-19 HKT — iRacing 2026 S4 schedules (official week list)
 const S4_START = Date.UTC(2026, 8, 15); // Sep 15 2026
 function iracingWeek(now){
   const t = now.getTime();
@@ -9,10 +9,10 @@ function iracingWeek(now){
 
 const SERIES = [
   {id:'pec', name:'Production Endurance Challenge', cls:'Rookie 4.0+', field:'largest average field', cars:['mx5','gr86','bmwm2','clio'], weeks:['Hockenheim Outer','Monza GP No Chicane','Snetterton 300','Oschersleben','Silverstone International','Nürburgring GP Short','Navarra Speed','Sonoma Cup Long','Le Mans Historic','Summit Point','Watkins Glen Boot','Oulton Island Historic']},
-  {id:'imsa', name:'IMSA iRacing Series — Open', cls:'Class B', field:'~42 cars · SoF ~2500', cars:['cadillac','ferrari296','porsche992'], weeks:['IMS Road Course','Road Atlanta','Fuji GP','Red Bull Ring','Long Beach','Gilles Villeneuve','Le Mans 24h','Mexico City','Suzuka GP','Silverstone GP','Sebring','Monza GP']},
-  {id:'imsaf', name:'IMSA iRacing Series — Fixed', cls:'Class B', field:'~40 cars', cars:['cadillac','ferrari296','porsche992'], weeks:['IMS Road Course','Road Atlanta','Fuji GP','Red Bull Ring','Long Beach','Gilles Villeneuve','Le Mans 24h','Mexico City','Suzuka GP','Silverstone GP','Sebring','Monza GP']},
+  {id:'imsa', name:'IMSA iRacing Series — Open', cls:'Class B', field:'~42 cars · SoF ~2500', cars:['cadillac','ferrari296','porsche992'], weeks:['IMS Road Course','Road Atlanta','Fuji GP','Red Bull Ring','Long Beach','Gilles Villeneuve','Le Mans 24h','Mexico City','Suzuka GP','Silverstone GP','Monza GP','Sebring']},
+  {id:'imsaf', name:'IMSA iRacing Series — Fixed', cls:'Class B', field:'~40 cars', cars:['cadillac','ferrari296','porsche992'], weeks:['IMS Road Course','Road Atlanta','Fuji GP','Red Bull Ring','Long Beach','Gilles Villeneuve','Le Mans 24h','Mexico City','Suzuka GP','Silverstone GP','Monza GP','Sebring']},
   {id:'gts', name:'GT Sprint Series by Simucube', cls:'Class C', field:'~26 cars', cars:['ferrari296','porsche992'], weeks:['Silverstone GP','Road Atlanta','Zandvoort GP','Motegi GP','IMS Road Course','The Bend GT','COTA GP','Spa GP','Fuji GP','Misano GP','Sebring','Suzuka GP']},
-  {id:'gr86s', name:'Toyota GR86 Cup by SIMAGIC', cls:'Class D', field:'~17 cars · many splits', cars:['gr86'], weeks:['Oulton Fosters','Barber','Spa GP','IMS Road Course','Tsukuba 2000','Daytona Road Course','Laguna Seca 2026','Snetterton 300','Road Atlanta','Zandvoort GP','Lime Rock GP','Road America Short West']},
+  {id:'gr86s', name:'Toyota GR86 Cup by SIMAGIC', cls:'Class D', field:'~17 cars · many splits', cars:['gr86'], weeks:['Oulton Fosters','Barber','Spa GP','IMS Road Course','Tsukuba 2000','Daytona Road Course','Laguna Seca 2026','Snetterton 300','Road Atlanta','Zandvoort GP','Lime Rock GP','Road America']},
   {id:'pcup', name:'Porsche Cup by CONSPIT', cls:'Favourite · Class D/C', field:'~24 cars · spec 992.2', cars:['porschecup'], weeks:['Road Atlanta','Okayama Full','Sebring','Bathurst','Road America','COTA GP','Hungaroring','Algarve GP','Long Beach','Miami GP','Oschersleben','Zandvoort GP']},
   {id:'ring', name:'Ring Meister by LVRY', cls:'Favourite · hourly Nordschleife', field:'car changes each week', cars:['ringmeister'], weeks:['Nordschleife · Caterham 420R','Nordschleife · Lotus 79','Nordschleife · Spec Racer Ford','Nordschleife · Ruf RT 12R','Nordschleife · Street Stock','Nordschleife · GT3 field','Nordschleife · Skip Barber','Nordschleife · TCR','Nordschleife · GT4 field','Nordschleife · Formula Vee','Nordschleife · Mazda MX-5','Nordschleife · Mini Stock']}
 ];
