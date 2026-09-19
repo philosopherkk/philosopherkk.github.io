@@ -6,12 +6,14 @@
   <meta name="theme-color" content="#2d163f" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Purple Sectors" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%23080808' width='64' height='64' rx='12'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%235b2a86' stroke-width='4'/%3E%3Cpath d='M20 44 L44 20 L48 28 L28 48 Z' fill='%238a6a2f'/%3E%3C/svg%3E" />
   <title>Purple Sectors — Weekly Board</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root{--ink:#1a120c;--paper:#f4ead8;--rule:#c9b89a;--purple:#5b2a86;--plum:#2d163f;--gold:#8a6a2f;--muted:#6b5b4a}
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:var(--paper);color:var(--ink);font-family:Georgia,serif;line-height:1.6}
+    body{background:var(--paper);color:var(--ink);font-family:Georgia,serif;line-height:1.6;-webkit-text-size-adjust:100%}
+    .ios-note{display:none;background:#2d163f;color:#f4ead8;padding:12px 14px;margin:0 0 18px}
     a{color:var(--purple)}
     .mast{border-bottom:4px double var(--ink);padding:28px 20px 18px;text-align:center;background:#efe4cd}
     .kicker{letter-spacing:.28em;font-size:.72rem;text-transform:uppercase;color:var(--gold)}
@@ -22,6 +24,7 @@
     nav{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;padding:10px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:rgba(244,234,216,.94);z-index:20;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase}
     nav a{color:var(--ink);text-decoration:none}
     .wrap{max-width:1100px;margin:0 auto;padding:28px 18px 80px}
+    h2,section,#board,#dossiers,#calendar,#weekbar{scroll-margin-top:64px}
     h2{font-size:2rem;border-bottom:1px solid var(--ink);padding-bottom:6px;margin:8px 0 18px}
     h3{font-size:1.35rem;margin:0 0 8px}
     .weekbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:22px}
@@ -45,14 +48,13 @@
     table.cal{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:10px;display:block;overflow-x:auto}
     table.cal th,table.cal td{border-bottom:1px solid var(--rule);padding:7px 6px;text-align:left}
     footer{text-align:center;padding:28px 12px 48px;border-top:4px double var(--ink);color:var(--muted)}
-    .ios-note{display:none;background:#2d163f;color:#f4ead8;padding:12px 14px;margin:0 0 18px}
   </style>
 </head>
 <body>
   <header class="mast">
     <div class="kicker">Sim racing broadsheet · Gran Turismo 7 & iRacing</div>
     <h1>Purple <span>Sectors</span></h1>
-    <p>A weekly board. iRacing’s busiest sports-car races, favourite series, circuit history, and the cars that run them.</p>
+    <p>A weekly board. iRacing’s busiest sports-car races, favourite series, circuit history, and the cars that run them. Pace lives on YouTube.</p>
     <div class="issue" id="issueLine"></div>
   </header>
   <nav>
@@ -64,13 +66,13 @@
   <div class="wrap">
     <section id="calendar">
       <h2>Calendar</h2>
-      <div class="weekbar">
+      <div class="weekbar" id="weekbar">
         <label>Issue week</label>
         <select id="weekSelect"></select>
         <button type="button" id="liveBtn">Today’s issue</button>
         <span id="clock" style="color:var(--muted)"></span>
       </div>
-      <p class="note">Weeks flip Tuesday 00:00 GMT. Season 4 2026 (15 Sep – 8 Dec). Shell updated 2026-09-19 HKT.</p>
+      <p class="note">Weeks flip Tuesday 00:00 GMT. Season 4 2026 is stored in this file (15 Sep – 8 Dec). Updated 2026-09-19 HKT.</p>
       <p class="ios-note" id="iosNote"></p>
       <div id="calTable"></div>
     </section>
@@ -81,23 +83,10 @@
     <h2 id="archive">Every S4 circuit, in full</h2>
     <div id="archiveBox"></div>
   </div>
-  <footer>Purple Sectors</footer>
+  <footer>Purple Sectors · not affiliated with iRacing or Gran Turismo</footer>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-  (async () => {
-    const base = "https://raw.githubusercontent.com/philosopherkk/purple-sectors/main/";
-    for (const f of ["data-series.js", "data-tracks.js", "data-app.js"]) {
-      const t = await fetch(base + f + "?v=20260919s4").then((r) => {
-        if (!r.ok) throw new Error(f + " " + r.status);
-        return r.text();
-      });
-      const s = document.createElement("script");
-      s.textContent = t;
-      document.body.appendChild(s);
-    }
-  })().catch((err) => {
-    document.body.insertAdjacentHTML("afterbegin", "<p style='padding:16px'>Failed to load Purple Sectors: "+err.message+"</p>");
-  });
-  </script>
+  <script src="data-series.js"></script>
+  <script src="data-tracks.js"></script>
+  <script src="data-app.js"></script>
 </body>
 </html>
