@@ -1,6 +1,6 @@
 (() => {
-  const VERSION = "2.1.8";
-  const UPDATED = "2026-09-19";
+  const VERSION = "2.1.9";
+  const UPDATED = "2026-09-20";
   const HISTORY_URL = "https://github.com/philosopherkk/outflow-app/blob/main/CHANGELOG.md";
   const LEDGER_KEY = "outflow.v4.ledger";
   const OLD_VAULT_KEY = "outflow.v3.vault";
@@ -14,12 +14,12 @@
     date: UPDATED,
     updatedAt: UPDATED + "T00:00:00.000Z",
     nextUpdateAt: null,
-    rates: { HKD: 1, USD: 0.1275, TWD: 4.04, CAD: 0.177, EUR: 0.11 },
-    hkdPer: { HKD: 1, USD: 7.84, TWD: 0.248, CAD: 5.65, EUR: 9.09 },
+    rates: { HKD: 1, USD: 0.1275, TWD: 4.04, CAD: 0.177, EUR: 0.11, JPY: 20.06 },
+    hkdPer: { HKD: 1, USD: 7.84, TWD: 0.248, CAD: 5.65, EUR: 9.09, JPY: 0.0499 },
     source: "fallback",
   };
   const ITER = 210000;
-  const CODES = ["HKD", "USD", "TWD", "CAD", "EUR"];
+  const CODES = ["HKD", "USD", "TWD", "CAD", "EUR", "JPY"];
   const IN_CATS = ["Salary", "Bonus", "Parttime", "Allowance", "Refund", "Interest", "Other"];
   const OUT_CATS = ["Rent", "Food", "Transport", "Utilities", "Phone", "Medical", "Shopping", "Parents", "Taobao", "Amazon", "PDD", "Other"];
   const $ = (id) => document.getElementById(id);
@@ -285,13 +285,13 @@
         if (data && data.hkdPer && usable(data)) return data;
         if (data && data.rates) {
           const rates = data.rates;
-          const hkdPer = { HKD: 1, USD: 1 / Number(rates.USD), TWD: 1 / Number(rates.TWD), CAD: 1 / Number(rates.CAD), EUR: 1 / Number(rates.EUR) };
+          const hkdPer = { HKD: 1, USD: 1 / Number(rates.USD), TWD: 1 / Number(rates.TWD), CAD: 1 / Number(rates.CAD), EUR: 1 / Number(rates.EUR), JPY: 1 / Number(rates.JPY) };
           const payload = {
             base: "HKD",
             date: (data.time_last_update_utc || "").slice(0, 16) || today(),
             updatedAt: data.time_last_update_utc ? new Date(data.time_last_update_utc).toISOString() : new Date().toISOString(),
             nextUpdateAt: data.time_next_update_utc ? new Date(data.time_next_update_utc).toISOString() : null,
-            rates: { HKD: 1, USD: Number(rates.USD), TWD: Number(rates.TWD), CAD: Number(rates.CAD), EUR: Number(rates.EUR) },
+            rates: { HKD: 1, USD: Number(rates.USD), TWD: Number(rates.TWD), CAD: Number(rates.CAD), EUR: Number(rates.EUR), JPY: Number(rates.JPY) },
             hkdPer,
             source: "open.er-api.com",
           };
