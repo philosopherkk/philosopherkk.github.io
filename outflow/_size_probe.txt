@@ -1,1 +1,1 @@
-@/workspace/outflow-219-sync/outflow/app.js
+file:///tmp/APP_JS_CONTENT.txt
