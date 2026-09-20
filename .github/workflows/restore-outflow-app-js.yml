@@ -1,0 +1,56 @@
+name: restore-outflow-app-js
+on:
+  workflow_dispatch:
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/sync-outflow-219-jpy
+          fetch-depth: 0
+      - name: Restore SoT app.js 2.1.9 from main 2.1.8 plus JPY patch
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git show origin/main:outflow/app.js > outflow/app.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p = Path('outflow/app.js')
+          t = p.read_text()
+          reps = [
+            ('const VERSION = "2.1.8";', 'const VERSION = "2.1.9";'),
+            ('const UPDATED = "2026-09-19";', 'const UPDATED = "2026-09-20";'),
+            ('rates: { HKD: 1, USD: 0.1275, TWD: 4.04, CAD: 0.177, EUR: 0.11 },',
+             'rates: { HKD: 1, USD: 0.1275, TWD: 4.04, CAD: 0.177, EUR: 0.11, JPY: 20.06 },'),
+            ('hkdPer: { HKD: 1, USD: 7.84, TWD: 0.248, CAD: 5.65, EUR: 9.09 },',
+             'hkdPer: { HKD: 1, USD: 7.84, TWD: 0.248, CAD: 5.65, EUR: 9.09, JPY: 0.0499 },'),
+            ('const CODES = ["HKD", "USD", "TWD", "CAD", "EUR"];',
+             'const CODES = ["HKD", "USD", "TWD", "CAD", "EUR", "JPY"];'),
+            ('const hkdPer = { HKD: 1, USD: 1 / Number(rates.USD), TWD: 1 / Number(rates.TWD), CAD: 1 / Number(rates.CAD), EUR: 1 / Number(rates.EUR) };',
+             'const hkdPer = { HKD: 1, USD: 1 / Number(rates.USD), TWD: 1 / Number(rates.TWD), CAD: 1 / Number(rates.CAD), EUR: 1 / Number(rates.EUR), JPY: 1 / Number(rates.JPY) };'),
+            ('rates: { HKD: 1, USD: Number(rates.USD), TWD: Number(rates.TWD), CAD: Number(rates.CAD), EUR: Number(rates.EUR) },',
+             'rates: { HKD: 1, USD: Number(rates.USD), TWD: Number(rates.TWD), CAD: Number(rates.CAD), EUR: Number(rates.EUR), JPY: Number(rates.JPY) },'),
+          ]
+          for a,b in reps:
+              if a not in t:
+                  raise SystemExit('missing: '+a[:80])
+              t = t.replace(a,b,1)
+          raw = t.encode()
+          blob = hashlib.sha1(b'blob %d\0'%len(raw)+raw).hexdigest()
+          if blob != '24a5e63b3bbcd8fb31f1a523a3017dbcc7225ea1':
+              raise SystemExit('blob mismatch '+blob)
+          if 'const VERSION = "2.1.9"' not in t or 'const CODES = ["HKD", "USD", "TWD", "CAD", "EUR", "JPY"]' not in t:
+              raise SystemExit('proof missing')
+          p.write_text(t)
+          print('ok', blob, len(raw))
+          PY
+          git rm -f --ignore-unmatch outflow/_size_probe.txt outflow/_sync_probe.txt outflow/_size_probe_15k.txt || true
+          git config user.name philosopherkk
+          git config user.email philosopherkk@gmail.com
+          git add -A outflow/
+          git commit -m "fix(outflow): restore SoT app.js 2.1.9 JPY (blob 24a5e63)" || echo 'no commit'
+          git push origin HEAD:chore/sync-outflow-219-jpy
