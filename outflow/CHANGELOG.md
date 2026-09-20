@@ -6,6 +6,12 @@ Git-sourced history for this app. Entries follow commits on this private repo (`
 
 Live mirror: https://philosopherkk.github.io/outflow/ (publish copy only).
 
+## [2.1.9] — 2026-09-20
+
+- **Commit:** `88588c8` (`88588c883fdcb23cf8412c2ee0d5c121a0f285f1`)
+- **Summary:** Restore JPY as a usable currency
+- **Notes:** Added `JPY` to `CODES`, `FALLBACK_FX` rates/`hkdPer`, live FX parse (`open.er-api.com`), and the currency `<select>`. FX detail table already iterates `CODES`. Base remains HKD. Version stamps: `VERSION.txt`, `app.js`, `sw.js` cache, `manifest.webmanifest`, `index.html`.
+
 ## [2.1.8] — 2026-09-19
 
 - **Commit:** `0e87dec` (`0e87decf327b60eb02628c41636c6450bc012e74`)
