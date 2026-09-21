@@ -1,7 +1,6 @@
 (() => {
   const VERSION = "2.1.9";
   const UPDATED = "2026-09-20";
-  const HISTORY_URL = "https://github.com/philosopherkk/outflow-app/blob/main/CHANGELOG.md";
   const LEDGER_KEY = "outflow.v4.ledger";
   const OLD_VAULT_KEY = "outflow.v3.vault";
   const BIO_KEY = "outflow.v4.bio";
@@ -491,10 +490,6 @@
   function stampAbout() {
     const about = $("aboutVer");
     if (about) about.textContent = "Outflow " + VERSION + " · updated " + UPDATED;
-    ["gateHistory", "homeHistory", "setHistory"].forEach((id) => {
-      const a = $(id);
-      if (a) a.href = HISTORY_URL;
-    });
   }
   function render() {
     $("verFoot").textContent = "Outflow " + VERSION + " · updated " + UPDATED;
