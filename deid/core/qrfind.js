@@ -324,17 +324,24 @@ function qrBoxFromOneFinder(f, imageData) {
   if (mod < 2 || mod > 36) return null;
   const maxSide = Math.min(W, H) * 0.42;
 
-  const mults = [11, 14, 17, 21, 25, 29];
+  const mults = [11, 14, 17, 21, 25, 29, 33];
+  /** @type {[number,number,number,number][]} */
+  const tried = [];
   for (const mult of mults) {
     const side = mod * mult;
     if (side < 60 || side > maxSide) continue;
     const insets = mod * 3.5;
+    const half = side / 2;
     /** @type {[number,number][]} */
     const origins = [
       [f.x - insets, f.y - insets],
       [f.x - (side - insets), f.y - insets],
       [f.x - insets, f.y - (side - insets)],
       [f.x - (side - insets), f.y - (side - insets)],
+      // Finder near mid-edge of a square (surviving TR/BR after left wipe)
+      [f.x - (side - insets), f.y - half],
+      [f.x - half, f.y - insets],
+      [f.x - half, f.y - half],
     ];
     for (const [ox, oy] of origins) {
       const pad = Math.min(mod * 3 + 10, 22);
@@ -346,13 +353,18 @@ function qrBoxFromOneFinder(f, imageData) {
       ]);
       const bw = box[2] - box[0];
       const bh = box[3] - box[1];
-      if (bw / bh < 0.75 || bw / bh > 1.35) continue;
-      if (!regionLooksLikeQrModules(imageData, box, mod)) continue;
+      if (bw / bh < 0.7 || bw / bh > 1.45) continue;
+      // Finder must lie inside the candidate box
+      if (f.x < box[0] || f.x > box[2] || f.y < box[1] || f.y > box[3]) continue;
+      tried.push(box);
+      // Partial damage: allow lower dark fraction (left wipe / blot)
+      if (!regionLooksLikeQrModules(imageData, box, mod, { partial: true })) continue;
       if (!hasModulePeriodicity(imageData, box, mod)) continue;
       if (regionIsColorful(imageData, box)) continue;
       return box;
     }
   }
+  void tried;
   return null;
 }
 
@@ -384,8 +396,9 @@ function qrBoxFromFinderTripletLoose(trip, W, H, mod) {
  * @param {ImageData} imageData
  * @param {[number,number,number,number]} box
  * @param {number} moduleSize
+ * @param {{ partial?: boolean }} [opts]  partial=true for damaged codes (left wipe / blot)
  */
-function regionLooksLikeQrModules(imageData, box, moduleSize) {
+function regionLooksLikeQrModules(imageData, box, moduleSize, opts = {}) {
   const { width: W, data } = imageData;
   const [x0, y0, x1, y1] = box;
   const bw = x1 - x0;
@@ -414,9 +427,13 @@ function regionLooksLikeQrModules(imageData, box, moduleSize) {
   const dRate = dark / n;
   const eRate = extreme / n;
   const tRate = transitions / n;
-  if (dRate < 0.22 || dRate > 0.78) return false;
-  if (eRate < 0.35) return false;
-  if (tRate < 0.12) return false;
+  const minDark = opts.partial ? 0.12 : 0.22;
+  const maxDark = opts.partial ? 0.85 : 0.78;
+  const minExtreme = opts.partial ? 0.28 : 0.35;
+  const minTrans = opts.partial ? 0.08 : 0.12;
+  if (dRate < minDark || dRate > maxDark) return false;
+  if (eRate < minExtreme) return false;
+  if (tRate < minTrans) return false;
   return true;
 }
 
@@ -486,15 +503,17 @@ function hasModulePeriodicity(imageData, box, hintMod = 0) {
 
 /**
  * Autocorrelation peak for a 0/1 signal; returns period in px or null.
+ * Prefers periods near `hintMod` (module size) so pixel-scale flicker (p=2) loses.
  * @param {number[]} signal
  * @param {number} hintMod
  */
 function bestPeriod(signal, hintMod) {
   const n = signal.length;
   if (n < 24) return null;
-  const minP = Math.max(2, hintMod ? Math.floor(hintMod * 0.5) : 2);
-  const maxP = Math.min(Math.floor(n / 4), hintMod ? Math.ceil(hintMod * 2.5) : 28);
-  let best = 0;
+  const minP = Math.max(3, hintMod ? Math.floor(hintMod * 0.65) : 3);
+  const maxP = Math.min(Math.floor(n / 4), hintMod ? Math.ceil(hintMod * 2.6) : 28);
+  if (maxP < minP) return null;
+  let best = -Infinity;
   let bestP = 0;
   let mean = 0;
   for (const v of signal) mean += v;
@@ -506,13 +525,17 @@ function bestPeriod(signal, hintMod) {
       corr += (signal[i] - mean) * (signal[i + p] - mean);
       cnt++;
     }
-    const score = corr / Math.max(1, cnt);
+    let score = corr / Math.max(1, cnt);
+    if (hintMod > 0) {
+      const closeness = 1 - Math.min(1, Math.abs(p - hintMod) / Math.max(hintMod, 1));
+      score *= 0.35 + 0.65 * closeness;
+    }
     if (score > best) {
       best = score;
       bestP = p;
     }
   }
-  if (bestP < 2 || best < 0.04) return null;
+  if (bestP < 3 || best < 0.03) return null;
   return bestP;
 }
 
