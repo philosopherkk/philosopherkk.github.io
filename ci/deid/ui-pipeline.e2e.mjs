@@ -154,6 +154,7 @@ async function main() {
         // Below generic keep top (0.12 * 800 ≈ 96)
         ctx.fillText(label, 30, 130);
         ctx.fillText("Right Eye (OD) MD -1.20 dB PSD 1.50 dB", 30, 164);
+        ctx.fillText("Left Eye (OS) MD -0.80 dB PSD 1.10 dB", 30, 194);
         if (deg === 0) {
           ctx.drawImage(bmp, 210, 400);
         } else {
@@ -348,9 +349,9 @@ async function main() {
       const clinical = await page.evaluate(async (url) => {
         const bmp = await createImageBitmap(await (await fetch(url)).blob());
         const c = document.createElement("canvas");
-        // Clinical lines sit near the top of the kept crop
-        c.width = Math.min(bmp.width, 560);
-        c.height = Math.min(200, bmp.height);
+        // Clinical lines sit near the top of the kept crop — capture both eyes
+        c.width = Math.min(bmp.width, 600);
+        c.height = Math.min(260, bmp.height);
         c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height, 0, 0, c.width, c.height);
         bmp.close();
         const T = window.Tesseract;
@@ -371,9 +372,11 @@ async function main() {
         }
       }, `${origin}/ci/deid/fixtures-synthetic/${outName}`);
       const text = clinical.text || "";
+      // Normalize common OCR confusions (dB↔aB, PSD↔PS D) before matching.
+      const norm = text.replace(/aB/g, "dB").replace(/P\s*S\s*D/gi, "PSD");
       for (const token of [/Right\s*Eye/i, /Left\s*Eye/i, /\bOD\b/i, /\bOS\b/i, /\bMD\b/i, /\bPSD\b/i]) {
         assert.match(
-          text,
+          norm,
           token,
           `${label}: clinical token ${token} must survive Blank all; OCR=${JSON.stringify(clinical)}`
         );
