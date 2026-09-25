@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   check-hub:
     runs-on: ubuntu-latest
@@ -12,3 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Guard root hub
         run: bash scripts/check-hub.sh
+      - name: Stage Pages (exclude tests) and verify
+        run: |
+          bash scripts/stage-pages.sh
+          bash scripts/verify-pages-stage.sh

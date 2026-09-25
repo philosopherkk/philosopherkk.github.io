@@ -1,0 +1,12 @@
+{
+  "firstLoadMB": 0.157,
+  "firstOcrMB": 8.242,
+  "firstLoadFiles": 19,
+  "firstOcrFiles": [
+    "vendor/tesseract/tesseract.min.js",
+    "vendor/tesseract/worker.min.js",
+    "vendor/tesseract/tesseract-core-simd-lstm.wasm.js",
+    "vendor/tessdata/eng.traineddata"
+  ],
+  "note": "Shell precache excludes OCR. Separate eng/chi_tra workers load lazily (eng first); cache-first deid-ocr-v1."
+}

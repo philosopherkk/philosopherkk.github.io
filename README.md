@@ -10,12 +10,13 @@ Hub only — root `index.html` is a page of **links**. Never dump an app into `/
 | 4 | Simracing web — Apex Trace | *none yet* | **PENDING** | PENDING until KK handoff |
 | 5 | Outflow | `outflow/` | https://philosopherkk.github.io/outflow/ | https://github.com/philosopherkk/outflow-app (private; may 404) |
 | 6 | HA waiting times | `waiting/` | https://philosopherkk.github.io/waiting/ | https://github.com/philosopherkk/hk-hospital-waiting-times |
+| 7 | Scan De-identifier | `deid/` | https://philosopherkk.github.io/deid/ | this repo (`deid/`) |
 
 Hub: https://philosopherkk.github.io/
 
 ## Hard rules
 
-- Root is hub only. Each GitHub Pages app stays in its own folder (`transit/`, `purple/`, `outflow/`, `waiting/`).
+- Root is hub only. Each GitHub Pages app stays in its own folder (`transit/`, `purple/`, `outflow/`, `waiting/`, `deid/`).
 - EyesInfo: hub links out only. Do **not** copy eyesinfo.org onto this repo.
 - Apex Trace: no scaffold, no `/apex/` or `/simracing/` placeholder until handoff.
 - Never commit Outflow ledger JSON/CSV, vault files, or passphrase material.

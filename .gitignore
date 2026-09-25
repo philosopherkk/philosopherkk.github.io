@@ -1,3 +1,6 @@
+# deid test deps (vendored runtime libs live under deid/vendor/)
+ci/deid/node_modules/
+
 # Outflow ledgers and vault material stay on-device only.
 **/ledger*.json
 **/ledger*.csv
@@ -12,3 +15,6 @@ outflow/*.xls
 **/*.xls
 outflow/backup*.json
 outflow/export*.json
+
+# Staged GitHub Pages artifact (see scripts/stage-pages.sh)
+_site/

@@ -1,0 +1,12 @@
+{
+  "name": "deid-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "npm --prefix ../ci/deid test",
+    "test:unit": "npm --prefix ../ci/deid run test:unit",
+    "test:e2e": "npm --prefix ../ci/deid run test:e2e",
+    "fixtures": "npm --prefix ../ci/deid run fixtures",
+    "test:pages-stage": "bash ../scripts/stage-pages.sh && bash ../scripts/verify-pages-stage.sh"
+  }
+}
