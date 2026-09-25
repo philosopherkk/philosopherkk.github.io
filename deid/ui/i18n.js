@@ -5,7 +5,9 @@ const STR = {
     tagline: "全程在本機處理，影像不會上載。",
     disclaimer:
       "僅為自動化輔助。分享前請自行檢查結果。本工具並非經認證的去識別化產品。",
-    drop: "拖放 PDF／JPG／PNG，或點擊選擇／拍照",
+    drop: "拖放 PDF／JPG／PNG 到此處，或使用下方按鈕選擇檔案／拍照。",
+    chooseFile: "選擇相片或 PDF / Choose photo or PDF",
+    takePhoto: "拍照 / Take photo",
     processing: "處理中…",
     device: "偵測裝置",
     before: "裁切前",
@@ -36,6 +38,8 @@ const STR = {
     progress: "進度",
     help:
       "框選空白／裁切：啟用後在「裁切後」圖上拖曳。條碼／QR：本機 jsQR／ZXing 解碼（無 CDN）；偵測到的區域會標紅，請空白後再核准。OCR 資料首次使用時才下載並快取。",
+    heicUnsupported:
+      "無法解碼 HEIC／HEIF。請在 iPhone「設定 → 相機 → 格式」改為「高兼容性」，或以 JPEG／PNG 匯出後再試。",
   },
   en: {
     title: "Scan De-identifier",
@@ -43,7 +47,9 @@ const STR = {
     tagline: "Fully on-device — nothing is uploaded.",
     disclaimer:
       "Automated aid only. Always check the result yourself before sharing. Not a certified de-identification tool.",
-    drop: "Drop PDF / JPG / PNG, or tap to choose / camera",
+    drop: "Drop PDF / JPG / PNG here, or use the buttons below to choose a file or take a photo.",
+    chooseFile: "Choose photo or PDF / 選擇相片或 PDF",
+    takePhoto: "Take photo / 拍照",
     processing: "Processing…",
     device: "Detected device",
     before: "Before",
@@ -74,6 +80,8 @@ const STR = {
     progress: "Progress",
     help:
       "Draw blank/crop: enable a tool, then drag on the After image. Barcodes/QR: located on-device with vendored jsQR/ZXing (no CDN) and flagged for blanking before approve. OCR language/wasm packs download once on first use and are cached.",
+    heicUnsupported:
+      "Cannot decode HEIC/HEIF. On iPhone set Camera → Formats → Most Compatible, or export as JPEG/PNG and try again.",
   },
 };
 
