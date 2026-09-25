@@ -1,3 +1,6 @@
+# deid test deps (vendored runtime libs live under deid/vendor/)
+deid/node_modules/
+
 # Outflow ledgers and vault material stay on-device only.
 **/ledger*.json
 **/ledger*.csv

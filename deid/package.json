@@ -1,0 +1,14 @@
+{
+  "name": "deid-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fixtures": "node tests/generate-fixtures.mjs",
+    "test:unit": "node --test --test-reporter=spec tests/unit.test.mjs tests/layouts.test.mjs",
+    "test:e2e": "node tests/e2e.mjs",
+    "test": "npm run fixtures && npm run test:unit && npm run test:e2e"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
