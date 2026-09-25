@@ -360,7 +360,8 @@ function setupOverlayDraw() {
     const pg = current();
     if (!pg) return;
     const [x, y] = canvasCoords(ev, overlay);
-    const hit = hitFlagAt(pg, x, y);
+    // Click-to-blank only when no draw tool is active; blank tool uses draw coverage.
+    const hit = !tool ? hitFlagAt(pg, x, y) : null;
     if (hit) {
       ev.preventDefault();
       blankAtFlag(hit);
