@@ -40,8 +40,17 @@ export {
   INSTITUTION_ZH,
   SIGNATURE_LINE,
   HK_PHONE,
+  CLINICAL_LINE,
+  isClinicalLine,
+  hasClearIdentifier,
 } from "./phi.js";
-export { detectBarcodeFlags, detectDenseHighContrastRegions } from "./barcode.js";
+export {
+  detectBarcodeFlags,
+  detectDenseHighContrastRegions,
+  decodeAnyCodes,
+  loadJsQR,
+} from "./barcode.js";
+export { remapFlagsAfterCrop, remapFlagsAfterRotate90 } from "./flagmap.js";
 export {
   deidPage,
   blankFlag,

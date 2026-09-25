@@ -9,5 +9,9 @@
 CDN fallback URLs inside the minified tesseract bundles were patched out so a
 misconfiguration cannot reach jsDelivr. Paths are always set to `/deid/vendor/…`.
 
-OCR/wasm/traineddata are **not** precached by the service worker. They load on
-first OCR use and are stored in the versioned `deid-ocr-v1` cache (cache-first).
+OCR/wasm/traineddata/jsQR/ZXing are **not** precached by the service worker shell.
+They load on first use and are stored in the versioned `deid-ocr-v1` cache (cache-first).
+
+Additional same-origin decoders (lazy):
+- **jsQR** — Apache-2.0 — https://github.com/cozmo/jsQR
+- **@zxing/library** (UMD) — Apache-2.0 — https://github.com/zxing-js/library

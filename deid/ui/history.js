@@ -1,33 +1,47 @@
 /**
- * Simple undo/redo stack for ImageData snapshots (in memory only).
+ * Undo/redo stack for page snapshots (image + flags + serialHits). In memory only.
  */
 export class HistoryStack {
   constructor(limit = 30) {
     this.limit = limit;
-    /** @type {ImageData[]} */
+    /** @type {import('./historyTypes.js').PageSnapshot[]} */
     this.undo = [];
-    /** @type {ImageData[]} */
+    /** @type {import('./historyTypes.js').PageSnapshot[]} */
     this.redo = [];
   }
 
-  /** @param {ImageData} img */
-  push(img) {
-    this.undo.push(clone(img));
+  /**
+   * @param {ImageData} img
+   * @param {import('../core/types.js').FlagHit[]} [flags]
+   * @param {string[]} [serialHits]
+   */
+  push(img, flags = [], serialHits = []) {
+    this.undo.push(snapshot(img, flags, serialHits));
     if (this.undo.length > this.limit) this.undo.shift();
     this.redo.length = 0;
   }
 
-  /** @param {ImageData} current */
-  undoOnce(current) {
+  /**
+   * @param {ImageData} current
+   * @param {import('../core/types.js').FlagHit[]} flags
+   * @param {string[]} serialHits
+   * @returns {import('./historyTypes.js').PageSnapshot|null}
+   */
+  undoOnce(current, flags = [], serialHits = []) {
     if (!this.undo.length) return null;
-    this.redo.push(clone(current));
+    this.redo.push(snapshot(current, flags, serialHits));
     return this.undo.pop();
   }
 
-  /** @param {ImageData} current */
-  redoOnce(current) {
+  /**
+   * @param {ImageData} current
+   * @param {import('../core/types.js').FlagHit[]} flags
+   * @param {string[]} serialHits
+   * @returns {import('./historyTypes.js').PageSnapshot|null}
+   */
+  redoOnce(current, flags = [], serialHits = []) {
     if (!this.redo.length) return null;
-    this.undo.push(clone(current));
+    this.undo.push(snapshot(current, flags, serialHits));
     return this.redo.pop();
   }
 
@@ -37,6 +51,18 @@ export class HistoryStack {
   }
 }
 
-function clone(img) {
-  return new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
+/**
+ * @param {ImageData} img
+ * @param {import('../core/types.js').FlagHit[]} flags
+ * @param {string[]} serialHits
+ */
+function snapshot(img, flags, serialHits) {
+  return {
+    image: new ImageData(new Uint8ClampedArray(img.data), img.width, img.height),
+    flags: (flags || []).map((f) => ({
+      ...f,
+      box: [...f.box],
+    })),
+    serialHits: (serialHits || []).slice(),
+  };
 }

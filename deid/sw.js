@@ -24,10 +24,11 @@ const SHELL_PRECACHE = [
   "./core/pipeline.js",
   "./core/export.js",
   "./core/barcode.js",
+  "./core/flagmap.js",
 ];
 
 const OCR_RE =
-  /\/deid\/vendor\/(tesseract|tessdata)\//i;
+  /\/deid\/vendor\/(tesseract|tessdata|jsqr|zxing)\//i;
 const PDF_RE = /\/deid\/vendor\/pdfjs\//i;
 
 self.addEventListener("install", (e) => {

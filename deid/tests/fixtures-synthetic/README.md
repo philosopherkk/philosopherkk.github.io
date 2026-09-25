@@ -5,3 +5,6 @@ All images in this folder are **generated mocks** with fake identifiers
 clinic reports, or photographs of people.
 
 Regenerate with: `node tests/generate-fixtures.mjs`
+
+`qr-phi.png` is a synthetic QR encoding the fake string
+`PATIENT CHAN TAI MAN HKID A123456(7) DOB 01-03-1980` — not a real patient record.

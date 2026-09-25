@@ -37,11 +37,41 @@ export const HK_PHONE =
   /(?:\+?852[-\s]?)?(?:\(?\+?852\)?[-\s]?)?[2-9]\d{3}[-\s]?\d{4}\b/;
 
 /**
+ * Clinical measurement / report tokens — lines containing these must NOT be
+ * flagged as institution/clinic unless a clear identifier pattern is also present.
+ */
+export const CLINICAL_LINE =
+  /\b(MD|PSD|VFI|GHT|IOP|CCT|RNFL|GCL|ONH|AL|AXL|ACD|WTW|K1|K2|Km|EKR|SITA|ETDRS|SSI|SQI)\b|\b(dB|µm|um|mmHg|D)\b|\b(Fixation|Stimulus|Background|Strategy|Threshold|Pattern\s+Deviation|Total\s+Deviation|Visual\s+Field|Signal\s+Strength|Within\s+Normal|Outside\s+Normal|Borderline)\b|\b(Right\s+Eye|Left\s+Eye|\(OD\)|\(OS\)|\(OU\))\b|\bC\s*\/\s*D\b/i;
+
+/**
  * True when token is laterality "Eye:R/L" etc., not a clinic name.
  * @param {string} t
  */
 export function isLateralityEye(t) {
   return /^eye\s*[:：/\-]?[\s]*[rl]\b|^eye\s*(od|os|ou)\b|^eye$/i.test(String(t).trim());
+}
+
+/**
+ * True when a line looks like clinical content that should survive Blank all.
+ * @param {string} t
+ */
+export function isClinicalLine(t) {
+  return CLINICAL_LINE.test(String(t || ""));
+}
+
+/**
+ * Clear identifier patterns that may still justify flagging a clinical-looking line.
+ * @param {string} t
+ */
+export function hasClearIdentifier(t) {
+  const s = String(t || "");
+  return (
+    HK_PHONE.test(s) ||
+    /\b[A-Z]{1,2}\d{6}\s*\(?[0-9A]\)?/.test(s) ||
+    /\b(name|patient|hkid|dob|mrn)\b/i.test(s) ||
+    INSTITUTION_ZH.test(s) ||
+    /\b(clinic|hospital|centre|center)\b/i.test(s)
+  );
 }
 
 /**
@@ -167,9 +197,15 @@ export function lineSafetyFlags(words, W, H) {
     else if (SIGNATURE_LINE.test(joined)) reason = "signature_line";
     else if (HK_PHONE.test(joined)) reason = "phone";
 
+    // "DEMO EYE CLINIC" style — but never "Right Eye (OD) MD …"
     if (!reason && /\bEye\b/.test(joined) && !isLateralityEye(joined)) {
       const caps = joined.split(/\s+/).filter((t) => /^[A-Z]/.test(t));
       if (caps.length >= 2) reason = "institution";
+    }
+
+    // Clinical measurement lines survive unless a clear identifier is also present
+    if (reason && isClinicalLine(joined) && !hasClearIdentifier(joined)) {
+      continue;
     }
 
     if (!reason) continue;

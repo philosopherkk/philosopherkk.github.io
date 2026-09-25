@@ -17,6 +17,9 @@ import {
   buildMultiPagePdf,
   copyImageToClipboard,
   DEVICE_LABELS,
+  detectBarcodeFlags,
+  remapFlagsAfterCrop,
+  remapFlagsAfterRotate90,
 } from "./core/index.js";
 
 /** @typedef {{ original: ImageData, upright: ImageData, working: ImageData, device: string, flags: import('./core/types.js').FlagHit[], serialHits: string[], approved: boolean, removedRegions: number[][], history: HistoryStack }} PageState */
@@ -156,14 +159,16 @@ async function processFiles(files) {
         setProgress(`${msg} (${i + 1}/${allPages.length})`, (i + (p || 0)) / allPages.length),
     });
     const history = new HistoryStack();
-    history.push(result.imageData);
+    const flags0 = result.flags.map((f) => ({ ...f, box: [...f.box] }));
+    const serials0 = result.serialHits.slice();
+    history.push(result.imageData, flags0, serials0);
     pages.push({
       original: allPages[i],
       upright: result.upright,
       working: cloneImageData(result.imageData),
       device: result.device,
-      flags: result.flags.map((f) => ({ ...f, box: [...f.box] })),
-      serialHits: result.serialHits.slice(),
+      flags: flags0.map((f) => ({ ...f, box: [...f.box] })),
+      serialHits: serials0.slice(),
       approved: false,
       removedRegions: result.removedRegions || [],
       history,
@@ -181,10 +186,8 @@ async function processFiles(files) {
 function blankAtFlag(flag) {
   const pg = current();
   if (!pg || flag.blanked) return;
-  pg.history.push(pg.working);
+  pg.history.push(pg.working, pg.flags, pg.serialHits);
   blankFlag(pg.working, flag);
-  // Remove serial hits that were in this region? Re-clear serial list if user blanked
-  pg.serialHits = [];
   pg.approved = false;
   refreshUI();
 }
@@ -192,13 +195,53 @@ function blankAtFlag(flag) {
 function blankAllFlags() {
   const pg = current();
   if (!pg) return;
-  pg.history.push(pg.working);
+  pg.history.push(pg.working, pg.flags, pg.serialHits);
   for (const f of pg.flags) {
     if (!f.blanked) blankFlag(pg.working, f);
   }
-  pg.serialHits = [];
   pg.approved = false;
   refreshUI();
+}
+
+/**
+ * After crop/rotate: remap existing flags and re-run barcode detection on the new image.
+ * Approve stays gated until every flag is blanked.
+ * @param {PageState} pg
+ * @param {'crop'|'rotate90'|'none'} [mode]
+ * @param {{ cropBox?: [number,number,number,number], prevW?: number, prevH?: number }} [geom]
+ */
+async function refreshFlagsAfterGeom(pg, mode = "none", geom = {}) {
+  let flags = pg.flags.map((f) => ({ ...f, box: [...f.box] }));
+  if (mode === "crop" && geom.cropBox) {
+    flags = remapFlagsAfterCrop(flags, geom.cropBox);
+  } else if (mode === "rotate90") {
+    flags = remapFlagsAfterRotate90(flags, geom.prevW || pg.working.width, geom.prevH || pg.working.height, 1);
+  }
+  // Drop blanked flags that no longer apply; keep unresolved ones remapped
+  flags = flags.filter((f) => {
+    const [x0, y0, x1, y1] = f.box;
+    return x1 > x0 && y1 > y0 && x0 < pg.working.width && y0 < pg.working.height;
+  });
+  try {
+    const codes = await detectBarcodeFlags(pg.working);
+    for (const c of codes) {
+      // Avoid duplicating overlaps
+      const dup = flags.some((f) => boxesOverlap(f.box, c.box));
+      if (!dup) flags.push({ ...c, box: [...c.box], blanked: false });
+    }
+  } catch {
+    /* optional */
+  }
+  pg.flags = flags;
+  // Serial hits are image-text — clear until re-OCR; keep Approve gated via flags
+  // If no flags remain after remap, do NOT auto-approve — require user check only if truly empty
+  pg.serialHits = [];
+  pg.approved = false;
+}
+
+/** @param {[number,number,number,number]} a @param {[number,number,number,number]} b */
+function boxesOverlap(a, b) {
+  return Math.min(a[2], b[2]) > Math.max(a[0], b[0]) && Math.min(a[3], b[3]) > Math.max(a[1], b[1]);
 }
 
 function setTool(next) {
@@ -211,90 +254,128 @@ function setTool(next) {
 
 function canvasCoords(ev, canvas) {
   const rect = canvas.getBoundingClientRect();
-  const x = ((ev.clientX - rect.left) / rect.width) * canvas.width;
-  const y = ((ev.clientY - rect.top) / rect.height) * canvas.height;
+  const clientX = ev.clientX ?? ev.touches?.[0]?.clientX ?? ev.changedTouches?.[0]?.clientX;
+  const clientY = ev.clientY ?? ev.touches?.[0]?.clientY ?? ev.changedTouches?.[0]?.clientY;
+  const x = ((clientX - rect.left) / rect.width) * canvas.width;
+  const y = ((clientY - rect.top) / rect.height) * canvas.height;
   return [x, y];
+}
+
+function hitFlagAt(pg, x, y) {
+  for (const f of pg.flags) {
+    if (f.blanked) continue;
+    const [a, b, c, d] = f.box;
+    if (x >= a && x <= c && y >= b && y <= d) return f;
+  }
+  return null;
+}
+
+function finishDraw(pg, x0, y0, x1, y1) {
+  const box = [
+    Math.min(x0, x1),
+    Math.min(y0, y1),
+    Math.max(x0, x1),
+    Math.max(y0, y1),
+  ];
+  if (box[2] - box[0] < 4 || box[3] - box[1] < 4) return;
+  pg.history.push(pg.working, pg.flags, pg.serialHits);
+  if (tool === "blank") {
+    fillWhite(pg.working, [box]);
+    // Mark overlapping flags blanked
+    for (const f of pg.flags) {
+      if (!f.blanked && boxesOverlap(f.box, box)) f.blanked = true;
+    }
+    pg.approved = false;
+    refreshUI();
+  } else if (tool === "crop") {
+    const prevW = pg.working.width;
+    const prevH = pg.working.height;
+    void prevW;
+    void prevH;
+    pg.working = cropImageData(pg.working, box);
+    refreshFlagsAfterGeom(pg, "crop", { cropBox: box }).then(() => refreshUI());
+  }
 }
 
 function setupOverlayDraw() {
   const overlay = $("overlayCanvas");
 
-  overlay.addEventListener(
-    "pointerdown",
-    (ev) => {
-      const pg = current();
-      if (!pg) return;
-      const [x, y] = canvasCoords(ev, overlay);
-      // Hit-test flags first
-      for (const f of pg.flags) {
-        if (f.blanked) continue;
-        const [a, b, c, d] = f.box;
-        if (x >= a && x <= c && y >= b && y <= d) {
-          ev.preventDefault();
-          blankAtFlag(f);
-          return;
-        }
-      }
-      if (!tool) return;
-      // Draw mode: block scroll / gesture while dragging
+  const onDown = (ev) => {
+    const pg = current();
+    if (!pg) return;
+    const [x, y] = canvasCoords(ev, overlay);
+    const hit = hitFlagAt(pg, x, y);
+    if (hit) {
       ev.preventDefault();
-      drawStart = [x, y];
+      blankAtFlag(hit);
+      return;
+    }
+    if (!tool) return;
+    ev.preventDefault();
+    drawStart = [x, y];
+    if (ev.pointerId != null) {
       try {
         overlay.setPointerCapture(ev.pointerId);
       } catch {
         /* older Safari */
       }
-    },
-    { passive: false }
-  );
+    }
+  };
 
-  overlay.addEventListener(
-    "pointermove",
-    (ev) => {
-      if (!drawStart || !tool) return;
-      ev.preventDefault();
-    },
-    { passive: false }
-  );
+  const onMove = (ev) => {
+    if (!drawStart || !tool) return;
+    ev.preventDefault();
+  };
 
-  overlay.addEventListener(
-    "pointerup",
-    (ev) => {
-      if (!drawStart || !tool) return;
-      ev.preventDefault();
-      const pg = current();
-      const [x0, y0] = drawStart;
-      const [x1, y1] = canvasCoords(ev, overlay);
-      drawStart = null;
+  const onUp = (ev) => {
+    if (!drawStart || !tool) return;
+    ev.preventDefault();
+    const pg = current();
+    const [x0, y0] = drawStart;
+    const [x1, y1] = canvasCoords(ev, overlay);
+    drawStart = null;
+    if (ev.pointerId != null) {
       try {
         overlay.releasePointerCapture(ev.pointerId);
       } catch {
         /* ignore */
       }
-      const box = [
-        Math.min(x0, x1),
-        Math.min(y0, y1),
-        Math.max(x0, x1),
-        Math.max(y0, y1),
-      ];
-      if (box[2] - box[0] < 4 || box[3] - box[1] < 4) return;
-      pg.history.push(pg.working);
-      if (tool === "blank") {
-        fillWhite(pg.working, [box]);
-      } else if (tool === "crop") {
-        pg.working = cropImageData(pg.working, box);
-        pg.flags = [];
-      }
-      pg.serialHits = [];
-      pg.approved = false;
-      refreshUI();
-    },
-    { passive: false }
-  );
+    }
+    finishDraw(pg, x0, y0, x1, y1);
+  };
 
+  overlay.addEventListener("pointerdown", onDown, { passive: false });
+  overlay.addEventListener("pointermove", onMove, { passive: false });
+  overlay.addEventListener("pointerup", onUp, { passive: false });
   overlay.addEventListener("pointercancel", () => {
     drawStart = null;
   });
+
+  // Native touch path (iPhone / Playwright CDP touch) — do not rely on pointer synthesis
+  overlay.addEventListener(
+    "touchstart",
+    (ev) => {
+      if (!current()) return;
+      onDown(ev);
+    },
+    { passive: false }
+  );
+  overlay.addEventListener(
+    "touchmove",
+    (ev) => {
+      if (!drawStart || !tool) return;
+      ev.preventDefault();
+    },
+    { passive: false }
+  );
+  overlay.addEventListener(
+    "touchend",
+    (ev) => {
+      if (!drawStart || !tool) return;
+      onUp(ev);
+    },
+    { passive: false }
+  );
 }
 
 async function exportPages(kind) {
@@ -368,9 +449,11 @@ function wire() {
   $("undoBtn").addEventListener("click", () => {
     const pg = current();
     if (!pg) return;
-    const prev = pg.history.undoOnce(pg.working);
+    const prev = pg.history.undoOnce(pg.working, pg.flags, pg.serialHits);
     if (prev) {
-      pg.working = prev;
+      pg.working = prev.image;
+      pg.flags = prev.flags.map((f) => ({ ...f, box: [...f.box] }));
+      pg.serialHits = prev.serialHits.slice();
       pg.approved = false;
       refreshUI();
     }
@@ -378,9 +461,11 @@ function wire() {
   $("redoBtn").addEventListener("click", () => {
     const pg = current();
     if (!pg) return;
-    const next = pg.history.redoOnce(pg.working);
+    const next = pg.history.redoOnce(pg.working, pg.flags, pg.serialHits);
     if (next) {
-      pg.working = next;
+      pg.working = next.image;
+      pg.flags = next.flags.map((f) => ({ ...f, box: [...f.box] }));
+      pg.serialHits = next.serialHits.slice();
       pg.approved = false;
       refreshUI();
     }
@@ -388,11 +473,11 @@ function wire() {
   $("rotateBtn").addEventListener("click", () => {
     const pg = current();
     if (!pg) return;
-    pg.history.push(pg.working);
+    pg.history.push(pg.working, pg.flags, pg.serialHits);
+    const prevW = pg.working.width;
+    const prevH = pg.working.height;
     pg.working = rotate90(pg.working, 1);
-    pg.flags = [];
-    pg.approved = false;
-    refreshUI();
+    refreshFlagsAfterGeom(pg, "rotate90", { prevW, prevH }).then(() => refreshUI());
   });
   $("drawBlankBtn").addEventListener("click", () => {
     setTool(tool === "blank" ? null : "blank");
@@ -439,47 +524,52 @@ function wire() {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
 
-  // Soft guard — tests check storage emptiness
-  void 0;
-
-  // E2E / Playwright hook (in-memory only; no persistence)
-  window.__deidTest = {
-    setTool,
-    /** @param {ImageData} imageData */
-    seedWorkingPage(imageData) {
-      const history = new HistoryStack();
-      history.push(imageData);
-      pages = [
-        {
-          original: cloneImageData(imageData),
-          upright: cloneImageData(imageData),
-          working: cloneImageData(imageData),
-          device: "generic",
-          flags: [],
-          serialHits: [],
-          approved: false,
-          removedRegions: [],
-          history,
-        },
-      ];
-      pageIdx = 0;
-      $("dropZone").classList.add("hidden");
-      $("workspace").classList.remove("hidden");
-      syncPageSelect();
-      refreshUI();
-    },
-    samplePixel(x, y) {
-      const pg = current();
-      if (!pg) return null;
-      const i = (Math.floor(y) * pg.working.width + Math.floor(x)) * 4;
-      return [pg.working.data[i], pg.working.data[i + 1], pg.working.data[i + 2]];
-    },
-    workingSize() {
-      const pg = current();
-      return pg ? { w: pg.working.width, h: pg.working.height } : null;
-    },
-    getTool: () => tool,
-  };
+  // Test hook only when ?test=1 (Playwright e2e). Never in normal production visits.
+  if (new URLSearchParams(location.search).get("test") === "1") {
+    window.__deidTest = {
+      setTool,
+      /** @param {ImageData} imageData */
+      seedWorkingPage(imageData, flags = []) {
+        const history = new HistoryStack();
+        const flagCopy = flags.map((f) => ({ ...f, box: [...f.box] }));
+        history.push(imageData, flagCopy, []);
+        pages = [
+          {
+            original: cloneImageData(imageData),
+            upright: cloneImageData(imageData),
+            working: cloneImageData(imageData),
+            device: "generic",
+            flags: flagCopy.map((f) => ({ ...f, box: [...f.box] })),
+            serialHits: [],
+            approved: false,
+            removedRegions: [],
+            history,
+          },
+        ];
+        pageIdx = 0;
+        $("dropZone").classList.add("hidden");
+        $("workspace").classList.remove("hidden");
+        syncPageSelect();
+        refreshUI();
+      },
+      samplePixel(x, y) {
+        const pg = current();
+        if (!pg) return null;
+        const i = (Math.floor(y) * pg.working.width + Math.floor(x)) * 4;
+        return [pg.working.data[i], pg.working.data[i + 1], pg.working.data[i + 2]];
+      },
+      workingSize() {
+        const pg = current();
+        return pg ? { w: pg.working.width, h: pg.working.height } : null;
+      },
+      getFlags: () => (current()?.flags || []).map((f) => ({ ...f, box: [...f.box] })),
+      getApproved: () => !!current()?.approved,
+      approveBtnDisabled: () => $("approveBtn").disabled,
+      clickUndo: () => $("undoBtn").click(),
+      clickRotate: () => $("rotateBtn").click(),
+      getTool: () => tool,
+    };
+  }
 }
 
 wire();

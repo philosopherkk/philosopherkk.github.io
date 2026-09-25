@@ -47,7 +47,7 @@ function startServer() {
 }
 
 function isOcrUrl(url) {
-  return /\/deid\/vendor\/(tesseract|tessdata)\//.test(url);
+  return /\/deid\/vendor\/(tesseract|tessdata|jsqr|zxing)\//.test(url);
 }
 
 async function main() {

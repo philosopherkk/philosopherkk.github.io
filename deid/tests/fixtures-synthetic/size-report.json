@@ -1,7 +1,7 @@
 {
-  "firstLoadMB": 0.088,
+  "firstLoadMB": 0.105,
   "firstOcrMB": 10.609,
-  "firstLoadFiles": 17,
+  "firstLoadFiles": 18,
   "firstOcrFiles": [
     "vendor/tesseract/tesseract.min.js",
     "vendor/tesseract/worker.min.js",
