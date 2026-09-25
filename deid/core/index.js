@@ -49,6 +49,7 @@ export {
   detectDenseHighContrastRegions,
   decodeAnyCodes,
   loadJsQR,
+  expandLinearBarcodeBox,
 } from "./barcode.js";
 export { remapFlagsAfterCrop, remapFlagsAfterRotate90 } from "./flagmap.js";
 export {

@@ -57,7 +57,7 @@ async function main() {
     if (u.origin !== `http://127.0.0.1:${PORT}`) external.push(req.url());
   });
 
-  await page.goto(`http://127.0.0.1:${PORT}/deid/?test=1`, { waitUntil: "networkidle" });
+  await page.goto(`http://127.0.0.1:${PORT}/deid/`, { waitUntil: "networkidle" });
 
   const result = await page.evaluate(async (qrUrl) => {
     const { detectBarcodeFlags, decodeAnyCodes, encodeImage, fillWhite } = await import(

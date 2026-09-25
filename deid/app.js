@@ -18,6 +18,7 @@ import {
   copyImageToClipboard,
   DEVICE_LABELS,
   detectBarcodeFlags,
+  decodeAnyCodes,
   remapFlagsAfterCrop,
   remapFlagsAfterRotate90,
 } from "./core/index.js";
@@ -487,12 +488,7 @@ function wire() {
   });
   $("blankAllBtn").addEventListener("click", blankAllFlags);
   $("approveBtn").addEventListener("click", () => {
-    const pg = current();
-    if (!pg) return;
-    const unresolved = pg.flags.filter((f) => !f.blanked);
-    if (unresolved.length || pg.serialHits.length) return;
-    pg.approved = true;
-    refreshUI();
+    void tryApprove();
   });
   $("resetBtn").addEventListener("click", () => {
     clearState();
@@ -523,53 +519,82 @@ function wire() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
+}
 
-  // Test hook only when ?test=1 (Playwright e2e). Never in normal production visits.
-  if (new URLSearchParams(location.search).get("test") === "1") {
-    window.__deidTest = {
-      setTool,
-      /** @param {ImageData} imageData */
-      seedWorkingPage(imageData, flags = []) {
-        const history = new HistoryStack();
-        const flagCopy = flags.map((f) => ({ ...f, box: [...f.box] }));
-        history.push(imageData, flagCopy, []);
-        pages = [
-          {
-            original: cloneImageData(imageData),
-            upright: cloneImageData(imageData),
-            working: cloneImageData(imageData),
-            device: "generic",
-            flags: flagCopy.map((f) => ({ ...f, box: [...f.box] })),
-            serialHits: [],
-            approved: false,
-            removedRegions: [],
-            history,
-          },
-        ];
-        pageIdx = 0;
-        $("dropZone").classList.add("hidden");
-        $("workspace").classList.remove("hidden");
-        syncPageSelect();
-        refreshUI();
-      },
-      samplePixel(x, y) {
-        const pg = current();
-        if (!pg) return null;
-        const i = (Math.floor(y) * pg.working.width + Math.floor(x)) * 4;
-        return [pg.working.data[i], pg.working.data[i + 1], pg.working.data[i + 2]];
-      },
-      workingSize() {
-        const pg = current();
-        return pg ? { w: pg.working.width, h: pg.working.height } : null;
-      },
-      getFlags: () => (current()?.flags || []).map((f) => ({ ...f, box: [...f.box] })),
-      getApproved: () => !!current()?.approved,
-      approveBtnDisabled: () => $("approveBtn").disabled,
-      clickUndo: () => $("undoBtn").click(),
-      clickRotate: () => $("rotateBtn").click(),
-      getTool: () => tool,
-    };
+/**
+ * Post-blank Approve: re-decode with jsQR + ZXing multi-format (1D+QR).
+ * Block Approve and re-flag if anything still decodes.
+ */
+async function tryApprove() {
+  const pg = current();
+  if (!pg) return;
+  const unresolved = pg.flags.filter((f) => !f.blanked);
+  if (unresolved.length || pg.serialHits.length) return;
+
+  $("approveBtn").disabled = true;
+  $("statusMsg").textContent = t("processing");
+  try {
+    const leftover = await decodeAnyCodes(pg.working);
+    if (leftover.length) {
+      const codes = await detectBarcodeFlags(pg.working);
+      for (const c of codes) {
+        const dup = pg.flags.some((f) => boxesOverlap(f.box, c.box));
+        if (!dup) pg.flags.push({ ...c, box: [...c.box], blanked: false });
+      }
+      // If detectors returned nothing but decode still found text, force a full-page hold
+      if (!pg.flags.some((f) => !f.blanked)) {
+        pg.flags.push({
+          box: [0, 0, pg.working.width, Math.min(48, pg.working.height)],
+          reason: "barcode",
+          text: leftover[0],
+          blanked: false,
+        });
+      }
+      pg.approved = false;
+      $("statusMsg").textContent = `${t("flags")}: ${leftover.length}. ${t("flagHint")}`;
+      $("statusMsg").style.color = "var(--warn)";
+      refreshUI();
+      return;
+    }
+    pg.approved = true;
+    refreshUI();
+  } catch (e) {
+    pg.approved = false;
+    $("statusMsg").textContent = String(e.message || e);
+    $("statusMsg").style.color = "var(--danger)";
+    refreshUI();
   }
+}
+
+/**
+ * Minimal controller for Playwright harness only (not assigned to window here).
+ * Pixel sampling and flag introspection live in tests/harness/, not this page.
+ */
+export function getAppController() {
+  return {
+    setTool,
+    current,
+    refreshUI,
+    syncPageSelect,
+    getTool: () => tool,
+    get pages() {
+      return pages;
+    },
+    setPages(next) {
+      pages = next;
+    },
+    setPageIdx(i) {
+      pageIdx = i;
+    },
+    hideDropShowWorkspace() {
+      $("dropZone").classList.add("hidden");
+      $("workspace").classList.remove("hidden");
+    },
+    clickUndo: () => $("undoBtn").click(),
+    clickRotate: () => $("rotateBtn").click(),
+    approveBtnDisabled: () => $("approveBtn").disabled,
+    getApproved: () => !!current()?.approved,
+  };
 }
 
 wire();

@@ -118,6 +118,191 @@ async function detectWithJsQR(imageData) {
 }
 
 /**
+ * Expand a thin 1D barcode box to cover the full bar height by scanning
+ * vertically for bar-like contrast continuity around the ZXing result row.
+ * @param {ImageData} imageData
+ * @param {[number, number, number, number]} box
+ * @param {string} [formatName]
+ * @returns {[number, number, number, number]}
+ */
+export function expandLinearBarcodeBox(imageData, box, formatName = "") {
+  const { width: W, height: H, data } = imageData;
+  let [x0, y0, x1, y1] = box;
+  const padX = 16;
+  x0 = Math.max(0, Math.floor(x0 - padX));
+  x1 = Math.min(W, Math.ceil(x1 + padX));
+
+  // If already tall enough (2D code), just pad
+  const h = y1 - y0;
+  const w = x1 - x0;
+  const isLikely1d =
+    /CODE_128|CODE_39|EAN|UPC|ITF|CODABAR|RSS/i.test(formatName) ||
+    h < 28 ||
+    (w > 0 && h / w < 0.2);
+
+  if (!isLikely1d && h >= 40) {
+    const pad = 12;
+    return [
+      Math.max(0, x0 - pad),
+      Math.max(0, y0 - pad),
+      Math.min(W, x1 + pad),
+      Math.min(H, y1 + pad),
+    ];
+  }
+
+  const midY = Math.floor((y0 + y1) / 2);
+  const gray = (x, y) => {
+    const i = (y * W + x) * 4;
+    return (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
+  };
+
+  /** Horizontal transition density on a scanline within [x0,x1]. */
+  const rowScore = (y) => {
+    if (y < 0 || y >= H) return 0;
+    let transitions = 0;
+    let dark = 0;
+    let n = 0;
+    let prev = gray(x0, y) < 128 ? 1 : 0;
+    for (let x = x0 + 1; x < x1; x++) {
+      const g = gray(x, y);
+      const b = g < 128 ? 1 : 0;
+      if (b !== prev) transitions++;
+      if (b) dark++;
+      n++;
+      prev = b;
+    }
+    if (n < 8) return 0;
+    const tRate = transitions / n;
+    const dRate = dark / n;
+    // Bars: many transitions, mixed dark/light (not solid text stroke)
+    if (tRate < 0.08) return 0;
+    if (dRate < 0.15 || dRate > 0.85) return 0;
+    return tRate;
+  };
+
+  const seed = Math.max(rowScore(midY), rowScore(Math.floor(y0)), rowScore(Math.floor(y1)));
+  const thresh = Math.max(0.08, seed * 0.35);
+
+  let top = midY;
+  let bottom = midY;
+  for (let y = midY - 1; y >= 0; y--) {
+    if (rowScore(y) < thresh) break;
+    top = y;
+  }
+  for (let y = midY + 1; y < H; y++) {
+    if (rowScore(y) < thresh) break;
+    bottom = y;
+  }
+
+  // Also try expanding from original y0/y1 if mid is weak
+  for (let y = Math.floor(y0); y >= 0; y--) {
+    if (rowScore(y) < thresh) break;
+    top = Math.min(top, y);
+  }
+  for (let y = Math.ceil(y1); y < H; y++) {
+    if (rowScore(y) < thresh) break;
+    bottom = Math.max(bottom, y);
+  }
+
+  const padY = 8;
+  // Guarantee a usable height for typical printed bars
+  const minH = 36;
+  if (bottom - top + 1 < minH) {
+    const grow = Math.ceil((minH - (bottom - top + 1)) / 2);
+    top = Math.max(0, top - grow);
+    bottom = Math.min(H - 1, bottom + grow);
+  }
+
+  return [x0, Math.max(0, top - padY), x1, Math.min(H, bottom + 1 + padY)];
+}
+
+/**
+ * Decode with ZXing across several horizontal bands (helps short/tall 1D crops).
+ * @param {any} ZXing
+ * @param {ImageData} imageData
+ * @returns {{ text: string, format: string, points: {x:number,y:number}[] }[]}
+ */
+function zxingDecodeAll(ZXing, imageData) {
+  const {
+    BinaryBitmap,
+    HybridBinarizer,
+    MultiFormatReader,
+    DecodeHintType,
+    BarcodeFormat,
+    RGBLuminanceSource,
+  } = ZXing;
+  if (!RGBLuminanceSource || !MultiFormatReader) return [];
+
+  const luminances = new Uint8ClampedArray(imageData.width * imageData.height);
+  for (let i = 0, j = 0; i < imageData.data.length; i += 4, j++) {
+    luminances[j] =
+      (imageData.data[i] * 0.299 + imageData.data[i + 1] * 0.587 + imageData.data[i + 2] * 0.114) | 0;
+  }
+
+  const hints = new Map();
+  if (DecodeHintType && BarcodeFormat) {
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.QR_CODE,
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.ITF,
+      BarcodeFormat.PDF_417,
+      BarcodeFormat.DATA_MATRIX,
+      BarcodeFormat.CODABAR,
+    ]);
+    hints.set(DecodeHintType.TRY_HARDER, true);
+    hints.set(DecodeHintType.ALSO_INVERTED, true);
+  }
+
+  /** @type {{ text: string, format: string, points: {x:number,y:number}[] }[]} */
+  const hits = [];
+  const tryDecode = (lum, w, h, yOff = 0) => {
+    try {
+      const source = new RGBLuminanceSource(lum, w, h);
+      const bitmap = new BinaryBitmap(new HybridBinarizer(source));
+      const reader = new MultiFormatReader();
+      if (hints.size) reader.setHints(hints);
+      const result = reader.decode(bitmap);
+      const points = (result.getResultPoints?.() || []).map((p) => ({
+        x: p.getX(),
+        y: p.getY() + yOff,
+      }));
+      hits.push({
+        text: result.getText?.() || "code",
+        format: String(result.getBarcodeFormat?.() ?? ""),
+        points,
+      });
+    } catch {
+      /* none */
+    }
+  };
+
+  tryDecode(luminances, imageData.width, imageData.height, 0);
+
+  // Banded passes catch codes that fail on the full-page binarization
+  const bandH = Math.max(40, Math.floor(imageData.height / 8));
+  for (let y0 = 0; y0 < imageData.height; y0 += Math.floor(bandH * 0.5)) {
+    const h = Math.min(bandH, imageData.height - y0);
+    if (h < 24) continue;
+    const band = new Uint8ClampedArray(imageData.width * h);
+    band.set(luminances.subarray(y0 * imageData.width, (y0 + h) * imageData.width));
+    tryDecode(band, imageData.width, h, y0);
+  }
+
+  // Dedupe by text
+  const seen = new Set();
+  return hits.filter((h) => {
+    const k = h.text;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/**
  * @param {ImageData} imageData
  * @returns {Promise<import('./types.js').FlagHit[]>}
  */
@@ -127,101 +312,29 @@ async function detectWithZxing(imageData) {
   try {
     const ZXing = await loadZxing();
     if (!ZXing) return out;
-    const {
-      BrowserMultiFormatReader,
-      HTMLCanvasElementLuminanceSource,
-      BinaryBitmap,
-      HybridBinarizer,
-      MultiFormatReader,
-      DecodeHintType,
-      BarcodeFormat,
-      RGBLuminanceSource,
-    } = ZXing;
-
-    // Prefer pure ImageData path (no DOM canvas dependency beyond what we have)
-    if (RGBLuminanceSource && MultiFormatReader && HybridBinarizer && BinaryBitmap) {
-      const luminances = new Uint8ClampedArray(imageData.width * imageData.height);
-      for (let i = 0, j = 0; i < imageData.data.length; i += 4, j++) {
-        luminances[j] =
-          (imageData.data[i] * 0.299 + imageData.data[i + 1] * 0.587 + imageData.data[i + 2] * 0.114) | 0;
-      }
-      const source = new RGBLuminanceSource(luminances, imageData.width, imageData.height);
-      const bitmap = new BinaryBitmap(new HybridBinarizer(source));
-      const hints = new Map();
-      if (DecodeHintType && BarcodeFormat) {
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-          BarcodeFormat.QR_CODE,
-          BarcodeFormat.CODE_128,
-          BarcodeFormat.CODE_39,
-          BarcodeFormat.EAN_13,
-          BarcodeFormat.EAN_8,
-          BarcodeFormat.UPC_A,
-          BarcodeFormat.ITF,
-          BarcodeFormat.PDF_417,
-          BarcodeFormat.DATA_MATRIX,
-        ]);
-        hints.set(DecodeHintType.TRY_HARDER, true);
-      }
-      const reader = new MultiFormatReader();
-      if (hints.size) reader.setHints(hints);
-      try {
-        const result = reader.decode(bitmap);
-        const points = result.getResultPoints?.() || [];
+    const hits = zxingDecodeAll(ZXing, imageData);
+    for (const hit of hits) {
+      let box;
+      if (hit.points.length) {
+        const xs = hit.points.map((p) => p.x);
+        const ys = hit.points.map((p) => p.y);
         const pad = 12;
-        let x0 = 0;
-        let y0 = 0;
-        let x1 = imageData.width;
-        let y1 = imageData.height;
-        if (points.length) {
-          const xs = points.map((p) => p.getX());
-          const ys = points.map((p) => p.getY());
-          x0 = Math.max(0, Math.min(...xs) - pad);
-          y0 = Math.max(0, Math.min(...ys) - pad);
-          x1 = Math.min(imageData.width, Math.max(...xs) + pad);
-          y1 = Math.min(imageData.height, Math.max(...ys) + pad);
-        }
-        out.push({
-          box: [x0, y0, x1, y1],
-          reason: "barcode",
-          text: result.getText?.() || "code",
-          blanked: false,
-        });
-      } catch {
-        /* not found */
+        box = [
+          Math.max(0, Math.min(...xs) - pad),
+          Math.max(0, Math.min(...ys) - pad),
+          Math.min(imageData.width, Math.max(...xs) + pad),
+          Math.min(imageData.height, Math.max(...ys) + pad),
+        ];
+      } else {
+        box = [0, 0, imageData.width, imageData.height];
       }
-      return out;
-    }
-
-    // Fallback: BrowserMultiFormatReader + canvas
-    if (BrowserMultiFormatReader && typeof document !== "undefined") {
-      const canvas = document.createElement("canvas");
-      canvas.width = imageData.width;
-      canvas.height = imageData.height;
-      canvas.getContext("2d").putImageData(imageData, 0, 0);
-      const reader = new BrowserMultiFormatReader();
-      const result = await reader.decodeFromCanvas(canvas);
-      if (result) {
-        const points = result.getResultPoints?.() || [];
-        const pad = 12;
-        let box = [0, 0, imageData.width, imageData.height];
-        if (points.length) {
-          const xs = points.map((p) => p.getX());
-          const ys = points.map((p) => p.getY());
-          box = [
-            Math.max(0, Math.min(...xs) - pad),
-            Math.max(0, Math.min(...ys) - pad),
-            Math.min(imageData.width, Math.max(...xs) + pad),
-            Math.min(imageData.height, Math.max(...ys) + pad),
-          ];
-        }
-        out.push({
-          box,
-          reason: "barcode",
-          text: result.getText?.() || "code",
-          blanked: false,
-        });
-      }
-      void HTMLCanvasElementLuminanceSource;
+      box = expandLinearBarcodeBox(imageData, box, hit.format);
+      out.push({
+        box,
+        reason: "barcode",
+        text: hit.text || "code",
+        blanked: false,
+      });
     }
   } catch {
     /* ignore */
@@ -275,8 +388,11 @@ async function detectWithBarcodeDetector(imageData) {
       const bb = code.boundingBox;
       if (!bb) continue;
       const pad = 8;
+      let box = [bb.x - pad, bb.y - pad, bb.x + bb.width + pad, bb.y + bb.height + pad];
+      const fmt = String(code.format || "");
+      box = expandLinearBarcodeBox(imageData, box, fmt);
       out.push({
-        box: [bb.x - pad, bb.y - pad, bb.x + bb.width + pad, bb.y + bb.height + pad],
+        box,
         reason: "barcode",
         text: code.rawValue || code.format || "barcode",
         blanked: false,
@@ -433,11 +549,13 @@ function mergeCodeFlags(flags) {
 }
 
 /**
- * Decode any QR/barcode left in ImageData (for export verification tests).
+ * Decode any QR/1D barcode still present (jsQR + ZXing multi-format).
+ * Used for export verification and post-blank Approve gating.
  * @param {ImageData} imageData
  * @returns {Promise<string[]>}
  */
 export async function decodeAnyCodes(imageData) {
+  /** @type {string[]} */
   const found = [];
   try {
     const jsQR = await loadJsQR();
@@ -450,9 +568,25 @@ export async function decodeAnyCodes(imageData) {
   } catch {
     /* ignore */
   }
-  const flags = await detectBarcodeFlags(imageData);
-  for (const f of flags) {
-    if (f.text && f.reason === "barcode") found.push(f.text);
+  try {
+    const ZXing = await loadZxing();
+    if (ZXing) {
+      for (const hit of zxingDecodeAll(ZXing, imageData)) {
+        if (hit.text) found.push(hit.text);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (typeof BarcodeDetector !== "undefined") {
+      const fromApi = await detectWithBarcodeDetector(imageData);
+      for (const f of fromApi) {
+        if (f.text) found.push(f.text);
+      }
+    }
+  } catch {
+    /* ignore */
   }
   return [...new Set(found)];
 }

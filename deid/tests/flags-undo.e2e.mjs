@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
+import { gotoDeidWithTestHook } from "./harness/inject.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../..");
@@ -42,7 +43,7 @@ async function main() {
   const server = await startServer();
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
-  await page.goto(`http://127.0.0.1:${PORT}/deid/?test=1`, { waitUntil: "networkidle" });
+  await gotoDeidWithTestHook(page, `http://127.0.0.1:${PORT}`);
 
   // Seed page with an unresolved flag in the centre
   await page.evaluate(() => {

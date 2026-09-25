@@ -1,6 +1,6 @@
 /**
  * Touch-draw e2e — real CDP touch only (no synthetic pointer events).
- * Requires ?test=1 for the seed hook.
+ * Test hook is injected from tests/harness (not shipped on /deid/).
  */
 import { chromium } from "playwright";
 import http from "node:http";
@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
+import { gotoDeidWithTestHook } from "./harness/inject.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../..");
@@ -81,13 +82,22 @@ async function main() {
   });
   const page = await context.newPage();
 
-  // Production URL must NOT expose the test hook
+  // Production URL must NOT expose the test hook (including ?test=1)
   await page.goto(`http://127.0.0.1:${PORT}/deid/`, { waitUntil: "networkidle" });
-  const noHook = await page.evaluate(() => typeof window.__deidTest === "undefined");
-  assert.equal(noHook, true, "production build must not expose __deidTest");
-
+  assert.equal(await page.evaluate(() => typeof window.__deidTest), "undefined");
   await page.goto(`http://127.0.0.1:${PORT}/deid/?test=1`, { waitUntil: "networkidle" });
-  assert.equal(await page.evaluate(() => typeof window.__deidTest), "object");
+  assert.equal(
+    await page.evaluate(() => typeof window.__deidTest),
+    "undefined",
+    "?test=1 must not install __deidTest"
+  );
+  // app.js must not contain samplePixel / getFlags test helpers
+  const appSrc = fs.readFileSync(path.join(REPO, "deid/app.js"), "utf8");
+  assert.ok(!appSrc.includes("__deidTest"), "app.js must not reference __deidTest");
+  assert.ok(!appSrc.includes("samplePixel"), "app.js must not ship samplePixel");
+  assert.ok(!/getFlags\s*:/.test(appSrc), "app.js must not ship getFlags hook");
+
+  await gotoDeidWithTestHook(page, `http://127.0.0.1:${PORT}`);
 
   await page.evaluate(() => {
     const img = new ImageData(200, 200);
@@ -122,7 +132,6 @@ async function main() {
     window.__deidTest.setTool("crop");
   });
   await touchDrag(page, "#overlayCanvas", { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 });
-  // crop remaps flags async — wait briefly
   await page.waitForTimeout(200);
   const size = await page.evaluate(() => window.__deidTest.workingSize());
   assert.ok(size.w < 200 && size.h < 200, `crop should shrink, got ${JSON.stringify(size)}`);
