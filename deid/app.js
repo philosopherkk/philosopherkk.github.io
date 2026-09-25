@@ -3,7 +3,7 @@
  */
 import { applyI18n, t, toggleLang, getLang } from "./ui/i18n.js";
 import { createOcrProvider } from "./ui/ocr.js";
-import { loadFilePages } from "./ui/loader.js";
+import { loadFilePages, HEIC_UNSUPPORTED } from "./ui/loader.js";
 import { HistoryStack } from "./ui/history.js";
 import {
   deidPage,
@@ -145,46 +145,63 @@ async function processFiles(files) {
   clearState();
   $("dropZone").classList.add("hidden");
   setProgress(t("processing"), 0.02);
-  const provider = await ensureOcr();
+  try {
+    const provider = await ensureOcr();
 
-  /** @type {ImageData[]} */
-  const allPages = [];
-  for (const f of files) {
-    const imgs = await loadFilePages(f);
-    allPages.push(...imgs);
+    /** @type {ImageData[]} */
+    const allPages = [];
+    for (const f of files) {
+      const imgs = await loadFilePages(f);
+      allPages.push(...imgs);
+    }
+
+    for (let i = 0; i < allPages.length; i++) {
+      setProgress(`${t("processing")} ${i + 1}/${allPages.length}`, (i + 0.1) / allPages.length);
+      const result = await deidPage(allPages[i], {
+        ocr: provider,
+        onProgress: (msg, p) =>
+          setProgress(`${msg} (${i + 1}/${allPages.length})`, (i + (p || 0)) / allPages.length),
+      });
+      const history = new HistoryStack();
+      const flags0 = result.flags.map((f) => ({ ...f, box: [...f.box] }));
+      // serialHits are already merged into flags (reason 'serial'); keep text list for history
+      const serials0 = flags0.filter((f) => f.reason === "serial").map((f) => f.text || "");
+      history.push(result.imageData, flags0, serials0);
+      pages.push({
+        original: allPages[i],
+        upright: result.upright,
+        working: cloneImageData(result.imageData),
+        device: result.device,
+        flags: flags0.map((f) => ({ ...f, box: [...f.box] })),
+        serialHits: serials0.slice(),
+        approved: false,
+        removedRegions: result.removedRegions || [],
+        history,
+      });
+    }
+
+    // Drop source file buffers from allPages originals after copy — keep for before view
+    pageIdx = 0;
+    syncPageSelect();
+    $("workspace").classList.remove("hidden");
+    $("progressWrap").classList.add("hidden");
+    refreshUI();
+  } catch (e) {
+    clearState();
+    $("dropZone").classList.remove("hidden");
+    $("progressWrap").classList.add("hidden");
+    const code = e?.code || e?.message;
+    const msg =
+      code === HEIC_UNSUPPORTED || e?.message === HEIC_UNSUPPORTED
+        ? t("heicUnsupported")
+        : String(e?.message || e);
+    $("statusMsg").textContent = msg;
+    $("statusMsg").style.color = "var(--danger)";
+    // status lives in workspace; surface via progress text when workspace is hidden
+    $("progressWrap").classList.remove("hidden");
+    $("progressText").textContent = msg;
+    $("progressBar").style.width = "0%";
   }
-
-  for (let i = 0; i < allPages.length; i++) {
-    setProgress(`${t("processing")} ${i + 1}/${allPages.length}`, (i + 0.1) / allPages.length);
-    const result = await deidPage(allPages[i], {
-      ocr: provider,
-      onProgress: (msg, p) =>
-        setProgress(`${msg} (${i + 1}/${allPages.length})`, (i + (p || 0)) / allPages.length),
-    });
-    const history = new HistoryStack();
-    const flags0 = result.flags.map((f) => ({ ...f, box: [...f.box] }));
-    // serialHits are already merged into flags (reason 'serial'); keep text list for history
-    const serials0 = flags0.filter((f) => f.reason === "serial").map((f) => f.text || "");
-    history.push(result.imageData, flags0, serials0);
-    pages.push({
-      original: allPages[i],
-      upright: result.upright,
-      working: cloneImageData(result.imageData),
-      device: result.device,
-      flags: flags0.map((f) => ({ ...f, box: [...f.box] })),
-      serialHits: serials0.slice(),
-      approved: false,
-      removedRegions: result.removedRegions || [],
-      history,
-    });
-  }
-
-  // Drop source file buffers from allPages originals after copy — keep for before view
-  pageIdx = 0;
-  syncPageSelect();
-  $("workspace").classList.remove("hidden");
-  $("progressWrap").classList.add("hidden");
-  refreshUI();
 }
 
 function blankAtFlag(flag) {
@@ -479,9 +496,17 @@ function wire() {
 
   const drop = $("dropZone");
   const input = $("fileInput");
-  drop.addEventListener("click", () => input.click());
+  const camera = $("cameraInput");
+  // Labels open the pickers via a real user gesture — do not call input.click()
+  // from a section handler (unreliable on iOS). Keep keyboard access on the zone.
   drop.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") input.click();
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      // Activate the main chooser label (photo library / Files / desktop dialog)
+      $("fileInput")?.focus?.();
+      const label = drop.querySelector('label[for="fileInput"]');
+      label?.click();
+    }
   });
   drop.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -493,10 +518,14 @@ function wire() {
     drop.classList.remove("drag");
     processFiles([...e.dataTransfer.files]);
   });
-  input.addEventListener("change", () => {
-    processFiles([...input.files]);
-    input.value = "";
-  });
+  const onFileChange = (el) => {
+    el.addEventListener("change", () => {
+      processFiles([...el.files]);
+      el.value = "";
+    });
+  };
+  onFileChange(input);
+  onFileChange(camera);
 
   $("pageSelect").addEventListener("change", () => {
     pageIdx = Number($("pageSelect").value) || 0;

@@ -79,7 +79,7 @@ body {
   text-align: center;
   color: var(--muted);
   background: color-mix(in srgb, var(--bg1) 80%, transparent);
-  cursor: pointer;
+  cursor: default;
   transition: border-color 0.2s, background 0.2s;
 }
 
@@ -87,6 +87,55 @@ body {
   outline: none;
   border-color: var(--accent);
   background: color-mix(in srgb, #1a3328 70%, transparent);
+}
+
+.drop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg1);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.3;
+  max-width: 100%;
+  text-align: center;
+}
+
+.file-btn:hover { border-color: #3d5164; }
+.file-btn.primary {
+  background: color-mix(in srgb, var(--accent) 22%, var(--bg1));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  color: #d8ffe9;
+}
+.file-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Visually hidden but activatable — never display:none for file inputs */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 .progress {
