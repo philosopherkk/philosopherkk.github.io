@@ -1,5 +1,5 @@
 /* Offline cache: shell only on install. OCR/wasm/traineddata = cache-first on first use. */
-const SHELL_CACHE = "deid-shell-v2";
+const SHELL_CACHE = "deid-shell-v3";
 const OCR_CACHE = "deid-ocr-v1";
 
 /** First-visit shell — no OCR wasm / traineddata / pdf.js. */
@@ -24,6 +24,7 @@ const SHELL_PRECACHE = [
   "./core/pipeline.js",
   "./core/export.js",
   "./core/barcode.js",
+  "./core/qrfind.js",
   "./core/flagmap.js",
 ];
 

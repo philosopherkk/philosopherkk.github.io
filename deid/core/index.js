@@ -51,6 +51,11 @@ export {
   loadJsQR,
   expandLinearBarcodeBox,
 } from "./barcode.js";
+export {
+  detectQrFinderFlags,
+  expandQrCodeBox,
+  findFinderPatterns,
+} from "./qrfind.js";
 export { remapFlagsAfterCrop, remapFlagsAfterRotate90 } from "./flagmap.js";
 export {
   deidPage,

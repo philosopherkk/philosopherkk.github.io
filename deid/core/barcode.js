@@ -1,11 +1,18 @@
 /**
- * Barcode / QR detection: BarcodeDetector → jsQR → ZXing → strict dense heuristic.
+ * Barcode / QR detection: BarcodeDetector → jsQR → ZXing → finder patterns → dense heuristic.
+ * Rotated passes (lazy) make skewed QR readable; boxes map back to the original image.
  * Decoders are lazy-loaded from same-origin /deid/vendor/ (no CDN).
  * @module core/barcode
  */
 
+import { rotateSmall } from "./deskew.js";
+import { detectQrFinderFlags, expandQrCodeBox } from "./qrfind.js";
+
 let jsQRPromise = null;
 let zxingPromise = null;
+
+/** Angles (PIL CCW deg) tried when the upright pass finds nothing. */
+const ROTATION_PASS_DEG = [0, 10, -10, 15, -15, 25, -25, 30, -30, 45, -45, 60, -60, 75, -75, 90, -90];
 
 /**
  * @param {ImageData} imageData
@@ -15,21 +22,158 @@ export async function detectBarcodeFlags(imageData) {
   /** @type {import('./types.js').FlagHit[]} */
   const flags = [];
 
-  const fromApi = await detectWithBarcodeDetector(imageData);
-  flags.push(...fromApi);
+  const upright = await detectCodesUpright(imageData);
+  flags.push(...upright);
 
-  const fromJsQR = await detectWithJsQR(imageData);
-  flags.push(...fromJsQR);
+  if (!flags.length) {
+    flags.push(...(await detectCodesRotated(imageData)));
+  }
 
-  const fromZxing = await detectWithZxing(imageData);
-  flags.push(...fromZxing);
+  // Decode-independent finder patterns (also catches partial / PDF-rendered codes)
+  const finders = detectQrFinderFlags(imageData);
+  for (const f of finders) {
+    const dup = flags.some((g) => boxesOverlap(g.box, f.box));
+    if (!dup) flags.push(f);
+  }
 
-  // Only use dense heuristic if no decoder found anything
+  // Only use dense heuristic if still nothing
   if (!flags.length) {
     flags.push(...detectDenseHighContrastRegions(imageData));
   }
 
   return mergeCodeFlags(flags);
+}
+
+/**
+ * @param {ImageData} imageData
+ * @returns {Promise<import('./types.js').FlagHit[]>}
+ */
+async function detectCodesUpright(imageData) {
+  /** @type {import('./types.js').FlagHit[]} */
+  const flags = [];
+  flags.push(...(await detectWithBarcodeDetector(imageData)));
+  flags.push(...(await detectWithJsQR(imageData)));
+  flags.push(...(await detectWithZxing(imageData)));
+  return flags.map((f) => normalizeCodeBox(imageData, f));
+}
+
+/**
+ * Rotate image, decode, map corner points back to the original frame.
+ * @param {ImageData} imageData
+ * @returns {Promise<import('./types.js').FlagHit[]>}
+ */
+async function detectCodesRotated(imageData) {
+  /** @type {import('./types.js').FlagHit[]} */
+  const out = [];
+  const W = imageData.width;
+  const H = imageData.height;
+
+  for (const deg of ROTATION_PASS_DEG) {
+    if (deg === 0) continue;
+    let rotated;
+    try {
+      rotated = rotateSmall(imageData, deg);
+    } catch {
+      continue;
+    }
+    const hits = [];
+    hits.push(...(await detectWithJsQR(rotated)));
+    hits.push(...(await detectWithZxing(rotated)));
+    for (const hit of hits) {
+      const mapped = mapBoxFromRotated(hit.box, W, H, deg);
+      const pts = hit._points
+        ? hit._points.map((p) => {
+            const [x, y] = mapPointFromRotated(p.x, p.y, W, H, deg);
+            return { x, y };
+          })
+        : [];
+      out.push(
+        normalizeCodeBox(imageData, {
+          ...hit,
+          box: mapped,
+          _points: pts,
+        })
+      );
+    }
+    if (out.length) break; // first successful angle is enough
+  }
+  return out;
+}
+
+/**
+ * Map a point from an image rotated by `deg` (PIL CCW / rotateSmall) back to original.
+ * @param {number} x
+ * @param {number} y
+ * @param {number} W
+ * @param {number} H
+ * @param {number} deg
+ * @returns {[number, number]}
+ */
+export function mapPointFromRotated(x, y, W, H, deg) {
+  const cx = W / 2;
+  const cy = H / 2;
+  const rad = (deg * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const dx = x - cx;
+  const dy = y - cy;
+  // Inverse of rotateSmall's canvas Rotate(-deg): apply Rotate(+deg)
+  return [cx + dx * cos - dy * sin, cy + dx * sin + dy * cos];
+}
+
+/**
+ * @param {[number, number, number, number]} box
+ * @param {number} W
+ * @param {number} H
+ * @param {number} deg
+ * @returns {[number, number, number, number]}
+ */
+function mapBoxFromRotated(box, W, H, deg) {
+  const [x0, y0, x1, y1] = box;
+  const corners = [
+    mapPointFromRotated(x0, y0, W, H, deg),
+    mapPointFromRotated(x1, y0, W, H, deg),
+    mapPointFromRotated(x0, y1, W, H, deg),
+    mapPointFromRotated(x1, y1, W, H, deg),
+  ];
+  const xs = corners.map((c) => c[0]);
+  const ys = corners.map((c) => c[1]);
+  return [
+    Math.max(0, Math.min(...xs)),
+    Math.max(0, Math.min(...ys)),
+    Math.min(W, Math.max(...xs)),
+    Math.min(H, Math.max(...ys)),
+  ];
+}
+
+/**
+ * Ensure QR boxes are full-sized (never a sub-finder stub); expand 1D as before.
+ * @param {ImageData} imageData
+ * @param {import('./types.js').FlagHit & {_points?: {x:number,y:number}[], _format?: string}} f
+ */
+function normalizeCodeBox(imageData, f) {
+  const fmt = String(f._format || "");
+  const isQrFormat = /QR/i.test(fmt) || f.reason === "qr_finder";
+  const w = f.box[2] - f.box[0];
+  const h = f.box[3] - f.box[1];
+  const nearSquare = w > 0 && h > 0 && w / h > 0.55 && w / h < 1.8;
+  let box = f.box;
+  if (isQrFormat || (nearSquare && !/CODE_|EAN|UPC|ITF|CODABAR|RSS/i.test(fmt))) {
+    box = expandQrCodeBox(imageData, box, f._points || []);
+  } else {
+    box = expandLinearBarcodeBox(imageData, box, fmt);
+  }
+  return {
+    box,
+    reason: f.reason === "qr_finder" ? "qr_finder" : f.reason === "dense_code_region" ? "dense_code_region" : "barcode",
+    text: f.text,
+    blanked: false,
+  };
+}
+
+/** @param {[number,number,number,number]} a @param {[number,number,number,number]} b */
+function boxesOverlap(a, b) {
+  return Math.min(a[2], b[2]) > Math.max(a[0], b[0]) && Math.min(a[3], b[3]) > Math.max(a[1], b[1]);
 }
 
 /**
@@ -84,10 +228,10 @@ function loadScript(src) {
 
 /**
  * @param {ImageData} imageData
- * @returns {Promise<import('./types.js').FlagHit[]>}
+ * @returns {Promise<(import('./types.js').FlagHit & {_points?: {x:number,y:number}[], _format?: string})[]>}
  */
 async function detectWithJsQR(imageData) {
-  /** @type {import('./types.js').FlagHit[]} */
+  /** @type {(import('./types.js').FlagHit & {_points?: {x:number,y:number}[], _format?: string})[]} */
   const out = [];
   try {
     const jsQR = await loadJsQR();
@@ -97,8 +241,14 @@ async function detectWithJsQR(imageData) {
     });
     if (!code || !code.location) return out;
     const loc = code.location;
-    const xs = [loc.topLeftCorner.x, loc.topRightCorner.x, loc.bottomLeftCorner.x, loc.bottomRightCorner.x];
-    const ys = [loc.topLeftCorner.y, loc.topRightCorner.y, loc.bottomLeftCorner.y, loc.bottomRightCorner.y];
+    const pts = [
+      loc.topLeftCorner,
+      loc.topRightCorner,
+      loc.bottomLeftCorner,
+      loc.bottomRightCorner,
+    ];
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
     const pad = 12;
     out.push({
       box: [
@@ -110,6 +260,8 @@ async function detectWithJsQR(imageData) {
       reason: "barcode",
       text: code.data || "qr",
       blanked: false,
+      _points: pts.map((p) => ({ x: p.x, y: p.y })),
+      _format: "QR_CODE",
     });
   } catch {
     /* ignore */
@@ -307,7 +459,7 @@ function zxingDecodeAll(ZXing, imageData) {
  * @returns {Promise<import('./types.js').FlagHit[]>}
  */
 async function detectWithZxing(imageData) {
-  /** @type {import('./types.js').FlagHit[]} */
+  /** @type {(import('./types.js').FlagHit & {_points?: {x:number,y:number}[], _format?: string})[]} */
   const out = [];
   try {
     const ZXing = await loadZxing();
@@ -328,12 +480,13 @@ async function detectWithZxing(imageData) {
       } else {
         box = [0, 0, imageData.width, imageData.height];
       }
-      box = expandLinearBarcodeBox(imageData, box, hit.format);
       out.push({
         box,
         reason: "barcode",
         text: hit.text || "code",
         blanked: false,
+        _points: hit.points,
+        _format: hit.format,
       });
     }
   } catch {
@@ -390,12 +543,13 @@ async function detectWithBarcodeDetector(imageData) {
       const pad = 8;
       let box = [bb.x - pad, bb.y - pad, bb.x + bb.width + pad, bb.y + bb.height + pad];
       const fmt = String(code.format || "");
-      box = expandLinearBarcodeBox(imageData, box, fmt);
       out.push({
         box,
         reason: "barcode",
         text: code.rawValue || code.format || "barcode",
         blanked: false,
+        _format: fmt,
+        _points: (code.cornerPoints || []).map((p) => ({ x: p.x, y: p.y })),
       });
     }
   } catch {
@@ -549,7 +703,7 @@ function mergeCodeFlags(flags) {
 }
 
 /**
- * Decode any QR/1D barcode still present (jsQR + ZXing multi-format).
+ * Decode any QR/1D barcode still present (jsQR + ZXing), including rotated passes.
  * Used for export verification and post-blank Approve gating.
  * @param {ImageData} imageData
  * @returns {Promise<string[]>}
@@ -557,36 +711,61 @@ function mergeCodeFlags(flags) {
 export async function decodeAnyCodes(imageData) {
   /** @type {string[]} */
   const found = [];
-  try {
-    const jsQR = await loadJsQR();
-    if (jsQR) {
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
-      });
-      if (code?.data) found.push(code.data);
+
+  const tryDecode = async (img) => {
+    /** @type {string[]} */
+    const local = [];
+    try {
+      const jsQR = await loadJsQR();
+      if (jsQR) {
+        const code = jsQR(img.data, img.width, img.height, {
+          inversionAttempts: "attemptBoth",
+        });
+        if (code?.data) local.push(code.data);
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
-  }
-  try {
-    const ZXing = await loadZxing();
-    if (ZXing) {
-      for (const hit of zxingDecodeAll(ZXing, imageData)) {
-        if (hit.text) found.push(hit.text);
+    try {
+      const ZXing = await loadZxing();
+      if (ZXing) {
+        for (const hit of zxingDecodeAll(ZXing, img)) {
+          if (hit.text) local.push(hit.text);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (typeof BarcodeDetector !== "undefined") {
+        const fromApi = await detectWithBarcodeDetector(img);
+        for (const f of fromApi) {
+          if (f.text) local.push(f.text);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    return local;
+  };
+
+  found.push(...(await tryDecode(imageData)));
+  if (!found.length) {
+    for (const deg of ROTATION_PASS_DEG) {
+      if (deg === 0) continue;
+      let rotated;
+      try {
+        rotated = rotateSmall(imageData, deg);
+      } catch {
+        continue;
+      }
+      const got = await tryDecode(rotated);
+      if (got.length) {
+        found.push(...got);
+        break;
       }
     }
-  } catch {
-    /* ignore */
   }
-  try {
-    if (typeof BarcodeDetector !== "undefined") {
-      const fromApi = await detectWithBarcodeDetector(imageData);
-      for (const f of fromApi) {
-        if (f.text) found.push(f.text);
-      }
-    }
-  } catch {
-    /* ignore */
-  }
+  // Finder patterns alone don't yield payload text — but Approve also checks flags.
   return [...new Set(found)];
 }

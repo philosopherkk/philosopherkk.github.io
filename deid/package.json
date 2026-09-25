@@ -5,7 +5,7 @@
   "scripts": {
     "fixtures": "node tests/generate-fixtures.mjs",
     "test:unit": "node --test --test-reporter=spec tests/unit.test.mjs tests/layouts.test.mjs tests/safety-flags.test.mjs",
-    "test:e2e": "node tests/e2e.mjs && node tests/touch-draw.e2e.mjs && node tests/size-report.e2e.mjs && node tests/qr-export.e2e.mjs && node tests/flags-undo.e2e.mjs && node tests/code128-export.e2e.mjs",
+    "test:e2e": "node tests/e2e.mjs && node tests/touch-draw.e2e.mjs && node tests/size-report.e2e.mjs && node tests/qr-export.e2e.mjs && node tests/flags-undo.e2e.mjs && node tests/code128-export.e2e.mjs && node tests/qr-rotated-pdf.e2e.mjs",
     "test": "npm run fixtures && npm run test:unit && npm run test:e2e"
   },
   "devDependencies": {

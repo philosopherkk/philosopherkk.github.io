@@ -1,10 +1,10 @@
 /**
- * Playwright-only test hook. Not linked from /deid/index.html.
+ * Playwright-only test hook. Lives outside /deid/ so it is not part of the app deploy path.
  * Inject via dynamic import from e2e tests after the app has loaded.
  */
-import { getAppController } from "../../app.js";
-import { HistoryStack } from "../../ui/history.js";
-import { cloneImageData } from "../../core/index.js";
+import { getAppController } from "../../deid/app.js";
+import { HistoryStack } from "../../deid/ui/history.js";
+import { cloneImageData } from "../../deid/core/index.js";
 
 /**
  * Install window.__deidTest for e2e. No-op if already installed.

@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
-import { gotoDeidWithTestHook } from "./harness/inject.mjs";
+import { gotoDeidWithTestHook } from "../../tests/deid-harness/inject.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../..");

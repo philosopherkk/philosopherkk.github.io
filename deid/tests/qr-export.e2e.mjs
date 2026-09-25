@@ -85,7 +85,7 @@ async function main() {
     // Blank every barcode flag (default action before export)
     fillWhite(
       img,
-      flags.filter((f) => f.reason === "barcode" || f.reason === "dense_code_region").map((f) => f.box)
+      flags.filter((f) => f.reason === "barcode" || f.reason === "dense_code_region" || f.reason === "qr_finder").map((f) => f.box)
     );
     const after = await decodeAnyCodes(img);
 
