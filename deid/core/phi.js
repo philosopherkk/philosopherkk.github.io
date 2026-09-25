@@ -44,6 +44,13 @@ export const CLINICAL_LINE =
   /\b(MD|PSD|VFI|GHT|IOP|CCT|RNFL|GCL|ONH|AL|AXL|ACD|WTW|K1|K2|Km|EKR|SITA|ETDRS|SSI|SQI)\b|\b(dB|µm|um|mmHg|D)\b|\b(Fixation|Stimulus|Background|Strategy|Threshold|Pattern\s+Deviation|Total\s+Deviation|Visual\s+Field|Signal\s+Strength|Within\s+Normal|Outside\s+Normal|Borderline)\b|\b(Right\s+Eye|Left\s+Eye|\(OD\)|\(OS\)|\(OU\))\b|\bC\s*\/\s*D\b/i;
 
 /**
+ * Single Latin clinical tokens (OCR word boxes) that must never be auto-blanked.
+ * Includes laterality and common HFA / topography abbreviations.
+ */
+export const CLINICAL_LATIN_TOKEN =
+  /^(Right|Left|Eye|OD|OS|OU|MD|PSD|VFI|GHT|IOP|CCT|RNFL|GCL|ONH|AL|AXL|ACD|WTW|K1|K2|Km|EKR|SITA|ETDRS|SSI|SQI|dB|µm|um|mmHg|D|Fixation|Stimulus|Background|Strategy|Threshold|Pattern|Deviation|Total|Visual|Field|Signal|Strength|Within|Normal|Outside|Borderline|Limits|Monitor)$/i;
+
+/**
  * True when token is laterality "Eye:R/L" etc., not a clinic name.
  * @param {string} t
  */
@@ -57,6 +64,91 @@ export function isLateralityEye(t) {
  */
 export function isClinicalLine(t) {
   return CLINICAL_LINE.test(String(t || ""));
+}
+
+/**
+ * True when a single OCR word is a Latin clinical token (Right, OD, MD, …).
+ * @param {string} t
+ */
+export function isClinicalLatinToken(t) {
+  const s = String(t || "")
+    .trim()
+    .replace(/^[(\[{]+|[)\]}:,.;]+$/g, "");
+  if (!s) return false;
+  if (CLINICAL_LATIN_TOKEN.test(s)) return true;
+  // "(OD)" / "Eye:" style fragments already partially stripped
+  if (/^\(?\s*(OD|OS|OU)\s*\)?$/i.test(String(t || "").trim())) return true;
+  return false;
+}
+
+/**
+ * High-confidence genuine Han (CJK) text — not Latin-dominant OCR garbage that
+ * chi_tra sometimes invents over English clinical lines.
+ * @param {string} t
+ */
+export function isGenuineHanText(t) {
+  const s = String(t || "").trim();
+  if (!s) return false;
+  // Count code points with /g — CJK export has no /g so .match length would be 1 for a run.
+  const han = s.match(/[\u3400-\u9fff\uf900-\ufaff]/g) || [];
+  if (han.length < 2) return false;
+  const latin = s.match(/[A-Za-z]/g) || [];
+  // Reject Latin-heavy misreads (e.g. fragments of "Right Eye")
+  if (latin.length >= han.length) return false;
+  const nonSpace = s.replace(/\s+/g, "");
+  if (han.length / Math.max(1, [...nonSpace].length) < 0.55) return false;
+  return true;
+}
+
+/**
+ * True when box overlaps an English OCR word that is a clinical Latin token/line.
+ * @param {[number,number,number,number]} box
+ * @param {import('./types.js').Word[]} engWords
+ */
+export function boxOverlapsClinicalLatin(box, engWords) {
+  if (!engWords || !engWords.length) return false;
+  const [ax0, ay0, ax1, ay1] = box;
+  for (const w of engWords) {
+    if ((w.conf ?? 0) < 35) continue;
+    const txt = String(w.text || "");
+    if (!isClinicalLatinToken(txt) && !isClinicalLine(txt)) continue;
+    const overlap =
+      Math.min(ax1, w.x1) > Math.max(ax0, w.x0) &&
+      Math.min(ay1, w.y1) > Math.max(ay0, w.y0);
+    if (overlap) return true;
+  }
+  return false;
+}
+
+/**
+ * Guard for chi_tra / CJK auto-blank: only high-conf genuine Han boxes that do
+ * not sit on Latin clinical tokens (Right Eye, OD/OS, MD, PSD, …).
+ * @param {import('./types.js').Word} w
+ * @param {import('./types.js').Word[]} [engWords]
+ */
+export function shouldAutoBlankCjkWord(w, engWords = []) {
+  if (!w || (w.conf ?? 0) < 80) return false;
+  if (!isGenuineHanText(w.text)) return false;
+  if (isClinicalLine(w.text)) return false;
+  const p = Math.floor(0.6 * Math.max(1, (w.y1 || 0) - (w.y0 || 0)));
+  const box = /** @type {[number,number,number,number]} */ ([
+    w.x0 - p,
+    w.y0 - p,
+    w.x1 + p,
+    w.y1 + p,
+  ]);
+  if (boxOverlapsClinicalLatin(box, engWords)) return false;
+  return true;
+}
+
+/**
+ * Drop auto-blank boxes that would wipe Latin clinical content.
+ * @param {[number,number,number,number][]} boxes
+ * @param {import('./types.js').Word[]} engWords
+ */
+export function filterClinicalSafeAutoBlanks(boxes, engWords) {
+  if (!boxes?.length) return [];
+  return boxes.filter((b) => !boxOverlapsClinicalLatin(b, engWords));
 }
 
 /**
@@ -252,17 +344,17 @@ export function collectFlags(ocrByRot, W, H, cjkWords = []) {
     }
   }
 
+  // CJK name flags: only genuine Han; never Latin clinical tokens (Right Eye, MD…).
+  const engForGuard = (ocrByRot[kUp] || []).filter((w) => (w.conf ?? 0) >= 35);
   for (const w of cjkWords) {
-    const chars = w.text.match(CJK) || [];
-    if (chars.length >= 2 && w.conf >= 80) {
-      const p = Math.floor(0.6 * (w.y1 - w.y0));
-      flags.push({
-        box: unrotateBox([w.x0 - p, w.y0 - p, w.x1 + p, w.y1 + p], kUp, W, H),
-        reason: "cjk_name",
-        text: w.text,
-        blanked: false,
-      });
-    }
+    if (!shouldAutoBlankCjkWord(w, engForGuard)) continue;
+    const p = Math.floor(0.6 * (w.y1 - w.y0));
+    flags.push({
+      box: unrotateBox([w.x0 - p, w.y0 - p, w.x1 + p, w.y1 + p], kUp, W, H),
+      reason: "cjk_name",
+      text: w.text,
+      blanked: false,
+    });
   }
   const [urw, urh] = rotSize(W, H, kUp);
   for (const f of lineSafetyFlags(cjkWords, urw, urh)) {
@@ -302,7 +394,7 @@ function mergeNearbyFlags(flags) {
         if (flags[j].text) text = (text ? text + " " : "") + flags[j].text;
         // Prefer specific safety reasons over generic identity_or_date
         const rank = (r) =>
-          ({ institution: 3, signature_line: 3, phone: 3, barcode: 3, dense_code_region: 2, cjk_name: 2, identity_or_date: 1 }[
+          ({ institution: 3, signature_line: 3, phone: 3, barcode: 3, qr_finder: 3, qr_texture: 3, dense_code_region: 2, cjk_name: 2, identity_or_date: 1 }[
             r
           ] || 0);
         if (rank(flags[j].reason) > rank(reason)) reason = flags[j].reason;

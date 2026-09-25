@@ -41,7 +41,13 @@ export {
   SIGNATURE_LINE,
   HK_PHONE,
   CLINICAL_LINE,
+  CLINICAL_LATIN_TOKEN,
   isClinicalLine,
+  isClinicalLatinToken,
+  isGenuineHanText,
+  shouldAutoBlankCjkWord,
+  filterClinicalSafeAutoBlanks,
+  boxOverlapsClinicalLatin,
   hasClearIdentifier,
 } from "./phi.js";
 export {

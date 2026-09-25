@@ -8,6 +8,10 @@ import {
   collectFlags,
   detectDenseHighContrastRegions,
   isClinicalLine,
+  isGenuineHanText,
+  shouldAutoBlankCjkWord,
+  filterClinicalSafeAutoBlanks,
+  detectQrFinderFlags,
 } from "../../deid/core/index.js";
 import "./helpers/imagedata-polyfill.mjs";
 
@@ -117,6 +121,45 @@ describe("unrecognised layout — clinic / signature / phone flags", () => {
   });
 });
 
+describe("clinical-term auto-blank guard", () => {
+  it("isGenuineHanText accepts real Han and rejects Latin-heavy garbage", () => {
+    assert.equal(isGenuineHanText("陳大文"), true);
+    assert.equal(isGenuineHanText("Right Eye"), false);
+    assert.equal(isGenuineHanText("Ri右ght"), false);
+    assert.equal(isGenuineHanText("右"), false); // need ≥2 Han
+  });
+
+  it("shouldAutoBlankCjkWord skips boxes overlapping Latin clinical tokens", () => {
+    const eng = [
+      w("Right", 10, 40, 60, 56),
+      w("Eye", 65, 40, 100, 56),
+      w("MD", 160, 40, 190, 56),
+    ];
+    // chi_tra invents Han over the clinical line
+    const fake = w("右眼視", 12, 38, 98, 58, 92);
+    assert.equal(shouldAutoBlankCjkWord(fake, eng), false);
+    // Real name elsewhere is fine
+    const name = w("陳大文", 200, 200, 280, 220, 92);
+    assert.equal(shouldAutoBlankCjkWord(name, eng), true);
+  });
+
+  it("filterClinicalSafeAutoBlanks drops boxes on Right Eye / MD", () => {
+    const eng = [
+      w("Right", 10, 40, 60, 56),
+      w("Eye", 65, 40, 100, 56),
+      w("(OD)", 105, 40, 150, 56),
+      w("MD", 160, 40, 190, 56),
+    ];
+    const boxes = [
+      [8, 36, 102, 60], // overlaps Right Eye
+      [300, 300, 360, 340], // clear
+    ];
+    const kept = filterClinicalSafeAutoBlanks(boxes, eng);
+    assert.equal(kept.length, 1);
+    assert.deepEqual(kept[0], [300, 300, 360, 340]);
+  });
+});
+
 describe("dense barcode heuristic — reject text blocks", () => {
   it("does not flag a horizontal text-like stroke band", () => {
     const W = 400;
@@ -143,5 +186,149 @@ describe("dense barcode heuristic — reject text blocks", () => {
     }
     const flags = detectDenseHighContrastRegions(img);
     assert.equal(flags.length, 0, `text must not be dense-flagged: ${JSON.stringify(flags)}`);
+  });
+});
+
+/** Paint a QR-like finder (7×7 modules) at module coords. */
+function paintFinder(img, ox, oy, mod) {
+  const { width: W, data } = img;
+  const set = (mx, my, dark) => {
+    for (let dy = 0; dy < mod; dy++) {
+      for (let dx = 0; dx < mod; dx++) {
+        const x = ox + mx * mod + dx;
+        const y = oy + my * mod + dy;
+        if (x < 0 || y < 0 || x >= W || y >= img.height) continue;
+        const i = (y * W + x) * 4;
+        const v = dark ? 0 : 255;
+        data[i] = data[i + 1] = data[i + 2] = v;
+        data[i + 3] = 255;
+      }
+    }
+  };
+  for (let y = 0; y < 7; y++) {
+    for (let x = 0; x < 7; x++) {
+      const border = x === 0 || y === 0 || x === 6 || y === 6;
+      const core = x >= 2 && x <= 4 && y >= 2 && y <= 4;
+      set(x, y, border || core);
+    }
+  }
+}
+
+/** Paint a binary module grid (checker-ish QR payload texture). */
+function paintModuleGrid(img, ox, oy, modules, mod) {
+  const { width: W, data } = img;
+  for (let my = 0; my < modules; my++) {
+    for (let mx = 0; mx < modules; mx++) {
+      // Pseudo-random but stable module pattern
+      const dark = ((mx * 7 + my * 13) % 5) < 2 || (mx + my) % 3 === 0;
+      for (let dy = 0; dy < mod; dy++) {
+        for (let dx = 0; dx < mod; dx++) {
+          const x = ox + mx * mod + dx;
+          const y = oy + my * mod + dy;
+          if (x < 0 || y < 0 || x >= W || y >= img.height) continue;
+          const i = (y * W + x) * 4;
+          const v = dark ? 0 : 255;
+          data[i] = data[i + 1] = data[i + 2] = v;
+          data[i + 3] = 255;
+        }
+      }
+    }
+  }
+}
+
+describe("damaged QR detectors — 1-finder + texture; no HFA/Pentacam FP", () => {
+  it("flags a QR with left finders wiped (1 finder + dense grid)", () => {
+    const W = 400;
+    const H = 400;
+    const img = new ImageData(W, H);
+    img.data.fill(255);
+    const mod = 6;
+    const n = 25;
+    const ox = 80;
+    const oy = 80;
+    paintModuleGrid(img, ox, oy, n, mod);
+    // Only top-right finder survives (left column wiped)
+    paintFinder(img, ox + (n - 7) * mod, oy, mod);
+    // Wipe left ~40% (destroy TL+BL finders if any)
+    for (let y = oy - 4; y < oy + n * mod + 4; y++) {
+      for (let x = ox - 4; x < ox + Math.floor(n * mod * 0.4); x++) {
+        if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const i = (y * W + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = 220;
+      }
+    }
+    const flags = detectQrFinderFlags(img);
+    assert.ok(
+      flags.some((f) => f.reason === "qr_finder" || f.reason === "qr_texture"),
+      `expected damaged-QR flag, got ${JSON.stringify(flags)}`
+    );
+  });
+
+  it("flags finder-less QR-like module texture", () => {
+    const W = 360;
+    const H = 360;
+    const img = new ImageData(W, H);
+    img.data.fill(255);
+    paintModuleGrid(img, 60, 60, 29, 6);
+    // No finders painted — texture detector must catch it
+    const flags = detectQrFinderFlags(img);
+    assert.ok(
+      flags.some((f) => f.reason === "qr_texture" || f.reason === "qr_finder"),
+      `expected qr_texture, got ${JSON.stringify(flags)}`
+    );
+  });
+
+  it("does NOT flag HFA-like greyscale symbol plot", () => {
+    const W = 400;
+    const H = 400;
+    const img = new ImageData(W, H);
+    img.data.fill(245);
+    // Soft greyscale blobs + sparse numeral-like strokes (not binary modules)
+    for (let y = 80; y < 300; y++) {
+      for (let x = 80; x < 300; x++) {
+        const dx = x - 190;
+        const dy = y - 190;
+        const r = Math.sqrt(dx * dx + dy * dy);
+        const g = Math.max(40, Math.min(240, 200 - r * 0.7 + ((x * y) % 17)));
+        const i = (y * W + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = g;
+        img.data[i + 3] = 255;
+      }
+    }
+    // Sparse "symbol" dots
+    for (let k = 0; k < 40; k++) {
+      const x = 100 + (k * 37) % 180;
+      const y = 100 + (k * 53) % 180;
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const i = ((y + dy) * W + (x + dx)) * 4;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 30;
+        }
+      }
+    }
+    const flags = detectQrFinderFlags(img);
+    assert.equal(flags.length, 0, `HFA greyscale must not flag: ${JSON.stringify(flags)}`);
+  });
+
+  it("does NOT flag colourful Pentacam-like map", () => {
+    const W = 400;
+    const H = 400;
+    const img = new ImageData(W, H);
+    img.data.fill(255);
+    for (let y = 60; y < 280; y++) {
+      for (let x = 60; x < 280; x++) {
+        const t = (x - 60) / 220;
+        const r = Math.round(255 * t);
+        const g = Math.round(80 + 100 * Math.sin(t * 6));
+        const b = Math.round(255 * (1 - t));
+        const i = (y * W + x) * 4;
+        img.data[i] = r;
+        img.data[i + 1] = g;
+        img.data[i + 2] = b;
+        img.data[i + 3] = 255;
+      }
+    }
+    const flags = detectQrFinderFlags(img);
+    assert.equal(flags.length, 0, `Pentacam colour map must not flag: ${JSON.stringify(flags)}`);
   });
 });

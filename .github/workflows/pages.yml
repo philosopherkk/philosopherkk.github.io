@@ -1,9 +1,10 @@
-# Deploy filtered static site to GitHub Pages (excludes ci/ and test trees).
-name: Deploy Pages
+# Manual-only Pages deploy staging.
+# Does NOT run on push to main — the live site still uses "Deploy from a branch"
+# until a human switches Pages source to GitHub Actions. Merging this PR must not
+# change what serves the live site.
+name: Deploy Pages (manual)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,16 +14,18 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Stage site (hub + apps, no tests)
+        with:
+          fetch-depth: 0
+      - name: Stage site (tracked files minus ci/dev)
         run: bash scripts/stage-pages.sh
-      - name: Verify tests are excluded
+      - name: Verify stage completeness + exclusions
         run: bash scripts/verify-pages-stage.sh
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -36,6 +39,19 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Guard: refuse to deploy while the repo still uses legacy branch Pages.
+      # Once a human switches Pages source to Actions, this check passes.
+      - name: Require Pages source = GitHub Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          build_type="$(gh api "repos/${{ github.repository }}/pages" --jq .build_type)"
+          echo "Pages build_type=$build_type"
+          if [[ "$build_type" != "workflow" ]]; then
+            echo "::error::Pages source is still '$build_type' (branch deploy). Refusing to run deploy-pages so we cannot race or overwrite the live branch build. Switch Settings → Pages → Source to GitHub Actions, then re-run this workflow."
+            exit 1
+          fi
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

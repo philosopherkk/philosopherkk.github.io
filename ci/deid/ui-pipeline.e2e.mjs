@@ -104,12 +104,14 @@ async function main() {
       xd.fillStyle = "#fff";
       xd.fillRect(0, 0, 700, 950);
       clinical(xd);
+      // QR at (260,360) size ~180. Smudge the left quiet-zone + finders
+      // (destroys TL and BL finders) and add a centre blot.
       xd.drawImage(bmp, 260, 360);
-      xd.fillStyle = "rgba(180,180,180,0.85)";
-      xd.fillRect(255, 355, 50, 40);
-      xd.fillStyle = "rgba(90,90,90,0.9)";
+      xd.fillStyle = "#d8d8d8";
+      xd.fillRect(248, 348, 78, 204); // wipe left column of finders + quiet zone
+      xd.fillStyle = "rgba(55,55,55,0.95)";
       xd.beginPath();
-      xd.arc(350, 450, 22, 0, Math.PI * 2);
+      xd.arc(350, 450, 28, 0, Math.PI * 2);
       xd.fill();
 
       const cM = document.createElement("canvas");
@@ -222,6 +224,39 @@ async function main() {
         `${label} page ${pi}: Approve must be blocked initially (status=${before.status})`
       );
 
+      // PDF path: "Right Eye" must survive chi_tra auto-blank (clinical-term guard).
+      if (opts.assertRightEye) {
+        const rightEye = await page.evaluate(async () => {
+          const c = document.getElementById("afterCanvas");
+          const crop = document.createElement("canvas");
+          crop.width = Math.min(c.width, 520);
+          crop.height = Math.min(170, c.height);
+          crop.getContext("2d").drawImage(c, 0, 0, crop.width, crop.height, 0, 0, crop.width, crop.height);
+          // Pipeline already loaded Tesseract; spin a short eng-only pass on the clinical band.
+          const T = window.Tesseract;
+          if (!T) return { text: "", err: "no-tesseract" };
+          const worker = await T.createWorker("eng", 1, {
+            workerPath: "/deid/vendor/tesseract/worker.min.js",
+            corePath: "/deid/vendor/tesseract/",
+            langPath: "/deid/vendor/tessdata",
+            gzip: false,
+            workerBlobURL: false,
+          });
+          try {
+            await worker.setParameters({ tessedit_pageseg_mode: "6" });
+            const { data } = await worker.recognize(crop);
+            return { text: data?.text || "" };
+          } finally {
+            await worker.terminate();
+          }
+        });
+        assert.match(
+          rightEye.text || "",
+          /Right\s*Eye/i,
+          `${label} page ${pi}: 'Right Eye' must survive auto-blank; OCR got: ${JSON.stringify(rightEye)}`
+        );
+      }
+
       await page.click("#blankAllBtn");
       await page.waitForTimeout(300);
       await page.waitForFunction(() => !document.getElementById("approveBtn").disabled, {
@@ -310,7 +345,10 @@ async function main() {
     await runCase(vp, `${vp.tag}-colormap`, path.join(FIX, "ui-qr-colormap.png"), {
       expectColorMaps: true,
     });
-    await runCase(vp, `${vp.tag}-pdf`, path.join(FIX, "ui-qr-two-page.pdf"), { pdfPages: 2 });
+    await runCase(vp, `${vp.tag}-pdf`, path.join(FIX, "ui-qr-two-page.pdf"), {
+      pdfPages: 2,
+      assertRightEye: true,
+    });
   }
 
   console.log("ui-pipeline e2e OK");

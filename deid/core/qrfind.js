@@ -1,7 +1,8 @@
 /**
  * Decode-independent QR finder-pattern detector (1:1:3:1:1).
  * Adaptive/local-contrast binarisation for grey/smudged codes.
- * Accepts 3 finders, or 2 finders + a dense square module region.
+ * Accepts 3 finders, 2 finders + dense square, 1 finder + dense square,
+ * or a finder-less square region with module-grid periodicity in both axes.
  * @module core/qrfind
  */
 
@@ -10,7 +11,7 @@
  */
 
 /**
- * Detect QR-like regions via finder squares.
+ * Detect QR-like regions via finder squares and/or module-grid texture.
  * @param {ImageData} imageData
  * @returns {import('./types.js').FlagHit[]}
  */
@@ -20,7 +21,7 @@ export function detectQrFinderFlags(imageData) {
   const flags = [];
   const usedFinder = new Set();
 
-  /** @type {{ score: number, idxs: number[], box: [number,number,number,number] }[]} */
+  /** @type {{ score: number, idxs: number[], box: [number,number,number,number], reason?: string, text?: string }[]} */
   const candidates = [];
 
   if (finders.length >= 3) {
@@ -62,18 +63,55 @@ export function detectQrFinderFlags(imageData) {
     }
   }
 
+  // One strong finder + dense square grid-like module region (left finders destroyed)
+  if (finders.length >= 1) {
+    for (let i = 0; i < finders.length; i++) {
+      const box = qrBoxFromOneFinder(finders[i], imageData);
+      if (!box) continue;
+      const bw = box[2] - box[0];
+      const bh = box[3] - box[1];
+      if (bw < 60 || bh < 60) continue;
+      if (bw > Math.min(imageData.width, imageData.height) * 0.5) continue;
+      candidates.push({
+        score: 0.4,
+        idxs: [i],
+        box,
+        reason: "qr_finder",
+        text: "qr-finder-1",
+      });
+    }
+  }
+
   candidates.sort((a, b) => b.score - a.score);
   for (const c of candidates) {
     if (c.idxs.some((idx) => usedFinder.has(idx))) continue;
     for (const idx of c.idxs) usedFinder.add(idx);
     flags.push({
       box: c.box,
-      reason: "qr_finder",
-      text: "qr-finder",
+      reason: c.reason || "qr_finder",
+      text: c.text || "qr-finder",
       blanked: false,
     });
   }
-  return flags.slice(0, 6);
+
+  // Finder-less QR-like texture: square dense region with module periodicity in both axes.
+  // Catches fully-smudged finders; must not flag HFA greyscale / Pentacam colour maps.
+  for (const box of detectQrLikeTextureRegions(imageData)) {
+    if (flags.some((f) => boxesOverlap(f.box, box))) continue;
+    flags.push({
+      box,
+      reason: "qr_texture",
+      text: "qr-texture",
+      blanked: false,
+    });
+  }
+
+  return flags.slice(0, 8);
+}
+
+/** @param {[number,number,number,number]} a @param {[number,number,number,number]} b */
+function boxesOverlap(a, b) {
+  return Math.min(a[2], b[2]) > Math.max(a[0], b[0]) && Math.min(a[3], b[3]) > Math.max(a[1], b[1]);
 }
 
 /**
@@ -138,6 +176,13 @@ export function expandQrCodeBox(imageData, box, points = []) {
     if (fromTwo) {
       const fw = fromTwo[2] - fromTwo[0];
       if (fw <= maxSide * 1.15) return fromTwo;
+    }
+  }
+  if (near.length >= 1) {
+    const fromOne = qrBoxFromOneFinder(near[0], imageData);
+    if (fromOne) {
+      const fw = fromOne[2] - fromOne[0];
+      if (fw <= maxSide * 1.15) return fromOne;
     }
   }
 
@@ -227,7 +272,6 @@ function qrBoxFromTwoFinders(pair, imageData) {
   if (modRatio > 2.0) return null;
   const mod = (a.moduleSize + b.moduleSize) / 2;
 
-  // Two candidate third corners: rotate vector AB by ±90°
   const vx = b.x - a.x;
   const vy = b.y - a.y;
   const candidates = [
@@ -245,6 +289,50 @@ function qrBoxFromTwoFinders(pair, imageData) {
     const box = qrBoxFromFinderTripletLoose(trip, imageData.width, imageData.height, mod);
     if (!box) continue;
     if (regionLooksLikeQrModules(imageData, box, mod)) {
+      return box;
+    }
+  }
+  return null;
+}
+
+/**
+ * One surviving finder + dense square module grid around it (damaged left finders).
+ * @param {FinderHit} f
+ * @param {ImageData} imageData
+ * @returns {[number,number,number,number]|null}
+ */
+function qrBoxFromOneFinder(f, imageData) {
+  const { width: W, height: H } = imageData;
+  const mod = f.moduleSize;
+  if (mod < 2 || mod > 36) return null;
+  const maxSide = Math.min(W, H) * 0.42;
+
+  const mults = [11, 14, 17, 21, 25, 29];
+  for (const mult of mults) {
+    const side = mod * mult;
+    if (side < 60 || side > maxSide) continue;
+    const insets = mod * 3.5;
+    /** @type {[number,number][]} */
+    const origins = [
+      [f.x - insets, f.y - insets],
+      [f.x - (side - insets), f.y - insets],
+      [f.x - insets, f.y - (side - insets)],
+      [f.x - (side - insets), f.y - (side - insets)],
+    ];
+    for (const [ox, oy] of origins) {
+      const pad = Math.min(mod * 3 + 10, 22);
+      const box = /** @type {[number,number,number,number]} */ ([
+        Math.max(0, ox - pad),
+        Math.max(0, oy - pad),
+        Math.min(W, ox + side + pad),
+        Math.min(H, oy + side + pad),
+      ]);
+      const bw = box[2] - box[0];
+      const bh = box[3] - box[1];
+      if (bw / bh < 0.75 || bw / bh > 1.35) continue;
+      if (!regionLooksLikeQrModules(imageData, box, mod)) continue;
+      if (!hasModulePeriodicity(imageData, box, mod)) continue;
+      if (regionIsColorful(imageData, box)) continue;
       return box;
     }
   }
@@ -309,11 +397,230 @@ function regionLooksLikeQrModules(imageData, box, moduleSize) {
   const dRate = dark / n;
   const eRate = extreme / n;
   const tRate = transitions / n;
-  // QR: mixed dark/light, high binary extremes, many transitions both ways
   if (dRate < 0.22 || dRate > 0.78) return false;
   if (eRate < 0.35) return false;
   if (tRate < 0.12) return false;
   return true;
+}
+
+/**
+ * Reject colourful Pentacam / topography maps (high chroma).
+ * @param {ImageData} imageData
+ * @param {[number,number,number,number]} box
+ */
+function regionIsColorful(imageData, box) {
+  const { width: W, data } = imageData;
+  const [x0, y0, x1, y1] = box;
+  let n = 0;
+  let colorful = 0;
+  const step = 4;
+  for (let y = Math.floor(y0); y < y1; y += step) {
+    for (let x = Math.floor(x0); x < x1; x += step) {
+      const i = (y * W + x) * 4;
+      const max = Math.max(data[i], data[i + 1], data[i + 2]);
+      const min = Math.min(data[i], data[i + 1], data[i + 2]);
+      if (max - min > 35 && max > 60) colorful++;
+      n++;
+    }
+  }
+  return n > 0 && colorful / n > 0.18;
+}
+
+/**
+ * Module-grid periodicity along both axes near `moduleSize`.
+ * Rejects HFA greyscale symbol plots (smooth gradients / sparse glyphs).
+ * @param {ImageData} imageData
+ * @param {[number,number,number,number]} box
+ * @param {number} [hintMod]
+ */
+function hasModulePeriodicity(imageData, box, hintMod = 0) {
+  const { width: W, data } = imageData;
+  const [x0, y0, x1, y1] = box;
+  const bw = Math.floor(x1 - x0);
+  const bh = Math.floor(y1 - y0);
+  if (bw < 48 || bh < 48) return false;
+
+  const midY = Math.floor((y0 + y1) / 2);
+  const midX = Math.floor((x0 + x1) / 2);
+  const row = [];
+  const col = [];
+  for (let x = Math.floor(x0); x < x1; x++) {
+    const i = (midY * W + x) * 4;
+    const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
+    row.push(g < 128 ? 1 : 0);
+  }
+  for (let y = Math.floor(y0); y < y1; y++) {
+    const i = (y * W + midX) * 4;
+    const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
+    col.push(g < 128 ? 1 : 0);
+  }
+
+  const px = bestPeriod(row, hintMod);
+  const py = bestPeriod(col, hintMod);
+  if (!px || !py) return false;
+  const ratio = Math.min(px, py) / Math.max(px, py);
+  if (ratio < 0.55) return false;
+  if (hintMod > 0) {
+    const avg = (px + py) / 2;
+    if (avg < hintMod * 0.45 || avg > hintMod * 2.4) return false;
+  }
+  return true;
+}
+
+/**
+ * Autocorrelation peak for a 0/1 signal; returns period in px or null.
+ * @param {number[]} signal
+ * @param {number} hintMod
+ */
+function bestPeriod(signal, hintMod) {
+  const n = signal.length;
+  if (n < 24) return null;
+  const minP = Math.max(2, hintMod ? Math.floor(hintMod * 0.5) : 2);
+  const maxP = Math.min(Math.floor(n / 4), hintMod ? Math.ceil(hintMod * 2.5) : 28);
+  let best = 0;
+  let bestP = 0;
+  let mean = 0;
+  for (const v of signal) mean += v;
+  mean /= n;
+  for (let p = minP; p <= maxP; p++) {
+    let corr = 0;
+    let cnt = 0;
+    for (let i = 0; i + p < n; i++) {
+      corr += (signal[i] - mean) * (signal[i + p] - mean);
+      cnt++;
+    }
+    const score = corr / Math.max(1, cnt);
+    if (score > best) {
+      best = score;
+      bestP = p;
+    }
+  }
+  if (bestP < 2 || best < 0.04) return null;
+  return bestP;
+}
+
+/**
+ * Finder-less QR-like texture scan: square near-binary regions with both-axis periodicity.
+ * Tight gates so HFA greyscale / Pentacam colour maps stay clean.
+ * @param {ImageData} imageData
+ * @returns {[number,number,number,number][]}
+ */
+function detectQrLikeTextureRegions(imageData) {
+  const { width: W, height: H, data } = imageData;
+  if (W < 80 || H < 80) return [];
+  const cell = 24;
+  const gw = Math.floor(W / cell);
+  const gh = Math.floor(H / cell);
+  if (gw < 3 || gh < 3) return [];
+
+  const hot = new Uint8Array(gw * gh);
+  for (let gy = 0; gy < gh; gy++) {
+    for (let gx = 0; gx < gw; gx++) {
+      let n = 0;
+      let dark = 0;
+      let extreme = 0;
+      let colorful = 0;
+      let eh = 0;
+      let ev = 0;
+      const x0 = gx * cell;
+      const y0 = gy * cell;
+      for (let y = y0; y < y0 + cell && y < H; y++) {
+        for (let x = x0; x < x0 + cell && x < W; x++) {
+          const i = (y * W + x) * 4;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const gray = (r * 0.299 + g * 0.587 + b * 0.114) | 0;
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          if (max - min > 35 && max > 60) colorful++;
+          if (gray < 40 || gray > 220) extreme++;
+          if (gray < 128) dark++;
+          if (x + 1 < x0 + cell && x + 1 < W) {
+            const i2 = (y * W + x + 1) * 4;
+            const g2 = (data[i2] * 0.299 + data[i2 + 1] * 0.587 + data[i2 + 2] * 0.114) | 0;
+            if ((gray < 128) !== (g2 < 128)) eh++;
+          }
+          if (y + 1 < y0 + cell && y + 1 < H) {
+            const i2 = ((y + 1) * W + x) * 4;
+            const g2 = (data[i2] * 0.299 + data[i2 + 1] * 0.587 + data[i2 + 2] * 0.114) | 0;
+            if ((gray < 128) !== (g2 < 128)) ev++;
+          }
+          n++;
+        }
+      }
+      const idx = gy * gw + gx;
+      hot[idx] =
+        colorful / n < 0.12 &&
+        extreme / n > 0.55 &&
+        dark / n > 0.22 &&
+        dark / n < 0.78 &&
+        eh / n > 0.14 &&
+        ev / n > 0.14
+          ? 1
+          : 0;
+    }
+  }
+
+  /** @type {[number,number,number,number][]} */
+  const out = [];
+  const seen = new Uint8Array(gw * gh);
+  const maxSide = Math.min(W, H) * 0.42;
+
+  for (let gy = 0; gy < gh; gy++) {
+    for (let gx = 0; gx < gw; gx++) {
+      const idx = gy * gw + gx;
+      if (seen[idx] || !hot[idx]) continue;
+      const stack = [[gx, gy]];
+      seen[idx] = 1;
+      let minX = gx;
+      let maxX = gx;
+      let minY = gy;
+      let maxY = gy;
+      let count = 0;
+      while (stack.length) {
+        const [x, y] = stack.pop();
+        count++;
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        for (const [nx, ny] of [
+          [x - 1, y],
+          [x + 1, y],
+          [x, y - 1],
+          [x, y + 1],
+        ]) {
+          if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
+          const ni = ny * gw + nx;
+          if (seen[ni] || !hot[ni]) continue;
+          seen[ni] = 1;
+          stack.push([nx, ny]);
+        }
+      }
+      const bw = maxX - minX + 1;
+      const bh = maxY - minY + 1;
+      const aspect = bw / Math.max(1, bh);
+      const pxW = bw * cell;
+      const pxH = bh * cell;
+      if (count < 9 || aspect < 0.75 || aspect > 1.35) continue;
+      if (pxW < 72 || pxH < 72) continue;
+      if (pxW > maxSide || pxH > maxSide) continue;
+      const pad = Math.floor(cell * 0.5);
+      const box = /** @type {[number,number,number,number]} */ ([
+        Math.max(0, minX * cell - pad),
+        Math.max(0, minY * cell - pad),
+        Math.min(W, (maxX + 1) * cell + pad),
+        Math.min(H, (maxY + 1) * cell + pad),
+      ]);
+      if (regionIsColorful(imageData, box)) continue;
+      const estMod = Math.max(3, Math.round(Math.min(box[2] - box[0], box[3] - box[1]) / 25));
+      if (!regionLooksLikeQrModules(imageData, box, estMod)) continue;
+      if (!hasModulePeriodicity(imageData, box, estMod)) continue;
+      out.push(box);
+    }
+  }
+  return out.slice(0, 4);
 }
 
 /** @param {FinderHit} a @param {FinderHit} b @param {FinderHit} c */
@@ -374,7 +681,6 @@ function adaptiveBinarize(gray, W, H) {
         }
       }
       const mean = sum / Math.max(1, n);
-      // Bias slightly toward dark so grey modules still read as black
       const thr = Math.max(60, Math.min(180, mean - 8));
       for (let y = by; y < y1; y++) {
         for (let x = bx; x < x1; x++) {

@@ -171,7 +171,8 @@ function normalizeCodeBox(imageData, f) {
   }
 
   const fmt = String(f._format || "");
-  const isQrFormat = /QR/i.test(fmt) || f.reason === "qr_finder";
+  const isQrFormat =
+    /QR/i.test(fmt) || f.reason === "qr_finder" || f.reason === "qr_texture";
   const w = f.box[2] - f.box[0];
   const h = f.box[3] - f.box[1];
   const nearSquare = w > 0 && h > 0 && w / h > 0.55 && w / h < 1.8;
@@ -182,9 +183,17 @@ function normalizeCodeBox(imageData, f) {
     box = expandLinearBarcodeBox(imageData, box, fmt);
   }
   box = capCodeBox(imageData, box, f._points || []);
+  const reason =
+    f.reason === "qr_finder"
+      ? "qr_finder"
+      : f.reason === "qr_texture"
+        ? "qr_texture"
+        : f.reason === "dense_code_region"
+          ? "dense_code_region"
+          : "barcode";
   return {
     box,
-    reason: f.reason === "qr_finder" ? "qr_finder" : f.reason === "dense_code_region" ? "dense_code_region" : "barcode",
+    reason,
     text: rawText || f.text,
     blanked: false,
   };

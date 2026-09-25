@@ -7,8 +7,14 @@ import { detectDeviceOrGeneric } from "./detect.js";
 import { uprightScore } from "./geometry.js";
 import { deskewAngle, rotate90, rotateSmall } from "./deskew.js";
 import { applyCrop, fillWhite, anchorShift } from "./crop.js";
-import { collectFlags, serialHits, labelMasks } from "./phi.js";
-import { ID_LABELS, ID_DATE_LABELS, CJK } from "./rules.js";
+import {
+  collectFlags,
+  serialHits,
+  labelMasks,
+  shouldAutoBlankCjkWord,
+  filterClinicalSafeAutoBlanks,
+} from "./phi.js";
+import { ID_LABELS, ID_DATE_LABELS } from "./rules.js";
 import { unrotateBox, rotSize } from "./geometry.js";
 import { detectBarcodeFlags } from "./barcode.js";
 
@@ -115,6 +121,9 @@ export async function deidPage(page, opts) {
   , 0);
   const [cw, ch] = [cropped.image.width, cropped.image.height];
 
+  /** Eng OCR on upright crop — used to protect Latin clinical tokens from auto-blank. */
+  const engWordsUp = (ocrCrop[kUp2] || []).filter((w) => (w.conf ?? 0) >= 35);
+
   /** @type {[number, number, number, number][]} */
   const backstopBoxes = [];
   for (const k of [0, 1, 2, 3]) {
@@ -126,25 +135,24 @@ export async function deidPage(page, opts) {
     }
   }
 
-  // Chinese personal-name-like runs
+  // Chinese personal-name-like runs — only genuine high-conf Han; never Latin clinical.
   let cjkWords = [];
   try {
     const upCrop = kUp2 === 0 ? cropped.image : rotate90(cropped.image, kUp2);
     cjkWords = await ocr.recognize(upCrop, { lang: "chi_tra", psm: 11 });
     for (const w of cjkWords) {
-      const chars = (w.text.match(CJK) || []).length;
-      if (chars >= 2 && w.conf >= 80) {
-        const p = Math.floor(0.6 * (w.y1 - w.y0));
-        backstopBoxes.push(unrotateBox([w.x0 - p, w.y0 - p, w.x1 + p, w.y1 + p], kUp2, cw, ch));
-      }
+      if (!shouldAutoBlankCjkWord(w, engWordsUp)) continue;
+      const p = Math.floor(0.6 * (w.y1 - w.y0));
+      backstopBoxes.push(unrotateBox([w.x0 - p, w.y0 - p, w.x1 + p, w.y1 + p], kUp2, cw, ch));
     }
   } catch {
     /* chi_tra may be unavailable in some test stubs */
   }
 
-  // Drop backstop blanks that hit a detected code (keep the whole code for user blank)
+  // Drop blanks that hit a code OR that would wipe Latin clinical tokens (Right Eye, MD…).
   const codeBoxes = codeFlagsPre.map((f) => f.box);
-  const safeBackstop = backstopBoxes.filter((b) => !codeBoxes.some((c) => boxesOverlap(b, c)));
+  const clinicalSafe = filterClinicalSafeAutoBlanks(backstopBoxes, engWordsUp);
+  const safeBackstop = clinicalSafe.filter((b) => !codeBoxes.some((c) => boxesOverlap(b, c)));
 
   let outImage = cropped.image;
   /** @type {[number, number, number, number][]} */
@@ -240,7 +248,10 @@ function mergeFlagHits(flags) {
       c = Math.max(c, x1);
       d = Math.max(d, y1);
       if (flags[j].reason === "barcode") reason = "barcode";
-      if (flags[j].text && flags[j].text !== "qr" && flags[j].text !== "qr-finder") {
+      if (flags[j].reason === "qr_finder" || flags[j].reason === "qr_texture") {
+        if (reason !== "barcode") reason = flags[j].reason;
+      }
+      if (flags[j].text && flags[j].text !== "qr" && flags[j].text !== "qr-finder" && flags[j].text !== "qr-texture") {
         text = text || flags[j].text;
       }
     }
