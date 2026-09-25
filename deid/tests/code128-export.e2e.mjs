@@ -49,10 +49,12 @@ async function main() {
   const png = await bwipjs.toBuffer({
     bcid: "code128",
     text: PAYLOAD,
-    scale: 3,
-    height: 14,
+    scale: 2,
+    height: 16,
     includetext: false,
     backgroundcolor: "FFFFFF",
+    paddingwidth: 12,
+    paddingheight: 6,
   });
   fs.writeFileSync(path.join(FIX, "code128-phi.png"), png);
 
@@ -85,12 +87,15 @@ async function main() {
     ctx.font = "18px sans-serif";
     ctx.fillText("SYNTHETIC REPORT — FAKE DATA", 40, 40);
     ctx.fillText("Right Eye (OD) MD -1.20 dB PSD 1.50 dB", 40, 80);
-    // Place Code128 in the middle with quiet zone
-    const bx = 120;
+    // Place Code128 with quiet zone; must not clip (fixture ~scale 2)
+    const bx = 80;
     const by = 480;
     ctx.drawImage(bmp, bx, by);
     const barW = bmp.width;
     const barH = bmp.height;
+    if (bx + barW > 800 || by + barH > 1100) {
+      throw new Error(`barcode clipped: ${barW}x${barH} at ${bx},${by}`);
+    }
     bmp.close();
     let img = ctx.getImageData(0, 0, 800, 1100);
 
@@ -189,7 +194,7 @@ async function main() {
     const ctx = pageC.getContext("2d");
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, 800, 1100);
-    ctx.drawImage(bmp, 120, 480);
+    ctx.drawImage(bmp, 80, 480);
     bmp.close();
     let img = ctx.getImageData(0, 0, 800, 1100);
     const flags = await detectBarcodeFlags(img);
