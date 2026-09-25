@@ -12,7 +12,9 @@ let jsQRPromise = null;
 let zxingPromise = null;
 
 /** Angles (PIL CCW deg) tried when the upright pass finds nothing. */
-const ROTATION_PASS_DEG = [0, 10, -10, 15, -15, 25, -25, 30, -30, 45, -45, 60, -60, 75, -75, 90, -90];
+const ROTATION_PASS_DEG = [
+  0, 10, -10, 15, -15, 25, -25, 30, -30, 35, -35, 45, -45, 60, -60, 75, -75, 90, -90,
+];
 
 /**
  * @param {ImageData} imageData
@@ -54,7 +56,7 @@ async function detectCodesUpright(imageData) {
   flags.push(...(await detectWithBarcodeDetector(imageData)));
   flags.push(...(await detectWithJsQR(imageData)));
   flags.push(...(await detectWithZxing(imageData)));
-  return flags.map((f) => normalizeCodeBox(imageData, f));
+  return flags.map((f) => normalizeCodeBox(imageData, f)).filter(Boolean);
 }
 
 /**
@@ -79,6 +81,8 @@ async function detectCodesRotated(imageData) {
     const hits = [];
     hits.push(...(await detectWithJsQR(rotated)));
     hits.push(...(await detectWithZxing(rotated)));
+    /** @type {import('./types.js').FlagHit[]} */
+    const angleHits = [];
     for (const hit of hits) {
       const mapped = mapBoxFromRotated(hit.box, W, H, deg);
       const pts = hit._points
@@ -87,15 +91,14 @@ async function detectCodesRotated(imageData) {
             return { x, y };
           })
         : [];
-      out.push(
-        normalizeCodeBox(imageData, {
-          ...hit,
-          box: mapped,
-          _points: pts,
-        })
-      );
+      const norm = normalizeCodeBox(imageData, {
+        ...hit,
+        box: mapped,
+        _points: pts,
+      });
+      if (norm) angleHits.push(norm);
     }
-    if (out.length) break; // first successful angle is enough
+    if (angleHits.length) return angleHits;
   }
   return out;
 }
@@ -148,10 +151,25 @@ function mapBoxFromRotated(box, W, H, deg) {
 
 /**
  * Ensure QR boxes are full-sized (never a sub-finder stub); expand 1D as before.
+ * Discard empty-text decoder hits; cap QR box size so colour maps are not swallowed.
  * @param {ImageData} imageData
  * @param {import('./types.js').FlagHit & {_points?: {x:number,y:number}[], _format?: string}} f
+ * @returns {import('./types.js').FlagHit|null}
  */
 function normalizeCodeBox(imageData, f) {
+  const rawText = (f.text || "").trim();
+  // Empty "qr"/"code" stubs from dense plots are false positives — drop them
+  if (f.reason === "barcode" || f.reason === "dense_code_region") {
+    const fmt = String(f._format || "");
+    const isQrish = /QR/i.test(fmt) || rawText === "qr" || rawText === "code";
+    if (isQrish && (!rawText || rawText === "qr" || rawText === "code")) {
+      return null;
+    }
+    if (!rawText && !/CODE_|EAN|UPC|ITF|CODABAR|RSS/i.test(fmt) && f.reason === "barcode") {
+      return null;
+    }
+  }
+
   const fmt = String(f._format || "");
   const isQrFormat = /QR/i.test(fmt) || f.reason === "qr_finder";
   const w = f.box[2] - f.box[0];
@@ -163,12 +181,52 @@ function normalizeCodeBox(imageData, f) {
   } else {
     box = expandLinearBarcodeBox(imageData, box, fmt);
   }
+  box = capCodeBox(imageData, box, f._points || []);
   return {
     box,
     reason: f.reason === "qr_finder" ? "qr_finder" : f.reason === "dense_code_region" ? "dense_code_region" : "barcode",
-    text: f.text,
+    text: rawText || f.text,
     blanked: false,
   };
+}
+
+/**
+ * Cap a code box so it cannot swallow clinical plots / most of the page.
+ * @param {ImageData} imageData
+ * @param {[number,number,number,number]} box
+ * @param {{x:number,y:number}[]} points
+ * @returns {[number,number,number,number]}
+ */
+export function capCodeBox(imageData, box, points = []) {
+  const { width: W, height: H } = imageData;
+  let [x0, y0, x1, y1] = box;
+  let w = x1 - x0;
+  let h = y1 - y0;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+
+  let maxSide = Math.min(W, H) * 0.42;
+  if (points.length >= 2) {
+    let span = 0;
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        span = Math.max(span, Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y));
+      }
+    }
+    if (span > 20) maxSide = Math.min(maxSide, span * 1.55 + 28);
+  }
+  // Absolute ceiling: never more than ~half the shorter page edge for QR-like boxes
+  maxSide = Math.min(maxSide, Math.min(W, H) * 0.5);
+
+  if (w > maxSide || h > maxSide) {
+    const side = Math.min(Math.max(w, h), maxSide);
+    const half = side / 2;
+    x0 = Math.max(0, cx - half);
+    y0 = Math.max(0, cy - half);
+    x1 = Math.min(W, cx + half);
+    y1 = Math.min(H, cy + half);
+  }
+  return [x0, y0, x1, y1];
 }
 
 /** @param {[number,number,number,number]} a @param {[number,number,number,number]} b */
@@ -240,6 +298,9 @@ async function detectWithJsQR(imageData) {
       inversionAttempts: "attemptBoth",
     });
     if (!code || !code.location) return out;
+    const payload = (code.data || "").trim();
+    // Discard empty-payload QR hits (common false positive on dense colour plots)
+    if (!payload) return out;
     const loc = code.location;
     const pts = [
       loc.topLeftCorner,
@@ -466,6 +527,8 @@ async function detectWithZxing(imageData) {
     if (!ZXing) return out;
     const hits = zxingDecodeAll(ZXing, imageData);
     for (const hit of hits) {
+      const payload = (hit.text || "").trim();
+      if (!payload || payload === "code" || payload === "qr") continue;
       let box;
       if (hit.points.length) {
         const xs = hit.points.map((p) => p.x);
@@ -483,7 +546,7 @@ async function detectWithZxing(imageData) {
       out.push({
         box,
         reason: "barcode",
-        text: hit.text || "code",
+        text: payload,
         blanked: false,
         _points: hit.points,
         _format: hit.format,
@@ -543,10 +606,13 @@ async function detectWithBarcodeDetector(imageData) {
       const pad = 8;
       let box = [bb.x - pad, bb.y - pad, bb.x + bb.width + pad, bb.y + bb.height + pad];
       const fmt = String(code.format || "");
+      const payload = String(code.rawValue || "").trim();
+      // Empty payload on QR-like formats → discard (plot FPs)
+      if (!payload && /qr/i.test(fmt)) continue;
       out.push({
         box,
         reason: "barcode",
-        text: code.rawValue || code.format || "barcode",
+        text: payload || code.format || "barcode",
         blanked: false,
         _format: fmt,
         _points: (code.cornerPoints || []).map((p) => ({ x: p.x, y: p.y })),

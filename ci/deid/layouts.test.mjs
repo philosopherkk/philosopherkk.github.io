@@ -3,8 +3,8 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { detectDevice } from "../core/detect.js";
-import { CROP } from "../core/rules.js";
+import { detectDevice } from "../../deid/core/detect.js";
+import { CROP } from "../../deid/core/rules.js";
 
 const SAMPLES = {
   alscan: "NIDEK AL SCAN Optical Biometer Calculation Date Camellin",

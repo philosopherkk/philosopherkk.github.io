@@ -114,7 +114,7 @@ await page.evaluate(async (fixUrl) => {
   }
   document.getElementById("statusMsg").textContent = `device=${result.device} flags=${result.flags.length}`;
   return result.device;
-}, `http://127.0.0.1:${PORT}/deid/tests/fixtures-synthetic/hfa.png`);
+}, `http://127.0.0.1:${PORT}/ci/deid/fixtures-synthetic/hfa.png`);
 
 await page.screenshot({ path: path.join(OUT, "ui-desktop-hfa-synthetic.png"), fullPage: true });
 await page.screenshot({ path: path.join(ART, "deid-desktop-hfa-synthetic.png"), fullPage: true });

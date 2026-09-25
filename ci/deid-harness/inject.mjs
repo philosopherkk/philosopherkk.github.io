@@ -12,7 +12,7 @@ export async function gotoDeidWithTestHook(page, origin) {
     throw new Error("production /deid/ must not expose __deidTest before harness inject");
   }
   await page.evaluate(async () => {
-    const { installDeidTestHook } = await import("/tests/deid-harness/install-test-hook.js");
+    const { installDeidTestHook } = await import("/ci/deid-harness/install-test-hook.js");
     installDeidTestHook();
   });
   const after = await page.evaluate(() => typeof window.__deidTest);

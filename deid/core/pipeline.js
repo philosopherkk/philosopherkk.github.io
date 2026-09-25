@@ -96,6 +96,17 @@ export async function deidPage(page, opts) {
   const { dy, anchor } = anchorShift(device, wordsUp, upright.width, upright.height);
   const cropped = applyCrop(upright, device, dy);
 
+  onProgress?.("codes", 0.55);
+  // Detect barcodes/QR on the pre-blank cropped image so OCR auto-blank cannot
+  // erase finder modules. These regions are exclusion zones for backstop blanking.
+  /** @type {import('./types.js').FlagHit[]} */
+  let codeFlagsPre = [];
+  try {
+    codeFlagsPre = await detectBarcodeFlags(cropped.image);
+  } catch {
+    /* barcode optional */
+  }
+
   onProgress?.("backstop", 0.6);
   // Backstop OCR on cropped result
   const ocrCrop = await ocrAllRotations(ocr, cropped.image, onProgress);
@@ -131,18 +142,22 @@ export async function deidPage(page, opts) {
     /* chi_tra may be unavailable in some test stubs */
   }
 
+  // Drop backstop blanks that hit a detected code (keep the whole code for user blank)
+  const codeBoxes = codeFlagsPre.map((f) => f.box);
+  const safeBackstop = backstopBoxes.filter((b) => !codeBoxes.some((c) => boxesOverlap(b, c)));
+
   let outImage = cropped.image;
   /** @type {[number, number, number, number][]} */
   const removedRegions = [
     ...cropped.erase.map(/** @returns {[number,number,number,number]} */ (e) => [
       e[0], e[1], e[2], e[3],
     ]),
-    ...backstopBoxes,
+    ...safeBackstop,
   ];
 
-  if (autoBlankBackstop && backstopBoxes.length) {
+  if (autoBlankBackstop && safeBackstop.length) {
     outImage = cloneImageData(cropped.image);
-    fillWhite(outImage, backstopBoxes);
+    fillWhite(outImage, safeBackstop);
   }
 
   onProgress?.("recheck", 0.85);
@@ -159,13 +174,23 @@ export async function deidPage(page, opts) {
     /* ignore */
   }
 
-  const flags = collectFlags(ocrFinal, outImage.width, outImage.height, cjkFinal);
+  let flags = collectFlags(ocrFinal, outImage.width, outImage.height, cjkFinal);
+
+  // Post-blank code pass (union with pre-blank); prefer whole code flags over
+  // OCR word boxes that sit inside a code region.
+  /** @type {import('./types.js').FlagHit[]} */
+  let codeFlagsPost = [];
   try {
-    const codeFlags = await detectBarcodeFlags(outImage);
-    for (const f of codeFlags) flags.push(f);
+    codeFlagsPost = await detectBarcodeFlags(outImage);
   } catch {
-    /* barcode optional */
+    /* optional */
   }
+  const codeFlags = mergeFlagHits([...codeFlagsPre, ...codeFlagsPost]);
+  flags = flags.filter((f) => !codeFlags.some((c) => boxesOverlap(f.box, c.box)));
+  for (const f of codeFlags) {
+    flags.push({ ...f, box: [...f.box], blanked: false });
+  }
+
   const serials = serialHits(ocrFinal);
   const unresolved = flags.filter((f) => !f.blanked);
   const passed = unresolved.length === 0 && serials.length === 0;
@@ -188,6 +213,40 @@ export async function deidPage(page, opts) {
     erase: cropped.erase,
     cuts: cropped.cuts,
   };
+}
+
+/** @param {[number,number,number,number]} a @param {[number,number,number,number]} b */
+function boxesOverlap(a, b) {
+  return Math.min(a[2], b[2]) > Math.max(a[0], b[0]) && Math.min(a[3], b[3]) > Math.max(a[1], b[1]);
+}
+
+/** @param {import('./types.js').FlagHit[]} flags */
+function mergeFlagHits(flags) {
+  if (flags.length < 2) return flags.map((f) => ({ ...f, box: [...f.box] }));
+  const out = [];
+  const used = new Set();
+  for (let i = 0; i < flags.length; i++) {
+    if (used.has(i)) continue;
+    let [a, b, c, d] = flags[i].box;
+    let text = flags[i].text;
+    let reason = flags[i].reason;
+    for (let j = i + 1; j < flags.length; j++) {
+      if (used.has(j)) continue;
+      if (!boxesOverlap([a, b, c, d], flags[j].box)) continue;
+      used.add(j);
+      const [x0, y0, x1, y1] = flags[j].box;
+      a = Math.min(a, x0);
+      b = Math.min(b, y0);
+      c = Math.max(c, x1);
+      d = Math.max(d, y1);
+      if (flags[j].reason === "barcode") reason = "barcode";
+      if (flags[j].text && flags[j].text !== "qr" && flags[j].text !== "qr-finder") {
+        text = text || flags[j].text;
+      }
+    }
+    out.push({ box: [a, b, c, d], reason, text, blanked: false });
+  }
+  return out;
 }
 
 /**

@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../..");
-const DEID = path.resolve(__dirname, "..");
+const DEID = path.resolve(__dirname, "../../deid");
 const FIX = path.join(__dirname, "fixtures-synthetic");
 const PORT = 8765;
 
@@ -183,7 +183,7 @@ async function main() {
       hasChanInPng: asText.includes("CHAN TAI MAN"),
       serialHits: result.serialHits,
     };
-  }, `http://127.0.0.1:${PORT}/deid/tests/fixtures-synthetic/generic.png`);
+  }, `http://127.0.0.1:${PORT}/ci/deid/fixtures-synthetic/generic.png`);
 
   assert.equal(pipelineResult.device, "generic");
   assert.ok(pipelineResult.outH < pipelineResult.inH, "crop should shrink height");
@@ -207,7 +207,7 @@ async function main() {
 
   // Screenshot with synthetic mock for PR (workspace already open)
   await page.screenshot({
-    path: path.join(DEID, "tests/fixtures-synthetic/ui-smoke.png"),
+    path: path.join(__dirname, "fixtures-synthetic/ui-smoke.png"),
     fullPage: true,
   });
 

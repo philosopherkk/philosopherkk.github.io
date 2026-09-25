@@ -8,7 +8,7 @@ import {
   collectFlags,
   detectDenseHighContrastRegions,
   isClinicalLine,
-} from "../core/index.js";
+} from "../../deid/core/index.js";
 import "./helpers/imagedata-polyfill.mjs";
 
 function w(text, x0, y0, x1, y1, conf = 90) {

@@ -10,7 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { gotoDeidWithTestHook } from "../../tests/deid-harness/inject.mjs";
+import { gotoDeidWithTestHook } from "../deid-harness/inject.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../..");
@@ -182,7 +182,7 @@ async function main() {
           };
         },
         {
-          qrUrl: `http://127.0.0.1:${PORT}/deid/tests/fixtures-synthetic/qr-rot-source.png`,
+          qrUrl: `http://127.0.0.1:${PORT}/ci/deid/fixtures-synthetic/qr-rot-source.png`,
           deg: c.deg,
           place: c.place,
           payload: PAYLOAD,
@@ -248,7 +248,7 @@ async function main() {
         disabled: window.__deidTest.approveBtnDisabled(),
         n: window.__deidTest.getFlags().filter((f) => !f.blanked).length,
       };
-    }, `http://127.0.0.1:${PORT}/deid/tests/fixtures-synthetic/qr-rot-source.png`);
+    }, `http://127.0.0.1:${PORT}/ci/deid/fixtures-synthetic/qr-rot-source.png`);
     assert.equal(gated.n >= 1, true, `Approve gate flags: ${gated.n}`);
     assert.equal(gated.disabled, true, "Approve must be blocked while QR flag open");
     await page.close();
@@ -317,7 +317,7 @@ async function main() {
         pngBuf: Array.from(new Uint8Array(await pngBlob.arrayBuffer())),
         rendered: { w: img.width, h: img.height },
       };
-    }, `http://127.0.0.1:${PORT}/deid/tests/fixtures-synthetic/qr-rot-source.png`);
+    }, `http://127.0.0.1:${PORT}/ci/deid/fixtures-synthetic/qr-rot-source.png`);
 
     assert.ok(
       pdfResult.flagCount >= 1,
@@ -338,8 +338,9 @@ async function main() {
   }
 
   // Harness must not live under /deid/
-  assert.equal(fs.existsSync(path.join(REPO, "deid/tests/harness")), false);
-  assert.equal(fs.existsSync(path.join(REPO, "tests/deid-harness/install-test-hook.js")), true);
+  assert.equal(fs.existsSync(path.join(REPO, "deid/tests")), false, "deid/tests must not exist");
+  assert.equal(fs.existsSync(path.join(REPO, "tests/deid-harness")), false, "tests/deid-harness must not exist");
+  assert.equal(fs.existsSync(path.join(REPO, "ci/deid-harness/install-test-hook.js")), true);
 
   console.log("qr-rotated-pdf e2e OK");
   await browser.close();

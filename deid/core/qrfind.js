@@ -1,7 +1,7 @@
 /**
  * Decode-independent QR finder-pattern detector (1:1:3:1:1).
- * Flags a code-like region even when jsQR/ZXing fail to decode.
- * Strict cross-checks avoid clinical text false positives.
+ * Adaptive/local-contrast binarisation for grey/smudged codes.
+ * Accepts 3 finders, or 2 finders + a dense square module region.
  * @module core/qrfind
  */
 
@@ -10,42 +10,62 @@
  */
 
 /**
- * Detect QR-like regions via three finder squares.
+ * Detect QR-like regions via finder squares.
  * @param {ImageData} imageData
  * @returns {import('./types.js').FlagHit[]}
  */
 export function detectQrFinderFlags(imageData) {
   const finders = findFinderPatterns(imageData);
-  if (finders.length < 3) return [];
-
   /** @type {import('./types.js').FlagHit[]} */
   const flags = [];
   const usedFinder = new Set();
 
-  // Greedy: pick best triplets first (closest to ideal right-isosceles)
-  /** @type {{ score: number, i: number, j: number, k: number, box: [number,number,number,number] }[]} */
+  /** @type {{ score: number, idxs: number[], box: [number,number,number,number] }[]} */
   const candidates = [];
-  for (let i = 0; i < finders.length; i++) {
-    for (let j = i + 1; j < finders.length; j++) {
-      for (let k = j + 1; k < finders.length; k++) {
-        const trip = [finders[i], finders[j], finders[k]];
-        const scored = scoreFinderTriplet(trip);
-        if (!scored) continue;
-        const box = qrBoxFromFinderTriplet(trip, imageData.width, imageData.height);
+
+  if (finders.length >= 3) {
+    for (let i = 0; i < finders.length; i++) {
+      for (let j = i + 1; j < finders.length; j++) {
+        for (let k = j + 1; k < finders.length; k++) {
+          const trip = [finders[i], finders[j], finders[k]];
+          const scored = scoreFinderTriplet(trip);
+          if (!scored) continue;
+          const box = qrBoxFromFinderTriplet(trip, imageData.width, imageData.height);
+          if (!box) continue;
+          const bw = box[2] - box[0];
+          const bh = box[3] - box[1];
+          if (bw < 60 || bh < 60) continue;
+          if (bw > Math.min(imageData.width, imageData.height) * 0.5) continue;
+          candidates.push({ score: scored, idxs: [i, j, k], box });
+        }
+      }
+    }
+  }
+
+  // Two finders + dense square module region (damaged / smudged third finder)
+  if (finders.length >= 2) {
+    for (let i = 0; i < finders.length; i++) {
+      for (let j = i + 1; j < finders.length; j++) {
+        const pair = [finders[i], finders[j]];
+        const box = qrBoxFromTwoFinders(pair, imageData);
         if (!box) continue;
         const bw = box[2] - box[0];
         const bh = box[3] - box[1];
         if (bw < 60 || bh < 60) continue;
-        candidates.push({ score: scored, i, j, k, box });
+        if (bw > Math.min(imageData.width, imageData.height) * 0.5) continue;
+        candidates.push({
+          score: 0.55,
+          idxs: [i, j],
+          box,
+        });
       }
     }
   }
+
   candidates.sort((a, b) => b.score - a.score);
   for (const c of candidates) {
-    if (usedFinder.has(c.i) || usedFinder.has(c.j) || usedFinder.has(c.k)) continue;
-    usedFinder.add(c.i);
-    usedFinder.add(c.j);
-    usedFinder.add(c.k);
+    if (c.idxs.some((idx) => usedFinder.has(idx))) continue;
+    for (const idx of c.idxs) usedFinder.add(idx);
     flags.push({
       box: c.box,
       reason: "qr_finder",
@@ -58,6 +78,7 @@ export function detectQrFinderFlags(imageData) {
 
 /**
  * Expand a partial/tiny QR decode box using nearby finder geometry when possible.
+ * Caps growth so colour maps are not swallowed.
  * @param {ImageData} imageData
  * @param {[number, number, number, number]} box
  * @param {{x:number,y:number}[]} [points]
@@ -68,6 +89,7 @@ export function expandQrCodeBox(imageData, box, points = []) {
   let [x0, y0, x1, y1] = box;
   const w = x1 - x0;
   const h = y1 - y0;
+  const maxSide = Math.min(W, H) * 0.42;
 
   if (points.length >= 3) {
     const fromPts = qrBoxFromFinderTriplet(
@@ -82,12 +104,13 @@ export function expandQrCodeBox(imageData, box, points = []) {
     if (fromPts) {
       const fw = fromPts[2] - fromPts[0];
       const fh = fromPts[3] - fromPts[1];
-      if (fw >= 60 && fh >= 60) return fromPts;
+      if (fw >= 60 && fh >= 60 && fw <= maxSide * 1.15 && fh <= maxSide * 1.15) {
+        return fromPts;
+      }
     }
   }
 
-  // Already a reasonable QR-sized near-square
-  if (w >= 72 && h >= 72 && w / h > 0.7 && w / h < 1.4) {
+  if (w >= 72 && h >= 72 && w / h > 0.7 && w / h < 1.4 && w <= maxSide && h <= maxSide) {
     const pad = 16;
     return [
       Math.max(0, x0 - pad),
@@ -105,10 +128,20 @@ export function expandQrCodeBox(imageData, box, points = []) {
     .sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
   if (near.length >= 3) {
     const fromNear = qrBoxFromFinderTriplet(near.slice(0, 3), W, H);
-    if (fromNear) return fromNear;
+    if (fromNear) {
+      const fw = fromNear[2] - fromNear[0];
+      if (fw <= maxSide * 1.15) return fromNear;
+    }
+  }
+  if (near.length >= 2) {
+    const fromTwo = qrBoxFromTwoFinders(near.slice(0, 2), imageData);
+    if (fromTwo) {
+      const fw = fromTwo[2] - fromTwo[0];
+      if (fw <= maxSide * 1.15) return fromTwo;
+    }
   }
 
-  let side = Math.max(96, Math.max(w, h) * 4);
+  let side = Math.min(maxSide, Math.max(96, Math.max(w, h) * 3.2));
   if (points.length >= 2) {
     let m = 0;
     for (let i = 0; i < points.length; i++) {
@@ -116,20 +149,20 @@ export function expandQrCodeBox(imageData, box, points = []) {
         m = Math.max(m, Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y));
       }
     }
-    side = Math.max(side, m * 1.25);
+    if (m > 20) side = Math.min(maxSide, Math.max(side, m * 1.35 + 20));
   }
   const half = side / 2;
   return [
-    Math.max(0, cx - half - 12),
-    Math.max(0, cy - half - 12),
-    Math.min(W, cx + half + 12),
-    Math.min(H, cy + half + 12),
+    Math.max(0, cx - half - 8),
+    Math.max(0, cy - half - 8),
+    Math.min(W, cx + half + 8),
+    Math.min(H, cy + half + 8),
   ];
 }
 
 /**
  * @param {FinderHit[]} trip
- * @returns {number|null} score (higher better)
+ * @returns {number|null}
  */
 function scoreFinderTriplet(trip) {
   const [a, b, c] = trip;
@@ -148,7 +181,6 @@ function scoreFinderTriplet(trip) {
       Math.min(a.moduleSize, b.moduleSize, c.moduleSize) <
     2.2;
   if (!modOk) return null;
-  // Prefer hyp ≈ leg * √2
   const ideal = 1 - Math.abs(hyp / leg - Math.SQRT2) / Math.SQRT2;
   return ideal * ratio;
 }
@@ -163,9 +195,8 @@ export function qrBoxFromFinderTriplet(trip, W, H) {
   if (trip.length < 3) return null;
   if (!scoreFinderTriplet(trip)) return null;
   const [a, b, c] = trip;
-  const mod =
-    (a.moduleSize + b.moduleSize + c.moduleSize) / 3 || 3;
-  const pad = mod * 4 + 14;
+  const mod = (a.moduleSize + b.moduleSize + c.moduleSize) / 3 || 3;
+  const pad = Math.min(mod * 4 + 14, 28);
   const tl = identifyTopLeft(a, b, c);
   const others = [a, b, c].filter((p) => p !== tl);
   const v1 = { x: others[0].x - tl.x, y: others[0].y - tl.y };
@@ -179,6 +210,110 @@ export function qrBoxFromFinderTriplet(trip, W, H) {
     Math.min(W, Math.max(...xs) + pad),
     Math.min(H, Math.max(...ys) + pad),
   ];
+}
+
+/**
+ * Build a QR box from two finders when a dense module square completes the code.
+ * @param {FinderHit[]} pair
+ * @param {ImageData} imageData
+ * @returns {[number,number,number,number]|null}
+ */
+function qrBoxFromTwoFinders(pair, imageData) {
+  const [a, b] = pair;
+  const dist = Math.hypot(a.x - b.x, a.y - b.y);
+  if (dist < 36 || dist > Math.min(imageData.width, imageData.height) * 0.4) return null;
+  const modRatio =
+    Math.max(a.moduleSize, b.moduleSize) / Math.min(a.moduleSize, b.moduleSize);
+  if (modRatio > 2.0) return null;
+  const mod = (a.moduleSize + b.moduleSize) / 2;
+
+  // Two candidate third corners: rotate vector AB by ±90°
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const candidates = [
+    { x: a.x - vy, y: a.y + vx },
+    { x: a.x + vy, y: a.y - vx },
+    { x: b.x - vy, y: b.y + vx },
+    { x: b.x + vy, y: b.y - vx },
+  ];
+
+  for (const third of candidates) {
+    if (third.x < 0 || third.y < 0 || third.x >= imageData.width || third.y >= imageData.height) {
+      continue;
+    }
+    const trip = [a, b, { x: third.x, y: third.y, moduleSize: mod }];
+    const box = qrBoxFromFinderTripletLoose(trip, imageData.width, imageData.height, mod);
+    if (!box) continue;
+    if (regionLooksLikeQrModules(imageData, box, mod)) {
+      return box;
+    }
+  }
+  return null;
+}
+
+/** Loose triplet box without strict √2 check (third is estimated). */
+function qrBoxFromFinderTripletLoose(trip, W, H, mod) {
+  const [a, b, c] = trip;
+  const pad = Math.min(mod * 4 + 14, 28);
+  const tl = identifyTopLeft(a, b, c);
+  const others = [a, b, c].filter((p) => p !== tl);
+  const v1 = { x: others[0].x - tl.x, y: others[0].y - tl.y };
+  const v2 = { x: others[1].x - tl.x, y: others[1].y - tl.y };
+  const fourth = { x: tl.x + v1.x + v2.x, y: tl.y + v1.y + v2.y };
+  const xs = [a.x, b.x, c.x, fourth.x];
+  const ys = [a.y, b.y, c.y, fourth.y];
+  const box = [
+    Math.max(0, Math.min(...xs) - pad),
+    Math.max(0, Math.min(...ys) - pad),
+    Math.min(W, Math.max(...xs) + pad),
+    Math.min(H, Math.max(...ys) + pad),
+  ];
+  const bw = box[2] - box[0];
+  const bh = box[3] - box[1];
+  if (bw / bh < 0.7 || bw / bh > 1.4) return null;
+  return /** @type {[number,number,number,number]} */ (box);
+}
+
+/**
+ * Dense near-binary module grid inside a candidate QR box (not clinical text).
+ * @param {ImageData} imageData
+ * @param {[number,number,number,number]} box
+ * @param {number} moduleSize
+ */
+function regionLooksLikeQrModules(imageData, box, moduleSize) {
+  const { width: W, data } = imageData;
+  const [x0, y0, x1, y1] = box;
+  const bw = x1 - x0;
+  const bh = y1 - y0;
+  if (bw < 50 || bh < 50) return false;
+
+  let n = 0;
+  let dark = 0;
+  let extreme = 0;
+  let transitions = 0;
+  const step = Math.max(1, Math.floor(moduleSize / 2));
+  for (let y = Math.floor(y0); y < y1; y += step) {
+    let prev = -1;
+    for (let x = Math.floor(x0); x < x1; x += step) {
+      const i = (y * W + x) * 4;
+      const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
+      const b = g < 128 ? 1 : 0;
+      if (g < 40 || g > 220) extreme++;
+      if (b) dark++;
+      if (prev >= 0 && b !== prev) transitions++;
+      prev = b;
+      n++;
+    }
+  }
+  if (n < 40) return false;
+  const dRate = dark / n;
+  const eRate = extreme / n;
+  const tRate = transitions / n;
+  // QR: mixed dark/light, high binary extremes, many transitions both ways
+  if (dRate < 0.22 || dRate > 0.78) return false;
+  if (eRate < 0.35) return false;
+  if (tRate < 0.12) return false;
+  return true;
 }
 
 /** @param {FinderHit} a @param {FinderHit} b @param {FinderHit} c */
@@ -200,6 +335,7 @@ function identifyTopLeft(a, b, c) {
 }
 
 /**
+ * Local-contrast (adaptive) binarisation then finder scan.
  * @param {ImageData} imageData
  * @returns {FinderHit[]}
  */
@@ -207,18 +343,60 @@ export function findFinderPatterns(imageData) {
   const { width: W, height: H, data } = imageData;
   if (W < 60 || H < 60) return [];
 
-  const binary = new Uint8Array(W * H);
+  const gray = new Uint8Array(W * H);
   for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-    const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
-    binary[j] = g < 110 ? 1 : 0;
+    gray[j] = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
   }
 
+  const binary = adaptiveBinarize(gray, W, H);
+  return scanFinders(binary, W, H);
+}
+
+/**
+ * Block-mean adaptive threshold (handles grey / smudged quiet zones).
+ * @param {Uint8Array} gray
+ * @param {number} W
+ * @param {number} H
+ */
+function adaptiveBinarize(gray, W, H) {
+  const block = Math.max(16, Math.floor(Math.min(W, H) / 24));
+  const binary = new Uint8Array(W * H);
+  for (let by = 0; by < H; by += block) {
+    for (let bx = 0; bx < W; bx += block) {
+      let sum = 0;
+      let n = 0;
+      const y1 = Math.min(H, by + block);
+      const x1 = Math.min(W, bx + block);
+      for (let y = by; y < y1; y++) {
+        for (let x = bx; x < x1; x++) {
+          sum += gray[y * W + x];
+          n++;
+        }
+      }
+      const mean = sum / Math.max(1, n);
+      // Bias slightly toward dark so grey modules still read as black
+      const thr = Math.max(60, Math.min(180, mean - 8));
+      for (let y = by; y < y1; y++) {
+        for (let x = bx; x < x1; x++) {
+          binary[y * W + x] = gray[y * W + x] < thr ? 1 : 0;
+        }
+      }
+    }
+  }
+  return binary;
+}
+
+/**
+ * @param {Uint8Array} binary
+ * @param {number} W
+ * @param {number} H
+ */
+function scanFinders(binary, W, H) {
   /** @type {FinderHit[]} */
   const raw = [];
   for (let y = 3; y < H - 3; y += 2) {
     let x = 0;
     while (x < W - 7) {
-      // Skip white
       while (x < W && binary[y * W + x] === 0) x++;
       if (x >= W) break;
       const runStart = x;
@@ -244,11 +422,9 @@ export function findFinderPatterns(imageData) {
           if (cross) raw.push(cross);
         }
       }
-      // Advance into the pattern so we can find overlapping starts
       x = runStart + Math.max(1, runs[0] || 1);
     }
   }
-
   return mergeFinders(raw);
 }
 
@@ -257,7 +433,7 @@ function matchFinderRatio(runs) {
   const total = runs[0] + runs[1] + runs[2] + runs[3] + runs[4];
   if (total < 14) return false;
   const unit = total / 7;
-  const ok = (v, n) => Math.abs(v - n * unit) <= Math.max(1.1, unit * 0.7);
+  const ok = (v, n) => Math.abs(v - n * unit) <= Math.max(1.1, unit * 0.75);
   return ok(runs[0], 1) && ok(runs[1], 1) && ok(runs[2], 3) && ok(runs[3], 1) && ok(runs[4], 1);
 }
 
@@ -306,7 +482,7 @@ function crossCheckVertical(binary, W, H, cx, cy, moduleSize) {
   if (!matchFinderRatio(runs)) return null;
   const total = runs[0] + runs[1] + runs[2] + runs[3] + runs[4];
   const ms = total / 7;
-  if (Math.abs(ms - moduleSize) / moduleSize > 0.65) return null;
+  if (Math.abs(ms - moduleSize) / moduleSize > 0.7) return null;
   const topOfPattern = cy - runs[0] - runs[1] - Math.floor(runs[2] / 2);
   const py = topOfPattern + runs[0] + runs[1] + runs[2] / 2;
   return { x: cx, y: py, moduleSize: (ms + moduleSize) / 2 };

@@ -4,7 +4,7 @@
 import "./helpers/imagedata-polyfill.mjs";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { detectDevice, detectDeviceOrGeneric } from "../core/detect.js";
+import { detectDevice, detectDeviceOrGeneric } from "../../deid/core/detect.js";
 import {
   isIdentToken,
   RX,
@@ -17,7 +17,7 @@ import {
   makeExportName,
   buildMultiPagePdf,
   labelMasks,
-} from "../core/index.js";
+} from "../../deid/core/index.js";
 
 describe("detectDevice", () => {
   it("detects HFA from keywords", () => {

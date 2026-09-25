@@ -148,7 +148,7 @@ async function main() {
       by,
       barW,
     };
-  }, `http://127.0.0.1:${PORT}/deid/tests/fixtures-synthetic/code128-phi.png`);
+  }, `http://127.0.0.1:${PORT}/ci/deid/fixtures-synthetic/code128-phi.png`);
 
   assert.ok(
     result.before.some((t) => t.includes("A123456") || t.includes("CHANTAIMAN")),
@@ -205,7 +205,7 @@ async function main() {
     const pngBlob = await encodeImage(img, "image/png");
     const buf = new Uint8Array(await pngBlob.arrayBuffer());
     return { buf: Array.from(buf), leftover: await decodeAnyCodes(img) };
-  }, `http://127.0.0.1:${PORT}/deid/tests/fixtures-synthetic/code128-phi.png`);
+  }, `http://127.0.0.1:${PORT}/ci/deid/fixtures-synthetic/code128-phi.png`);
 
   assert.deepEqual(exportCheck.leftover, []);
   const outPng = path.join(FIX, "code128-blanked-export.png");

@@ -113,7 +113,7 @@ async function main() {
       pngDecoded,
       jpgDecoded,
     };
-  }, `http://127.0.0.1:${PORT}/deid/tests/fixtures-synthetic/qr-phi.png`);
+  }, `http://127.0.0.1:${PORT}/ci/deid/fixtures-synthetic/qr-phi.png`);
 
   assert.ok(result.before.some((t) => t.includes("CHAN TAI MAN")), JSON.stringify(result.before));
   assert.ok(result.flagCount >= 1, "QR must be flagged");
