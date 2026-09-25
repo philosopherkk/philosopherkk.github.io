@@ -21,6 +21,29 @@ import {
 } from "./rules.js";
 import { unrotateBox, rotSize, uprightScore } from "./geometry.js";
 
+/** Institution / clinic words (EN). Bare laterality Eye:R is excluded separately. */
+export const INSTITUTION_EN =
+  /\b(clinic|hospital|centre|center|medical|ophthalmic|limited|ltd)\b|\beye\s+(clinic|centre|center|hospital|institute|care)\b/i;
+
+/** Chinese institution / clinic tokens. */
+export const INSTITUTION_ZH = /醫院|診所|中心|眼科|醫務/;
+
+/** Signature / staff lines that often remain after a generic crop. */
+export const SIGNATURE_LINE =
+  /\b(signature|signed|physician|doctor|operator|technician)\b|\bdr\.?\b|簽名/i;
+
+/** HK phone: +852 / 8-digit starting 2–9, optional separators. */
+export const HK_PHONE =
+  /(?:\+?852[-\s]?)?(?:\(?\+?852\)?[-\s]?)?[2-9]\d{3}[-\s]?\d{4}\b/;
+
+/**
+ * True when token is laterality "Eye:R/L" etc., not a clinic name.
+ * @param {string} t
+ */
+export function isLateralityEye(t) {
+  return /^eye\s*[:：/\-]?[\s]*[rl]\b|^eye\s*(od|os|ou)\b|^eye$/i.test(String(t).trim());
+}
+
 /**
  * Masks for label→value and regex hits (in the words' coordinate frame).
  * @param {import('./types.js').Word[]} words
@@ -88,7 +111,7 @@ export function labelMasks(words, W, H, labels = LABELS, dateLabels = DATE_LABEL
     if (w.conf < 20) continue;
     const h = w.y1 - w.y0;
     if (h > 2.5 * th && /^[\d\s]+$/.test(w.text)) continue;
-    if (isIdentToken(w.text) || (CJK.test(w.text) && w.conf >= 60)) {
+    if (isIdentToken(w.text) || HK_PHONE.test(w.text) || (CJK.test(w.text) && w.conf >= 60)) {
       const pad = Math.floor(0.5 * (h < 3 * th ? Math.max(th, h) : th));
       boxes.push([w.x0 - pad, w.y0 - pad, w.x1 + pad, w.y1 + pad]);
     }
@@ -97,11 +120,80 @@ export function labelMasks(words, W, H, labels = LABELS, dateLabels = DATE_LABEL
 }
 
 /**
+ * Group words into visual lines and flag clinic / signature / phone lines.
+ * @param {import('./types.js').Word[]} words
+ * @param {number} W
+ * @param {number} H
+ * @returns {import('./types.js').FlagHit[]}
+ */
+export function lineSafetyFlags(words, W, H) {
+  /** @type {import('./types.js').FlagHit[]} */
+  const flags = [];
+  const good = (words || []).filter((w) => w.conf >= 40);
+  if (!good.length) return flags;
+
+  const hs = good.map((w) => w.y1 - w.y0).sort((a, b) => a - b);
+  const th = Math.max(10, hs[Math.floor(hs.length / 2)] || 16);
+
+  /** @type {import('./types.js').Word[][]} */
+  const lines = [];
+  const used = new Set();
+  const sorted = [...good].sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
+  for (const w of sorted) {
+    if (used.has(w)) continue;
+    const line = [w];
+    used.add(w);
+    const cy = (w.y0 + w.y1) / 2;
+    for (const v of sorted) {
+      if (used.has(v)) continue;
+      const cv = (v.y0 + v.y1) / 2;
+      if (Math.abs(cv - cy) < 0.7 * Math.max(w.y1 - w.y0, v.y1 - v.y0, th * 0.8)) {
+        line.push(v);
+        used.add(v);
+      }
+    }
+    line.sort((a, b) => a.x0 - b.x0);
+    lines.push(line);
+  }
+
+  for (const line of lines) {
+    const text = line.map((w) => w.text).join(" ");
+    const joined = text.replace(/\s+/g, " ").trim();
+    if (!joined) continue;
+
+    let reason = null;
+    if (INSTITUTION_ZH.test(joined)) reason = "institution";
+    else if (INSTITUTION_EN.test(joined) && !isLateralityEye(joined)) reason = "institution";
+    else if (SIGNATURE_LINE.test(joined)) reason = "signature_line";
+    else if (HK_PHONE.test(joined)) reason = "phone";
+
+    if (!reason && /\bEye\b/.test(joined) && !isLateralityEye(joined)) {
+      const caps = joined.split(/\s+/).filter((t) => /^[A-Z]/.test(t));
+      if (caps.length >= 2) reason = "institution";
+    }
+
+    if (!reason) continue;
+    const pad = Math.floor(0.5 * th);
+    const x0 = Math.min(...line.map((w) => w.x0)) - pad;
+    const y0 = Math.min(...line.map((w) => w.y0)) - pad;
+    const x1 = Math.max(...line.map((w) => w.x1)) + pad;
+    const y1 = Math.max(...line.map((w) => w.y1)) + pad;
+    flags.push({
+      box: [Math.max(0, x0), Math.max(0, y0), Math.min(W, x1), Math.min(H, y1)],
+      reason,
+      text: joined,
+      blanked: false,
+    });
+  }
+  return flags;
+}
+
+/**
  * Build flag hits from OCR across 4 rotations (for UI safety net — does not auto-blank).
- * @param {Record<number, import('./types.js').Word[]>} ocrByRot  k -> words in rotated coords
- * @param {number} W  Original width
- * @param {number} H  Original height
- * @param {import('./types.js').Word[]} [cjkWords]  Optional Chinese OCR on upright image
+ * @param {Record<number, import('./types.js').Word[]>} ocrByRot
+ * @param {number} W
+ * @param {number} H
+ * @param {import('./types.js').Word[]} [cjkWords]
  * @returns {import('./types.js').FlagHit[]}
  */
 export function collectFlags(ocrByRot, W, H, cjkWords = []) {
@@ -117,8 +209,10 @@ export function collectFlags(ocrByRot, W, H, cjkWords = []) {
     const [rw, rh] = rotSize(W, H, k);
     if (k !== kUp) words = words.filter((w) => w.conf >= 80);
     for (const b of labelMasks(words, rw, rh, ID_LABELS, ID_DATE_LABELS)) {
-      const box = unrotateBox(b, k, W, H);
-      flags.push({ box, reason: "identity_or_date", blanked: false });
+      flags.push({ box: unrotateBox(b, k, W, H), reason: "identity_or_date", blanked: false });
+    }
+    for (const f of lineSafetyFlags(words, rw, rh)) {
+      flags.push({ ...f, box: unrotateBox(f.box, k, W, H) });
     }
   }
 
@@ -126,9 +220,17 @@ export function collectFlags(ocrByRot, W, H, cjkWords = []) {
     const chars = w.text.match(CJK) || [];
     if (chars.length >= 2 && w.conf >= 80) {
       const p = Math.floor(0.6 * (w.y1 - w.y0));
-      const box = unrotateBox([w.x0 - p, w.y0 - p, w.x1 + p, w.y1 + p], kUp, W, H);
-      flags.push({ box, reason: "cjk_name", text: w.text, blanked: false });
+      flags.push({
+        box: unrotateBox([w.x0 - p, w.y0 - p, w.x1 + p, w.y1 + p], kUp, W, H),
+        reason: "cjk_name",
+        text: w.text,
+        blanked: false,
+      });
     }
+  }
+  const [urw, urh] = rotSize(W, H, kUp);
+  for (const f of lineSafetyFlags(cjkWords, urw, urh)) {
+    flags.push({ ...f, box: unrotateBox(f.box, kUp, W, H) });
   }
 
   return mergeNearbyFlags(flags);
@@ -153,8 +255,8 @@ function mergeNearbyFlags(flags) {
       const overlap =
         Math.min(c, x1) > Math.max(a, x0) && Math.min(d, y1) > Math.max(b, y0);
       const near =
-        Math.abs(((a + c) / 2) - ((x0 + x1) / 2)) < 40 &&
-        Math.abs(((b + d) / 2) - ((y0 + y1) / 2)) < 40;
+        Math.abs((a + c) / 2 - (x0 + x1) / 2) < 40 &&
+        Math.abs((b + d) / 2 - (y0 + y1) / 2) < 40;
       if (overlap || near) {
         used.add(j);
         a = Math.min(a, x0);
@@ -162,6 +264,12 @@ function mergeNearbyFlags(flags) {
         c = Math.max(c, x1);
         d = Math.max(d, y1);
         if (flags[j].text) text = (text ? text + " " : "") + flags[j].text;
+        // Prefer specific safety reasons over generic identity_or_date
+        const rank = (r) =>
+          ({ institution: 3, signature_line: 3, phone: 3, barcode: 3, dense_code_region: 2, cjk_name: 2, identity_or_date: 1 }[
+            r
+          ] || 0);
+        if (rank(flags[j].reason) > rank(reason)) reason = flags[j].reason;
       }
     }
     out.push({ box: [a, b, c, d], reason, text, blanked: false });
@@ -170,7 +278,6 @@ function mergeNearbyFlags(flags) {
 }
 
 /**
- * Post-crop serial check — return list of 'rot:token' hits.
  * @param {Record<number, import('./types.js').Word[]>} ocrByRot
  * @returns {string[]}
  */
@@ -188,8 +295,7 @@ export function serialHits(ocrByRot) {
     const good = (ocrByRot[k] || []).filter((w) => w.conf >= thr);
     for (const w of good) {
       const t = w.text.replace(/^[\s;,]+|[\s;,]+$/g, "");
-      const lab =
-        SERIAL_LABEL_RX.test(t) && (k === kUp || !/^sn$/i.test(t));
+      const lab = SERIAL_LABEL_RX.test(t) && (k === kUp || !/^sn$/i.test(t));
       const val =
         w.conf >= (k === kUp ? 60 : 80) && SERIAL_VALUE_RX.some((r) => r.test(t));
       if (lab || val) hits.push(`${k * 90}:${t}`);
@@ -205,11 +311,9 @@ export function serialHits(ocrByRot) {
 }
 
 /**
- * Test whether a string still contains any of the given fake identifiers.
- * Used by automated tests (not for production auto-pass).
  * @param {string} text
  * @param {string[]} identifiers
- * @returns {string[]}  Identifiers still found
+ * @returns {string[]}
  */
 export function remainingIdentifiers(text, identifiers) {
   const upper = text.toUpperCase();

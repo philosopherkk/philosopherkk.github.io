@@ -10,6 +10,7 @@ import { applyCrop, fillWhite, anchorShift } from "./crop.js";
 import { collectFlags, serialHits, labelMasks } from "./phi.js";
 import { ID_LABELS, ID_DATE_LABELS, CJK } from "./rules.js";
 import { unrotateBox, rotSize } from "./geometry.js";
+import { detectBarcodeFlags } from "./barcode.js";
 
 /**
  * Convert ImageBitmap / canvas / ImageData to ImageData.
@@ -159,6 +160,12 @@ export async function deidPage(page, opts) {
   }
 
   const flags = collectFlags(ocrFinal, outImage.width, outImage.height, cjkFinal);
+  try {
+    const codeFlags = await detectBarcodeFlags(outImage);
+    for (const f of codeFlags) flags.push(f);
+  } catch {
+    /* barcode optional */
+  }
   const serials = serialHits(ocrFinal);
   const unresolved = flags.filter((f) => !f.blanked);
   const passed = unresolved.length === 0 && serials.length === 0;

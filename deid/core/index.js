@@ -33,9 +33,15 @@ export {
 export {
   labelMasks,
   collectFlags,
+  lineSafetyFlags,
   serialHits,
   remainingIdentifiers,
+  INSTITUTION_EN,
+  INSTITUTION_ZH,
+  SIGNATURE_LINE,
+  HK_PHONE,
 } from "./phi.js";
+export { detectBarcodeFlags, detectDenseHighContrastRegions } from "./barcode.js";
 export {
   deidPage,
   blankFlag,

@@ -1,6 +1,9 @@
-/* Offline cache for app shell only — never caches user uploads. */
-const CACHE = "deid-shell-v1";
-const PRECACHE = [
+/* Offline cache: shell only on install. OCR/wasm/traineddata = cache-first on first use. */
+const SHELL_CACHE = "deid-shell-v2";
+const OCR_CACHE = "deid-ocr-v1";
+
+/** First-visit shell — no OCR wasm / traineddata / pdf.js. */
+const SHELL_PRECACHE = [
   "./",
   "./index.html",
   "./styles.css",
@@ -20,47 +23,77 @@ const PRECACHE = [
   "./core/phi.js",
   "./core/pipeline.js",
   "./core/export.js",
-  "./vendor/tesseract/tesseract.min.js",
-  "./vendor/tesseract/worker.min.js",
-  "./vendor/tesseract/tesseract-core-simd-lstm.wasm.js",
-  "./vendor/tesseract/tesseract-core-simd-lstm.wasm",
-  "./vendor/tesseract/tesseract-core-lstm.wasm.js",
-  "./vendor/tesseract/tesseract-core-lstm.wasm",
-  "./vendor/tessdata/eng.traineddata",
-  "./vendor/tessdata/chi_tra.traineddata",
-  "./vendor/pdfjs/pdf.mjs",
-  "./vendor/pdfjs/pdf.worker.mjs",
+  "./core/barcode.js",
 ];
+
+const OCR_RE =
+  /\/deid\/vendor\/(tesseract|tessdata)\//i;
+const PDF_RE = /\/deid\/vendor\/pdfjs\//i;
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting())
+    caches
+      .open(SHELL_CACHE)
+      .then((c) => c.addAll(SHELL_PRECACHE))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener("activate", (e) => {
+  const keep = new Set([SHELL_CACHE, OCR_CACHE]);
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
+/**
+ * @param {Request} request
+ * @param {string} cacheName
+ */
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const res = await fetch(request);
+  if (res.ok) {
+    cache.put(request, res.clone()).catch(() => {});
+  }
+  return res;
+}
+
+/**
+ * @param {Request} request
+ * @param {string} cacheName
+ */
+async function networkFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  try {
+    const res = await fetch(request);
+    if (res.ok && new URL(request.url).pathname.startsWith("/deid/")) {
+      cache.put(request, res.clone()).catch(() => {});
+    }
+    return res;
+  } catch {
+    const hit = await cache.match(request);
+    if (hit) return hit;
+    throw new Error("offline and uncached");
+  }
+}
+
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  if (url.origin !== self.location.origin) return; // never touch cross-origin
+  if (url.origin !== self.location.origin) return;
   if (e.request.method !== "GET") return;
-  // Network-first for shell so deploys update; cache fallback for offline
-  e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        const copy = res.clone();
-        // Only cache same-origin app assets, never opaque or POST bodies
-        if (res.ok && url.pathname.startsWith("/deid/")) {
-          caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
-        }
-        return res;
-      })
-      .catch(() => caches.match(e.request))
-  );
+  if (!url.pathname.startsWith("/deid/")) return;
+
+  if (OCR_RE.test(url.pathname) || PDF_RE.test(url.pathname)) {
+    // Heavy assets: fetch once, then serve from versioned OCR cache
+    e.respondWith(cacheFirst(e.request, OCR_CACHE));
+    return;
+  }
+
+  e.respondWith(networkFirst(e.request, SHELL_CACHE));
 });

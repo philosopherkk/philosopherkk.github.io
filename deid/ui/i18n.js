@@ -34,6 +34,8 @@ const STR = {
     hold: "未核准 — 不可匯出",
     privacy: "私隱：無伺服器、無分析、無第三方請求。影像只存於記憶體。",
     progress: "進度",
+    help:
+      "框選空白／裁切：啟用後在「裁切後」圖上拖曳。條碼／QR：支援 BarcodeDetector 的瀏覽器會自動標記；否則以高對比區塊提示，請人手覆核。OCR 資料首次使用時才下載並快取。",
   },
   en: {
     title: "Scan De-identifier",
@@ -70,6 +72,8 @@ const STR = {
     hold: "Not approved — export blocked",
     privacy: "Privacy: no server, no analytics, no third-party requests. Images stay in memory only.",
     progress: "Progress",
+    help:
+      "Draw blank/crop: enable a tool, then drag on the After image. Barcodes/QR: flagged via BarcodeDetector when available; otherwise dense high-contrast regions are suggested — always review. OCR language/wasm packs download once on first use and are cached.",
   },
 };
 

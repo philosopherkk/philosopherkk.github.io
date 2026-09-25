@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1419" />
   <meta name="referrer" content="no-referrer" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; font-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; font-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'" />
   <base href="/deid/" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
@@ -25,6 +25,7 @@
     僅為自動化輔助。分享前請自行檢查結果。本工具並非經認證的去識別化產品。
   </p>
   <p class="privacy" data-i18n="privacy">私隱：無伺服器、無分析、無第三方請求。影像只存於記憶體。</p>
+  <p class="privacy" data-i18n="help">框選空白／裁切：啟用後在「裁切後」圖上拖曳。條碼／QR：支援 BarcodeDetector 的瀏覽器會自動標記；否則以高對比區塊提示，請人手覆核。OCR 資料首次使用時才下載並快取。</p>
 
   <section id="dropZone" class="drop" tabindex="0">
     <input type="file" id="fileInput" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.heic,.heif" capture="environment" multiple hidden />
@@ -92,7 +93,6 @@
     <a href="../">← hub</a>
   </footer>
 
-  <script src="vendor/tesseract/tesseract.min.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

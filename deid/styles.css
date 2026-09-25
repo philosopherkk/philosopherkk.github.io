@@ -227,6 +227,12 @@ canvas {
   height: 100%;
   pointer-events: auto;
   cursor: crosshair;
+  /* Allow page scroll when not drawing; .drawing disables gesture scrolling */
+  touch-action: pan-y;
+}
+#overlayCanvas.drawing {
+  touch-action: none;
+  cursor: crosshair;
 }
 
 .foot {

@@ -35,10 +35,12 @@ function clearState() {
   pageIdx = 0;
   tool = null;
   drawStart = null;
+  $("overlayCanvas")?.classList.remove("drawing");
+  $("drawBlankBtn")?.classList.remove("on");
+  $("drawCropBtn")?.classList.remove("on");
   $("workspace").classList.add("hidden");
   $("progressWrap").classList.add("hidden");
   $("statusMsg").textContent = "";
-  // Drop references so GC can reclaim image memory
 }
 
 async function ensureOcr() {
@@ -199,6 +201,14 @@ function blankAllFlags() {
   refreshUI();
 }
 
+function setTool(next) {
+  tool = next;
+  const overlay = $("overlayCanvas");
+  overlay.classList.toggle("drawing", tool === "blank" || tool === "crop");
+  $("drawBlankBtn").classList.toggle("on", tool === "blank");
+  $("drawCropBtn").classList.toggle("on", tool === "crop");
+}
+
 function canvasCoords(ev, canvas) {
   const rect = canvas.getBoundingClientRect();
   const x = ((ev.clientX - rect.left) / rect.width) * canvas.width;
@@ -208,47 +218,82 @@ function canvasCoords(ev, canvas) {
 
 function setupOverlayDraw() {
   const overlay = $("overlayCanvas");
-  overlay.addEventListener("pointerdown", (ev) => {
-    const pg = current();
-    if (!pg) return;
-    const [x, y] = canvasCoords(ev, overlay);
-    // Hit-test flags first
-    for (const f of pg.flags) {
-      if (f.blanked) continue;
-      const [a, b, c, d] = f.box;
-      if (x >= a && x <= c && y >= b && y <= d) {
-        blankAtFlag(f);
-        return;
-      }
-    }
-    if (!tool) return;
-    drawStart = [x, y];
-    overlay.setPointerCapture(ev.pointerId);
-  });
 
-  overlay.addEventListener("pointerup", (ev) => {
-    if (!drawStart || !tool) return;
-    const pg = current();
-    const [x0, y0] = drawStart;
-    const [x1, y1] = canvasCoords(ev, overlay);
+  overlay.addEventListener(
+    "pointerdown",
+    (ev) => {
+      const pg = current();
+      if (!pg) return;
+      const [x, y] = canvasCoords(ev, overlay);
+      // Hit-test flags first
+      for (const f of pg.flags) {
+        if (f.blanked) continue;
+        const [a, b, c, d] = f.box;
+        if (x >= a && x <= c && y >= b && y <= d) {
+          ev.preventDefault();
+          blankAtFlag(f);
+          return;
+        }
+      }
+      if (!tool) return;
+      // Draw mode: block scroll / gesture while dragging
+      ev.preventDefault();
+      drawStart = [x, y];
+      try {
+        overlay.setPointerCapture(ev.pointerId);
+      } catch {
+        /* older Safari */
+      }
+    },
+    { passive: false }
+  );
+
+  overlay.addEventListener(
+    "pointermove",
+    (ev) => {
+      if (!drawStart || !tool) return;
+      ev.preventDefault();
+    },
+    { passive: false }
+  );
+
+  overlay.addEventListener(
+    "pointerup",
+    (ev) => {
+      if (!drawStart || !tool) return;
+      ev.preventDefault();
+      const pg = current();
+      const [x0, y0] = drawStart;
+      const [x1, y1] = canvasCoords(ev, overlay);
+      drawStart = null;
+      try {
+        overlay.releasePointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
+      const box = [
+        Math.min(x0, x1),
+        Math.min(y0, y1),
+        Math.max(x0, x1),
+        Math.max(y0, y1),
+      ];
+      if (box[2] - box[0] < 4 || box[3] - box[1] < 4) return;
+      pg.history.push(pg.working);
+      if (tool === "blank") {
+        fillWhite(pg.working, [box]);
+      } else if (tool === "crop") {
+        pg.working = cropImageData(pg.working, box);
+        pg.flags = [];
+      }
+      pg.serialHits = [];
+      pg.approved = false;
+      refreshUI();
+    },
+    { passive: false }
+  );
+
+  overlay.addEventListener("pointercancel", () => {
     drawStart = null;
-    const box = [
-      Math.min(x0, x1),
-      Math.min(y0, y1),
-      Math.max(x0, x1),
-      Math.max(y0, y1),
-    ];
-    if (box[2] - box[0] < 4 || box[3] - box[1] < 4) return;
-    pg.history.push(pg.working);
-    if (tool === "blank") {
-      fillWhite(pg.working, [box]);
-    } else if (tool === "crop") {
-      pg.working = cropImageData(pg.working, box);
-      pg.flags = [];
-    }
-    pg.serialHits = [];
-    pg.approved = false;
-    refreshUI();
   });
 }
 
@@ -350,14 +395,10 @@ function wire() {
     refreshUI();
   });
   $("drawBlankBtn").addEventListener("click", () => {
-    tool = tool === "blank" ? null : "blank";
-    $("drawBlankBtn").classList.toggle("on", tool === "blank");
-    $("drawCropBtn").classList.remove("on");
+    setTool(tool === "blank" ? null : "blank");
   });
   $("drawCropBtn").addEventListener("click", () => {
-    tool = tool === "crop" ? null : "crop";
-    $("drawCropBtn").classList.toggle("on", tool === "crop");
-    $("drawBlankBtn").classList.remove("on");
+    setTool(tool === "crop" ? null : "crop");
   });
   $("blankAllBtn").addEventListener("click", blankAllFlags);
   $("approveBtn").addEventListener("click", () => {
@@ -398,12 +439,47 @@ function wire() {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
 
-  // Guard: never write image payloads to storage
-  const block = () => {
-    throw new Error("deid: storage of image data is forbidden");
+  // Soft guard — tests check storage emptiness
+  void 0;
+
+  // E2E / Playwright hook (in-memory only; no persistence)
+  window.__deidTest = {
+    setTool,
+    /** @param {ImageData} imageData */
+    seedWorkingPage(imageData) {
+      const history = new HistoryStack();
+      history.push(imageData);
+      pages = [
+        {
+          original: cloneImageData(imageData),
+          upright: cloneImageData(imageData),
+          working: cloneImageData(imageData),
+          device: "generic",
+          flags: [],
+          serialHits: [],
+          approved: false,
+          removedRegions: [],
+          history,
+        },
+      ];
+      pageIdx = 0;
+      $("dropZone").classList.add("hidden");
+      $("workspace").classList.remove("hidden");
+      syncPageSelect();
+      refreshUI();
+    },
+    samplePixel(x, y) {
+      const pg = current();
+      if (!pg) return null;
+      const i = (Math.floor(y) * pg.working.width + Math.floor(x)) * 4;
+      return [pg.working.data[i], pg.working.data[i + 1], pg.working.data[i + 2]];
+    },
+    workingSize() {
+      const pg = current();
+      return pg ? { w: pg.working.width, h: pg.working.height } : null;
+    },
+    getTool: () => tool,
   };
-  // Soft guard — tests check storage emptiness; we don't monkeypatch hard in prod
-  void block;
 }
 
 wire();
