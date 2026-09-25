@@ -10,8 +10,7 @@ Hub only — root `index.html` is a page of **links**. Never dump an app into `/
 | 4 | Simracing web — Apex Trace | *none yet* | **PENDING** | PENDING until KK handoff |
 | 5 | Outflow | `outflow/` | https://philosopherkk.github.io/outflow/ | https://github.com/philosopherkk/outflow-app (private; may 404) |
 | 6 | HA waiting times | `waiting/` | https://philosopherkk.github.io/waiting/ | https://github.com/philosopherkk/hk-hospital-waiting-times |
-| 7 | Market Desk | `marketdesk/` | https://philosopherkk.github.io/marketdesk/ | https://github.com/philosopherkk/marketdesk |
-| 8 | Scan De-identifier | `deid/` | https://philosopherkk.github.io/deid/ | this repo (`deid/`) |
+| 7 | Scan De-identifier | `deid/` | https://philosopherkk.github.io/deid/ | this repo (`deid/`) |
 
 Hub: https://philosopherkk.github.io/
 

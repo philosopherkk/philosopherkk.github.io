@@ -25,8 +25,7 @@ Hong Kong timezone (HKT) for dates and version notes.
 4. Apex Trace — PENDING (no live URL)
 5. Outflow — https://philosopherkk.github.io/outflow/
 6. HA waiting times — https://philosopherkk.github.io/waiting/
-7. Market Desk — https://philosopherkk.github.io/marketdesk/
-8. Scan De-identifier — https://philosopherkk.github.io/deid/
+7. Scan De-identifier — https://philosopherkk.github.io/deid/
 
 ## Publish loop (one Pages app)
 
