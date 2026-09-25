@@ -1,7 +1,8 @@
 # Manual-only Pages deploy staging.
 # Does NOT run on push to main — the live site still uses "Deploy from a branch"
-# until a human switches Pages source to GitHub Actions. Merging this PR must not
-# change what serves the live site.
+# until a human switches Pages source to GitHub Actions.
+# If the Pages source is ever switched to GitHub Actions, `push: branches: [main]`
+# must be added, or the site stops updating.
 name: Deploy Pages (manual)
 
 on:
@@ -9,8 +10,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -20,21 +19,22 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Stage site (tracked files minus ci/dev)
         run: bash scripts/stage-pages.sh
       - name: Verify stage completeness + exclusions
         run: bash scripts/verify-pages-stage.sh
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: _site
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -54,4 +54,4 @@ jobs:
           fi
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

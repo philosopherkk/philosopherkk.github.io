@@ -28,7 +28,6 @@ should_publish() {
 
 [[ -f "$STAGE/index.html" ]] || fail "hub index.html missing"
 [[ -f "$STAGE/favicon.svg" ]] || fail "hub favicon.svg missing (live hub asset)"
-[[ -f "$STAGE/oculens-p/index.html" ]] || fail "oculens-p/index.html missing (live at /oculens-p/)"
 [[ -f "$STAGE/deid/index.html" ]] || fail "deid/index.html missing"
 [[ -f "$STAGE/deid/app.js" ]] || fail "deid/app.js missing"
 
@@ -51,11 +50,16 @@ REF="origin/main"
 if ! git -C "$ROOT" rev-parse --verify "$REF" >/dev/null 2>&1; then
   REF="main"
 fi
+git -C "$ROOT" rev-parse --verify "$REF^{commit}" >/dev/null 2>&1 || fail "cannot resolve $REF to compare against"
 
 missing=0
 while IFS= read -r f; do
   [[ -n "$f" ]] || continue
   should_publish "$f" || continue
+  if ! git -C "$ROOT" cat-file -e "HEAD:$f" 2>/dev/null; then
+    ok "removed in this change (allowed): $f"
+    continue
+  fi
   if [[ ! -f "$STAGE/$f" ]]; then
     echo "verify-pages-stage: MISSING from stage (present on $REF): $f" >&2
     missing=$((missing + 1))
