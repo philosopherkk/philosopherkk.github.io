@@ -683,9 +683,9 @@ async function detectWithBarcodeDetector(imageData) {
  */
 export function detectDenseHighContrastRegions(imageData) {
   const { width: W, height: H, data } = imageData;
-  if (W < 80 || H < 80) return [];
+  if (W < 48 || H < 48) return [];
 
-  const cell = Math.max(10, Math.floor(Math.min(W, H) / 32));
+  const cell = Math.max(8, Math.floor(Math.min(W, H) / 32));
   const gw = Math.floor(W / cell);
   const gh = Math.floor(H / cell);
   const edgeH = new Float32Array(gw * gh);
@@ -771,8 +771,8 @@ export function detectDenseHighContrastRegions(imageData) {
       const pxW = bw * cell;
       const pxH = bh * cell;
       // QR: sizable near-square, high binary fraction, not a thin text band
-      if (count < 16 || aspect < 0.75 || aspect > 1.35) continue;
-      if (pxW < 80 || pxH < 80) continue;
+      if (count < 9 || aspect < 0.75 || aspect > 1.35) continue;
+      if (pxW < 48 || pxH < 48) continue;
       if (binSum / count < 0.7) continue;
       const pad = cell;
       flags.push({

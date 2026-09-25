@@ -1,5 +1,5 @@
 /**
- * Measure first-load (shell) vs first-OCR network bytes.
+ * Measure first-load (shell), first-OCR (eng), full eng+chi_tra, and pdf.js bytes.
  * Asserts OCR assets are not fetched on first paint.
  */
 import { chromium } from "playwright";
@@ -50,6 +50,10 @@ function isOcrUrl(url) {
   return /\/deid\/vendor\/(tesseract|tessdata|jsqr|zxing)\//.test(url);
 }
 
+function isPdfUrl(url) {
+  return /\/deid\/vendor\/pdfjs\//.test(url);
+}
+
 async function main() {
   const server = await startServer();
   const browser = await chromium.launch({ headless: true });
@@ -72,7 +76,7 @@ async function main() {
   await page.goto(`http://127.0.0.1:${PORT}/deid/`, { waitUntil: "networkidle" });
   await new Promise((r) => setTimeout(r, 400));
 
-  const firstLoad = reqs.filter((r) => !isOcrUrl(r.url) && !/\/vendor\/pdfjs\//.test(r.url));
+  const firstLoad = reqs.filter((r) => !isOcrUrl(r.url) && !isPdfUrl(r.url));
   const firstLoadBytes = firstLoad.reduce((s, r) => s + r.bytes, 0);
   const ocrOnLoad = reqs.filter((r) => isOcrUrl(r.url));
   assert.equal(
@@ -94,25 +98,61 @@ async function main() {
     ctx.fillStyle = "#000";
     ctx.font = "20px sans-serif";
     ctx.fillText("TEST", 10, 35);
-    await ocr.recognize(ctx.getImageData(0, 0, 200, 60));
-    await ocr.terminate();
+    // eng-only first OCR
+    await ocr.recognize(ctx.getImageData(0, 0, 200, 60), { lang: "eng" });
+    window.__deidOcr = ocr;
   });
 
-  const ocrReqs = reqs.slice(beforeOcr).filter((r) => isOcrUrl(r.url));
-  const ocrBytes = ocrReqs.reduce((s, r) => s + r.bytes, 0);
+  const engReqs = reqs.slice(beforeOcr).filter((r) => isOcrUrl(r.url));
+  const engBytes = engReqs.reduce((s, r) => s + r.bytes, 0);
+
+  const beforeChi = reqs.length;
+  await page.evaluate(async () => {
+    const ocr = window.__deidOcr;
+    const c = document.createElement("canvas");
+    c.width = 220;
+    c.height = 60;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, 220, 60);
+    ctx.fillStyle = "#000";
+    ctx.font = "22px sans-serif";
+    ctx.fillText("陳大文", 10, 38);
+    await ocr.recognize(ctx.getImageData(0, 0, 220, 60), { lang: "chi_tra" });
+    await ocr.terminate();
+  });
+  const chiReqs = reqs.slice(beforeChi).filter((r) => isOcrUrl(r.url));
+  const chiBytes = chiReqs.reduce((s, r) => s + r.bytes, 0);
+  const fullOcrBytes = engBytes + chiBytes;
+
+  const beforePdf = reqs.length;
+  await page.evaluate(async () => {
+    const { loadPdfJs } = await import("./ui/loader.js");
+    await loadPdfJs();
+  });
+  const pdfReqs = reqs.slice(beforePdf).filter((r) => isPdfUrl(r.url));
+  const pdfBytes = pdfReqs.reduce((s, r) => s + r.bytes, 0);
 
   const report = {
     firstLoadMB: +(firstLoadBytes / 1e6).toFixed(3),
-    firstOcrMB: +(ocrBytes / 1e6).toFixed(3),
+    firstOcrEngMB: +(engBytes / 1e6).toFixed(3),
+    fullOcrEngChiTraMB: +(fullOcrBytes / 1e6).toFixed(3),
+    pdfJsMB: +(pdfBytes / 1e6).toFixed(3),
+    // Back-compat keys used by older docs / dashboards
+    firstOcrMB: +(engBytes / 1e6).toFixed(3),
     firstLoadFiles: firstLoad.length,
-    firstOcrFiles: [...new Set(ocrReqs.map((r) => r.url.replace(/.*\/deid\//, "")))],
-    note: "Shell precache excludes OCR. OCR/wasm/traineddata load lazily and use cache-first (deid-ocr-v1).",
+    firstOcrFiles: [...new Set(engReqs.map((r) => r.url.replace(/.*\/deid\//, "")))],
+    chiTraFiles: [...new Set(chiReqs.map((r) => r.url.replace(/.*\/deid\//, "")))],
+    pdfJsFiles: [...new Set(pdfReqs.map((r) => r.url.replace(/.*\/deid\//, "")))],
+    note: "Shell precache excludes OCR/pdf.js. eng first; chi_tra lazy; pdf.js on PDF open. cache-first deid-ocr-v1.",
   };
   console.log("SIZE_REPORT", JSON.stringify(report, null, 2));
   assert.ok(firstLoadBytes < 2e6, `first load too large: ${firstLoadBytes}`);
-  assert.ok(ocrBytes > 1e6, "first OCR should download wasm/traineddata");
+  assert.ok(engBytes > 1e6, "first OCR eng should download wasm/traineddata");
+  assert.ok(chiBytes > 0.5e6, "chi_tra traineddata should download");
+  assert.ok(pdfBytes > 0.5e6, "pdf.js should download on demand");
   assert.ok(
-    !ocrReqs.some((r) => /tesseract-core[^/?#]*\.wasm$/.test(r.url)),
+    !engReqs.some((r) => /tesseract-core[^/?#]*\.wasm$/.test(r.url)),
     "standalone .wasm should not be requested"
   );
 

@@ -206,6 +206,57 @@ describe("clinical-term auto-blank guard", () => {
       "cjk_name must not flag over Right Eye"
     );
   });
+
+  it("deidPage leaves genuine CJK names as unblanked cjk_name flags (not auto-blanked)", async () => {
+    const W = 400;
+    const H = 500;
+    const img = new ImageData(W, H);
+    img.data.fill(255);
+    for (let y = 140; y < 170; y++) {
+      for (let x = 30; x < 320; x++) {
+        if ((x + y) % 5 < 2) {
+          const i = (y * W + x) * 4;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 20;
+        }
+      }
+    }
+    // Name band ink
+    for (let y = 200; y < 230; y++) {
+      for (let x = 40; x < 200; x++) {
+        if ((x + y) % 4 < 2) {
+          const i = (y * W + x) * 4;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 15;
+        }
+      }
+    }
+    const engWords = [
+      w("Right", 30, 80, 90, 106, 92),
+      w("Eye", 95, 80, 140, 106, 92),
+      w("MD", 200, 80, 240, 106, 91),
+    ];
+    // Crop shifts y by ~keep top 0.12*H ≈ 60 → name at image y=200 is OCR y≈140
+    const name = w("陳大文", 40, 140, 180, 170, 92);
+    const ocr = {
+      async recognize(_image, opts = {}) {
+        if (opts.lang === "chi_tra") return [name];
+        return engWords;
+      },
+    };
+    const result = await deidPage(img, { ocr, forceDevice: "generic", autoBlankBackstop: true });
+    const cjk = result.flags.filter((f) => f.reason === "cjk_name" && !f.blanked);
+    assert.ok(cjk.length >= 1, `expected unblanked cjk_name, got ${JSON.stringify(result.flags)}`);
+    assert.equal(result.passed, false);
+    // Name ink must still be present (not auto-blanked white)
+    let dark = 0;
+    const band = result.imageData;
+    for (let y = 120; y < 180 && y < band.height; y++) {
+      for (let x = 30; x < Math.min(220, band.width); x++) {
+        const i = (y * band.width + x) * 4;
+        if (band.data[i] < 80) dark++;
+      }
+    }
+    assert.ok(dark > 10, `CJK name band was auto-blanked (dark=${dark})`);
+  });
 });
 
 describe("dense barcode heuristic — reject text blocks", () => {
@@ -378,6 +429,82 @@ describe("damaged QR detectors — 1-finder + texture; no HFA/Pentacam FP", () =
     }
     const flags = detectQrFinderFlags(img);
     assert.equal(flags.length, 0, `Pentacam colour map must not flag: ${JSON.stringify(flags)}`);
+  });
+
+  it("flags rendered smudged QR bitmaps at 50 / 72 / 120px and smudged finder at 120px", () => {
+    // Synthetic module grids scaled to target side lengths (not ideal 150px unit grids).
+    const cases = [
+      { side: 50, mod: 2, n: 25 },
+      { side: 72, mod: 3, n: 25 },
+      { side: 120, mod: 4, n: 25 },
+    ];
+    for (const { side, mod, n } of cases) {
+      const pad = 80;
+      const W = Math.max(side, n * mod) + pad * 2;
+      const H = W;
+      const img = new ImageData(W, H);
+      img.data.fill(255);
+      const ox = pad;
+      const oy = pad;
+      paintModuleGrid(img, ox, oy, n, mod);
+      paintFinder(img, ox + (n - 7) * mod, oy, mod); // TR finder only
+      // Wipe left ~40%
+      for (let y = oy - 2; y < oy + n * mod + 2; y++) {
+        for (let x = ox - 2; x < ox + Math.floor(n * mod * 0.4); x++) {
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          const i = (y * W + x) * 4;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 210;
+        }
+      }
+      // Centre blot
+      const cx = ox + Math.floor(n * mod * 0.55);
+      const cy = oy + Math.floor(n * mod * 0.55);
+      const r = Math.max(3, Math.floor(side * 0.12));
+      for (let y = cy - r; y <= cy + r; y++) {
+        for (let x = cx - r; x <= cx + r; x++) {
+          if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > r * r) continue;
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          const i = (y * W + x) * 4;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 45;
+        }
+      }
+      const flags = detectQrFinderFlags(img);
+      assert.ok(
+        flags.some((f) => f.reason === "qr_finder" || f.reason === "qr_texture"),
+        `smudged ${side}px must flag; got ${JSON.stringify(flags)}`
+      );
+    }
+
+    // 120px with TL finder smudged (TR survives)
+    {
+      const side = 120;
+      const mod = 4;
+      const n = 25;
+      const pad = 40;
+      const W = side + pad * 2;
+      const H = side + pad * 2;
+      const img = new ImageData(W, H);
+      img.data.fill(255);
+      const ox = pad;
+      const oy = pad;
+      paintModuleGrid(img, ox, oy, n, mod);
+      paintFinder(img, ox, oy, mod);
+      paintFinder(img, ox + (n - 7) * mod, oy, mod);
+      paintFinder(img, ox, oy + (n - 7) * mod, mod);
+      // Smudge TL finder
+      for (let y = oy - 2; y < oy + 7 * mod + 2; y++) {
+        for (let x = ox - 2; x < ox + 7 * mod + 2; x++) {
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          const i = (y * W + x) * 4;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 200;
+        }
+      }
+      const flags = detectQrFinderFlags(img);
+      assert.ok(
+        flags.some((f) => f.reason === "qr_finder" || f.reason === "qr_texture"),
+        `120px smudged finder must flag; got ${JSON.stringify(flags)}`
+      );
+    }
   });
 
   it("assert zero code flags on HFA and Pentacam mock rasters", () => {
