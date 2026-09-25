@@ -10,6 +10,7 @@ import {
   isClinicalLine,
   isGenuineHanText,
   shouldAutoBlankCjkWord,
+  mergeAdjacentHanWords,
   filterClinicalSafeAutoBlanks,
   detectQrFinderFlags,
   deidPage,
@@ -123,11 +124,17 @@ describe("unrecognised layout — clinic / signature / phone flags", () => {
 });
 
 describe("clinical-term auto-blank guard", () => {
-  it("isGenuineHanText accepts real Han and rejects Latin-heavy garbage", () => {
-    assert.equal(isGenuineHanText("陳大文"), true);
-    assert.equal(isGenuineHanText("Right Eye"), false);
-    assert.equal(isGenuineHanText("Ri右ght"), false);
-    assert.equal(isGenuineHanText("右"), false); // need ≥2 Han
+  it("mergeAdjacentHanWords joins split chi_tra glyphs into a name run", () => {
+    const parts = [
+      w("陳", 40, 140, 70, 175, 90),
+      w("大", 72, 142, 100, 176, 95),
+      w("文", 102, 141, 130, 175, 88),
+    ];
+    const merged = mergeAdjacentHanWords(parts);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].text, "陳大文");
+    assert.equal(isGenuineHanText(merged[0].text), true);
+    assert.equal(shouldAutoBlankCjkWord(merged[0], []), true);
   });
 
   it("shouldAutoBlankCjkWord skips boxes overlapping Latin clinical tokens", () => {

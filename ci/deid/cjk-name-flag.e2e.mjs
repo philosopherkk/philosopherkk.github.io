@@ -61,13 +61,13 @@ async function main() {
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, 700, 900);
       ctx.fillStyle = "#000";
-      ctx.font = "32px sans-serif";
-      // Below generic keep top (~0.12) so crop retains the name
-      ctx.fillText("姓名 陳大文", 40, 160);
+      ctx.font = "42px \"Noto Sans CJK TC\", \"PingFang TC\", \"Microsoft JhengHei\", sans-serif";
+      // Single clear name line below generic keep top (~0.12)
+      ctx.fillText("陳大文", 48, 168);
       ctx.font = "20px sans-serif";
-      ctx.fillText("SYNTHETIC PNG — FAKE DATA", 40, 210);
-      ctx.fillText("Right Eye (OD) MD -1.20 dB PSD 1.50 dB", 40, 250);
-      ctx.fillText("Left Eye (OS) MD -0.80 dB PSD 1.10 dB", 40, 290);
+      ctx.fillText("SYNTHETIC PNG — FAKE DATA", 40, 220);
+      ctx.fillText("Right Eye (OD) MD -1.20 dB PSD 1.50 dB", 40, 260);
+      ctx.fillText("Left Eye (OS) MD -0.80 dB PSD 1.10 dB", 40, 300);
       const blob = await new Promise((r) => c.toBlob(r, "image/png"));
       return Array.from(new Uint8Array(await blob.arrayBuffer()));
     });
@@ -100,6 +100,13 @@ async function main() {
         reasons: unresolved.map((f) => f.reason),
       };
     }, `${origin}/ci/deid/fixtures-synthetic/cjk-name-png.png`);
+    assert.ok(
+      pipe.cjk.some((t) => /陳大文|大文|陳/.test(t)),
+      `pipeline PNG: expected Han name in cjk flags, got ${JSON.stringify(pipe)}`);
+    assert.ok(
+      pipe.cjk.some((t) => /陳|大文/.test(t || "")),
+      `pipeline PNG: expected Han name text in cjk flags, got ${JSON.stringify(pipe)}`
+    );
     assert.ok(
       pipe.cjk.length >= 1,
       `pipeline PNG: expected cjk_name flag, got ${JSON.stringify(pipe)}`

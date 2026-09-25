@@ -127,8 +127,9 @@ async function main() {
 
   const beforePdf = reqs.length;
   await page.evaluate(async () => {
-    const { loadPdfJs } = await import("./ui/loader.js");
-    await loadPdfJs();
+    // Force network fetch of pdf.js + worker (same URLs loader uses).
+    await import(new URL("./vendor/pdfjs/pdf.mjs", location.href).href);
+    await fetch(new URL("./vendor/pdfjs/pdf.worker.mjs", location.href).href);
   });
   const pdfReqs = reqs.slice(beforePdf).filter((r) => isPdfUrl(r.url));
   const pdfBytes = pdfReqs.reduce((s, r) => s + r.bytes, 0);
