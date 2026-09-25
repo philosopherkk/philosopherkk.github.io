@@ -11,7 +11,6 @@ import {
   collectFlags,
   serialHits,
   labelMasks,
-  shouldAutoBlankCjkWord,
   filterClinicalSafeAutoBlanks,
 } from "./phi.js";
 import { ID_LABELS, ID_DATE_LABELS } from "./rules.js";
@@ -135,19 +134,8 @@ export async function deidPage(page, opts) {
     }
   }
 
-  // Chinese personal-name-like runs — only genuine high-conf Han; never Latin clinical.
-  let cjkWords = [];
-  try {
-    const upCrop = kUp2 === 0 ? cropped.image : rotate90(cropped.image, kUp2);
-    cjkWords = await ocr.recognize(upCrop, { lang: "chi_tra", psm: 11 });
-    for (const w of cjkWords) {
-      if (!shouldAutoBlankCjkWord(w, engWordsUp)) continue;
-      const p = Math.floor(0.6 * (w.y1 - w.y0));
-      backstopBoxes.push(unrotateBox([w.x0 - p, w.y0 - p, w.x1 + p, w.y1 + p], kUp2, cw, ch));
-    }
-  } catch {
-    /* chi_tra may be unavailable in some test stubs */
-  }
+  // Chinese personal names are NOT auto-blanked (PNG and PDF share this path).
+  // collectFlags emits cjk_name review flags after re-OCR so Approve stays gated.
 
   // Drop blanks that hit a code OR that would wipe Latin clinical tokens (Right Eye, MD…).
   const codeBoxes = codeFlagsPre.map((f) => f.box);
