@@ -2,28 +2,53 @@
  * Same-origin tesseract.js OCR provider.
  * Paths are relative to the page (/deid/).
  */
-const BASE = new URL(".", import.meta.url); // /deid/ui/
-const ROOT = new URL("../", BASE); // /deid/
 
 let workerPromise = null;
 
 function paths() {
   return {
-    workerPath: new URL("../vendor/tesseract/worker.min.js", BASE).href,
-    corePath: new URL("../vendor/tesseract/", BASE).href,
-    langPath: new URL("../vendor/tessdata", BASE).href,
+    workerPath: new URL("../vendor/tesseract/worker.min.js", import.meta.url).href,
+    corePath: new URL("../vendor/tesseract/", import.meta.url).href,
+    langPath: new URL("../vendor/tessdata", import.meta.url).href,
   };
 }
 
 /**
- * Ensure Tesseract global is loaded (script tag) or dynamic import of UMD is awkward —
- * we load via script in index.html. This module expects window.Tesseract.
+ * Ensure Tesseract global is loaded (script tag in index.html).
  */
 export function getTesseract() {
   if (typeof window === "undefined" || !window.Tesseract) {
     throw new Error("Tesseract global missing — load vendor/tesseract/tesseract.min.js first");
   }
   return window.Tesseract;
+}
+
+/**
+ * Convert ImageData / bitmap / canvas to an HTMLCanvasElement (tesseract.js reads canvas reliably).
+ * @param {ImageData|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} image
+ * @returns {HTMLCanvasElement}
+ */
+export function toCanvas(image) {
+  if (typeof HTMLCanvasElement !== "undefined" && image instanceof HTMLCanvasElement) {
+    return image;
+  }
+  let w;
+  let h;
+  const canvas = document.createElement("canvas");
+  if (image && image.data && typeof image.width === "number" && !(image instanceof ImageBitmap)) {
+    w = image.width;
+    h = image.height;
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d").putImageData(image, 0, 0);
+    return canvas;
+  }
+  w = image.width;
+  h = image.height;
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d").drawImage(image, 0, 0);
+  return canvas;
 }
 
 /**
@@ -38,9 +63,8 @@ export async function createOcrProvider(onProgress) {
       workerPath,
       corePath,
       langPath,
-      // gzipped traineddata not used — we ship .traineddata
       gzip: false,
-      workerBlobURL: false, // keep worker-src 'self' (no blob worker script from CDN)
+      workerBlobURL: false,
       logger: (m) => {
         if (m && typeof m.progress === "number") {
           onProgress?.(m.status || "ocr", m.progress);
@@ -57,23 +81,18 @@ export async function createOcrProvider(onProgress) {
      * @returns {Promise<import('../core/types.js').Word[]>}
      */
     async recognize(image, opts = {}) {
-      const lang = opts.lang || "eng+chi_tra";
       const psm = opts.psm ?? 11;
-      // Ensure languages loaded
       try {
         await worker.setParameters({ tessedit_pageseg_mode: String(psm) });
       } catch {
         /* ignore */
       }
-      // tesseract.js accepts canvas / ImageData / bitmap
-      let input = image;
-      if (image && image.data && image.width && !(image instanceof ImageData === false && false)) {
-        // ImageData is fine in modern tesseract
-        input = image;
-      }
-      // Switch language if needed — worker was created with eng+chi_tra
-      void lang;
-      const result = await worker.recognize(input);
+      const canvas = toCanvas(image);
+      // Prefer PNG blob — most reliable input for tesseract.js worker
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png");
+      });
+      const result = await worker.recognize(blob);
       const words = [];
       const data = result?.data;
       if (data?.words) {
@@ -103,5 +122,3 @@ export async function createOcrProvider(onProgress) {
     },
   };
 }
-
-export { ROOT };
