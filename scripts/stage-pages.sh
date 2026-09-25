@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # Stage a GitHub Pages artifact from git-tracked files.
 # Copies EVERY tracked file except:
-#   - ci/          (tests / harness — must not be public)
+#   - ci/          (tests / harness — excluded from Actions artifacts)
 #   - .github/     (workflows)
 #   - package.json / package-lock.json / node_modules (dev-only)
 #
-# Merging must not change the live site until Pages source is switched to Actions;
-# this script only builds a local/CI artifact.
+# With Pages source still on "Deploy from a branch", merging this branch to main
+# publishes /deid/ (and leaves every other hub app unchanged). Switching Pages
+# source to Actions is optional and only then uses this staging script (which
+# omits ci/). If anyone switches to Actions, pages.yml must gain a push-to-main
+# trigger or site updates will stop going live.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="${ROOT}/_site"

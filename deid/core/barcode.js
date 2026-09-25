@@ -11,6 +11,21 @@ import { detectQrFinderFlags, expandQrCodeBox } from "./qrfind.js";
 let jsQRPromise = null;
 let zxingPromise = null;
 
+/** Optional injected decoders for non-DOM hosts (OcuLens / Node). */
+/** @type {{ jsQR?: Function|null, ZXing?: object|null }|null} */
+let injectedDecoders = null;
+
+/**
+ * Let callers inject jsQR / ZXing instead of DOM script-tag loading.
+ * Pass null to clear. Injected values take precedence over globals / script load.
+ * @param {{ jsQR?: Function|null, ZXing?: object|null }|null} decoders
+ */
+export function setBarcodeDecoders(decoders) {
+  injectedDecoders = decoders;
+  jsQRPromise = null;
+  zxingPromise = null;
+}
+
 /** Angles (PIL CCW deg) tried when the upright pass finds nothing. */
 const ROTATION_PASS_DEG = [
   0, 10, -10, 15, -15, 25, -25, 30, -30, 35, -35, 45, -45, 60, -60, 75, -75, 90, -90,
@@ -43,7 +58,25 @@ export async function detectBarcodeFlags(imageData) {
     flags.push(...detectDenseHighContrastRegions(imageData));
   }
 
-  return mergeCodeFlags(flags);
+  const merged = mergeCodeFlags(flags);
+  const MAX_CODE_FLAGS = 24;
+  if (merged.length > MAX_CODE_FLAGS) {
+    return [
+      ...merged.slice(0, MAX_CODE_FLAGS),
+      {
+        box: /** @type {[number,number,number,number]} */ ([
+          0,
+          0,
+          imageData.width,
+          Math.min(48, imageData.height),
+        ]),
+        reason: "too_many_codes",
+        text: "too many codes, check manually",
+        blanked: false,
+      },
+    ];
+  }
+  return merged;
 }
 
 /**
@@ -188,9 +221,11 @@ function normalizeCodeBox(imageData, f) {
       ? "qr_finder"
       : f.reason === "qr_texture"
         ? "qr_texture"
-        : f.reason === "dense_code_region"
-          ? "dense_code_region"
-          : "barcode";
+        : f.reason === "too_many_codes"
+          ? "too_many_codes"
+          : f.reason === "dense_code_region"
+            ? "dense_code_region"
+            : "barcode";
   return {
     box,
     reason,
@@ -248,6 +283,9 @@ function boxesOverlap(a, b) {
  * @returns {Promise<Function|null>}
  */
 export async function loadJsQR() {
+  if (injectedDecoders && "jsQR" in injectedDecoders) {
+    return injectedDecoders.jsQR || null;
+  }
   if (typeof globalThis.jsQR === "function") return globalThis.jsQR;
   if (jsQRPromise) return jsQRPromise;
   jsQRPromise = (async () => {
@@ -262,6 +300,9 @@ export async function loadJsQR() {
  * Lazy-load vendored ZXing UMD (ZXing / ZXingLib globals vary by build).
  */
 async function loadZxing() {
+  if (injectedDecoders && "ZXing" in injectedDecoders) {
+    return injectedDecoders.ZXing || null;
+  }
   if (zxingPromise) return zxingPromise;
   zxingPromise = (async () => {
     if (typeof document === "undefined") return null;
@@ -746,7 +787,7 @@ export function detectDenseHighContrastRegions(imageData) {
       });
     }
   }
-  return flags.slice(0, 8);
+  return flags.slice(0, 24);
 }
 
 /** @param {import('./types.js').FlagHit[]} flags */

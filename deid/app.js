@@ -21,6 +21,7 @@ import {
   decodeAnyCodes,
   remapFlagsAfterCrop,
   remapFlagsAfterRotate90,
+  serialHits,
 } from "./core/index.js";
 
 /** @typedef {{ original: ImageData, upright: ImageData, working: ImageData, device: string, flags: import('./core/types.js').FlagHit[], serialHits: string[], approved: boolean, removedRegions: number[][], history: HistoryStack }} PageState */
@@ -100,12 +101,13 @@ function refreshUI() {
   paintOverlay();
 
   const unresolved = pg.flags.filter((f) => !f.blanked);
-  const serial = pg.serialHits.length;
+  const serialFlags = unresolved.filter((f) => f.reason === "serial");
   if (pg.approved) {
     $("statusMsg").textContent = t("approved");
     $("statusMsg").style.color = "var(--accent)";
-  } else if (serial) {
-    $("statusMsg").textContent = t("serialWarn") + " " + pg.serialHits.join(", ");
+  } else if (serialFlags.length) {
+    $("statusMsg").textContent =
+      t("serialWarn") + " " + serialFlags.map((f) => f.text || "").filter(Boolean).join(", ");
     $("statusMsg").style.color = "var(--danger)";
   } else if (unresolved.length) {
     $("statusMsg").textContent = `${t("flags")}: ${unresolved.length}. ${t("flagHint")}`;
@@ -115,7 +117,7 @@ function refreshUI() {
     $("statusMsg").style.color = "var(--accent)";
   }
 
-  $("approveBtn").disabled = unresolved.length > 0 || serial > 0;
+  $("approveBtn").disabled = unresolved.length > 0;
   const allApproved = pages.length && pages.every((p) => p.approved);
   $("exportPng").disabled = !allApproved;
   $("exportJpg").disabled = !allApproved;
@@ -161,7 +163,8 @@ async function processFiles(files) {
     });
     const history = new HistoryStack();
     const flags0 = result.flags.map((f) => ({ ...f, box: [...f.box] }));
-    const serials0 = result.serialHits.slice();
+    // serialHits are already merged into flags (reason 'serial'); keep text list for history
+    const serials0 = flags0.filter((f) => f.reason === "serial").map((f) => f.text || "");
     history.push(result.imageData, flags0, serials0);
     pages.push({
       original: allPages[i],
@@ -189,6 +192,7 @@ function blankAtFlag(flag) {
   if (!pg || flag.blanked) return;
   pg.history.push(pg.working, pg.flags, pg.serialHits);
   blankFlag(pg.working, flag);
+  syncSerialHitsFromFlags(pg);
   pg.approved = false;
   refreshUI();
 }
@@ -200,13 +204,51 @@ function blankAllFlags() {
   for (const f of pg.flags) {
     if (!f.blanked) blankFlag(pg.working, f);
   }
+  syncSerialHitsFromFlags(pg);
   pg.approved = false;
   refreshUI();
 }
 
 /**
- * After crop/rotate: remap existing flags and re-run barcode detection on the new image.
- * Approve stays gated until every flag is blanked.
+ * Sync legacy serialHits text list from unblanked serial flags (history / status).
+ * @param {PageState} pg
+ */
+function syncSerialHitsFromFlags(pg) {
+  pg.serialHits = pg.flags
+    .filter((f) => f.reason === "serial" && !f.blanked)
+    .map((f) => f.text || "")
+    .filter(Boolean);
+}
+
+/**
+ * Fraction of flag box that is near-white on the working image (cumulative blanking).
+ * @param {ImageData} imageData
+ * @param {[number,number,number,number]} box
+ */
+function regionWhiteFraction(imageData, box) {
+  const { width: W, height: H, data } = imageData;
+  const x0 = Math.max(0, Math.floor(box[0]));
+  const y0 = Math.max(0, Math.floor(box[1]));
+  const x1 = Math.min(W, Math.ceil(box[2]));
+  const y1 = Math.min(H, Math.ceil(box[3]));
+  if (x1 <= x0 || y1 <= y0) return 0;
+  let n = 0;
+  let white = 0;
+  const step = Math.max(1, Math.floor(Math.min(x1 - x0, y1 - y0) / 40));
+  for (let y = y0; y < y1; y += step) {
+    for (let x = x0; x < x1; x += step) {
+      const i = (y * W + x) * 4;
+      if (data[i] >= 245 && data[i + 1] >= 245 && data[i + 2] >= 245) white++;
+      n++;
+    }
+  }
+  return n ? white / n : 0;
+}
+
+/**
+ * After crop/rotate: remap existing flags (incl. serial) and re-run barcode detection.
+ * After crop, also re-run serial OCR on the new working image.
+ * Approve stays gated until every flag (including serial) is blanked.
  * @param {PageState} pg
  * @param {'crop'|'rotate90'|'none'} [mode]
  * @param {{ cropBox?: [number,number,number,number], prevW?: number, prevH?: number }} [geom]
@@ -218,7 +260,6 @@ async function refreshFlagsAfterGeom(pg, mode = "none", geom = {}) {
   } else if (mode === "rotate90") {
     flags = remapFlagsAfterRotate90(flags, geom.prevW || pg.working.width, geom.prevH || pg.working.height, 1);
   }
-  // Drop blanked flags that no longer apply; keep unresolved ones remapped
   flags = flags.filter((f) => {
     const [x0, y0, x1, y1] = f.box;
     return x1 > x0 && y1 > y0 && x0 < pg.working.width && y0 < pg.working.height;
@@ -226,17 +267,30 @@ async function refreshFlagsAfterGeom(pg, mode = "none", geom = {}) {
   try {
     const codes = await detectBarcodeFlags(pg.working);
     for (const c of codes) {
-      // Avoid duplicating overlaps
       const dup = flags.some((f) => boxesOverlap(f.box, c.box));
       if (!dup) flags.push({ ...c, box: [...c.box], blanked: false });
     }
   } catch {
     /* optional */
   }
+
+  // After crop: re-check serials on the new image (text may still be present).
+  if (mode === "crop") {
+    try {
+      const provider = await ensureOcr();
+      const words = await provider.recognize(pg.working, { lang: "eng", psm: 11 });
+      const serials = serialHits({ 0: words }, pg.working.width, pg.working.height);
+      for (const s of serials) {
+        const dup = flags.some((f) => boxesOverlap(f.box, s.box));
+        if (!dup) flags.push({ ...s, box: [...s.box], blanked: false });
+      }
+    } catch {
+      /* OCR optional on geom refresh */
+    }
+  }
+
   pg.flags = flags;
-  // Serial hits are image-text — clear until re-OCR; keep Approve gated via flags
-  // If no flags remain after remap, do NOT auto-approve — require user check only if truly empty
-  pg.serialHits = [];
+  syncSerialHitsFromFlags(pg);
   pg.approved = false;
 }
 
@@ -282,10 +336,11 @@ function finishDraw(pg, x0, y0, x1, y1) {
   pg.history.push(pg.working, pg.flags, pg.serialHits);
   if (tool === "blank") {
     fillWhite(pg.working, [box]);
-    // Mark overlapping flags blanked
+    // Mark a flag blanked only when ≥95% of its box is white (union of draws).
     for (const f of pg.flags) {
-      if (!f.blanked && boxesOverlap(f.box, box)) f.blanked = true;
+      if (!f.blanked && regionWhiteFraction(pg.working, f.box) >= 0.95) f.blanked = true;
     }
+    syncSerialHitsFromFlags(pg);
     pg.approved = false;
     refreshUI();
   } else if (tool === "crop") {
@@ -455,6 +510,7 @@ function wire() {
       pg.working = prev.image;
       pg.flags = prev.flags.map((f) => ({ ...f, box: [...f.box] }));
       pg.serialHits = prev.serialHits.slice();
+      syncSerialHitsFromFlags(pg);
       pg.approved = false;
       refreshUI();
     }
@@ -467,6 +523,7 @@ function wire() {
       pg.working = next.image;
       pg.flags = next.flags.map((f) => ({ ...f, box: [...f.box] }));
       pg.serialHits = next.serialHits.slice();
+      syncSerialHitsFromFlags(pg);
       pg.approved = false;
       refreshUI();
     }
@@ -529,7 +586,7 @@ async function tryApprove() {
   const pg = current();
   if (!pg) return;
   const unresolved = pg.flags.filter((f) => !f.blanked);
-  if (unresolved.length || pg.serialHits.length) return;
+  if (unresolved.length) return;
 
   $("approveBtn").disabled = true;
   $("statusMsg").textContent = t("processing");
@@ -568,7 +625,7 @@ async function tryApprove() {
 
 /**
  * Minimal controller for Playwright harness only (not assigned to window here).
- * Pixel sampling and flag introspection live in tests/harness/, not this page.
+ * Pixel sampling and flag introspection live in ci/deid-harness/, not this page.
  */
 export function getAppController() {
   return {

@@ -207,6 +207,8 @@ async function main() {
     await page.waitForTimeout(400);
 
     const pages = opts.pdfPages || 1;
+    /** @type {{box:[number,number,number,number], reason:string}[]} */
+    let damagedQrFlags = [];
 
     for (let pi = 0; pi < pages; pi++) {
       if (pages > 1) {
@@ -224,37 +226,33 @@ async function main() {
         `${label} page ${pi}: Approve must be blocked initially (status=${before.status})`
       );
 
-      // PDF path: "Right Eye" must survive chi_tra auto-blank (clinical-term guard).
-      if (opts.assertRightEye) {
-        const rightEye = await page.evaluate(async () => {
+      if (opts.assertDamagedQr) {
+        const info = await page.evaluate(async () => {
+          const { detectBarcodeFlags } = await import("/deid/core/index.js");
           const c = document.getElementById("afterCanvas");
-          const crop = document.createElement("canvas");
-          crop.width = Math.min(c.width, 520);
-          crop.height = Math.min(170, c.height);
-          crop.getContext("2d").drawImage(c, 0, 0, crop.width, crop.height, 0, 0, crop.width, crop.height);
-          // Pipeline already loaded Tesseract; spin a short eng-only pass on the clinical band.
-          const T = window.Tesseract;
-          if (!T) return { text: "", err: "no-tesseract" };
-          const worker = await T.createWorker("eng", 1, {
-            workerPath: "/deid/vendor/tesseract/worker.min.js",
-            corePath: "/deid/vendor/tesseract/",
-            langPath: "/deid/vendor/tessdata",
-            gzip: false,
-            workerBlobURL: false,
-          });
-          try {
-            await worker.setParameters({ tessedit_pageseg_mode: "6" });
-            const { data } = await worker.recognize(crop);
-            return { text: data?.text || "" };
-          } finally {
-            await worker.terminate();
-          }
+          const id = c.getContext("2d").getImageData(0, 0, c.width, c.height);
+          const flags = await detectBarcodeFlags(id);
+          return {
+            W: c.width,
+            H: c.height,
+            qr: flags
+              .filter((f) => f.reason === "qr_finder" || f.reason === "qr_texture")
+              .map((f) => ({ box: f.box, reason: f.reason })),
+          };
         });
-        assert.match(
-          rightEye.text || "",
-          /Right\s*Eye/i,
-          `${label} page ${pi}: 'Right Eye' must survive auto-blank; OCR got: ${JSON.stringify(rightEye)}`
+        assert.ok(
+          info.qr.length >= 1,
+          `${label}: expected qr_finder/qr_texture flag, got none (status=${before.status})`
         );
+        // Damaged QR was drawn near mid-page; cropped keep starts ~12% — flag should sit in lower 2/3
+        const hit = info.qr.some((f) => {
+          const [x0, y0, x1, y1] = f.box;
+          const cx = (x0 + x1) / 2;
+          const cy = (y0 + y1) / 2;
+          return cx > info.W * 0.2 && cx < info.W * 0.9 && cy > info.H * 0.25;
+        });
+        assert.ok(hit, `${label}: QR flag must overlap QR area: ${JSON.stringify(info.qr)}`);
+        damagedQrFlags = info.qr;
       }
 
       await page.click("#blankAllBtn");
@@ -263,39 +261,23 @@ async function main() {
         timeout: 90000,
       });
 
-      const cleared = await page.evaluate(() => {
-        const c = document.getElementById("afterCanvas");
-        const ctx = c.getContext("2d");
-        const { width: W, height: H } = c;
-        // Clinical lines sit near the top of the *kept* crop (~first 120px of after canvas)
-        let clinicalDark = 0;
-        for (let x = 30; x < Math.min(W - 30, 420); x += 2) {
-          for (let y = 5; y < Math.min(120, H); y += 2) {
-            const d = ctx.getImageData(x, y, 1, 1).data;
-            if (d[0] < 80) clinicalDark++;
-          }
-        }
-        let colorful = 0;
-        for (let y = Math.floor(H * 0.15); y < Math.floor(H * 0.45); y += 6) {
-          for (let x = 40; x < Math.min(260, W); x += 6) {
-            const d = ctx.getImageData(x, y, 1, 1).data;
-            const max = Math.max(d[0], d[1], d[2]);
-            const min = Math.min(d[0], d[1], d[2]);
-            if (max - min > 40 && max > 80) colorful++;
-          }
-        }
-        return { clinicalDark, colorful, W, H };
-      });
-
-      assert.ok(
-        cleared.clinicalDark > 30,
-        `${label} page ${pi}: clinical lines wiped (clinicalDark=${cleared.clinicalDark})`
-      );
       if (opts.expectColorMaps) {
-        assert.ok(
-          cleared.colorful > 40,
-          `${label}: colour maps wiped (colorful=${cleared.colorful})`
-        );
+        const colorful = await page.evaluate(() => {
+          const c = document.getElementById("afterCanvas");
+          const ctx = c.getContext("2d");
+          const { width: W, height: H } = c;
+          let n = 0;
+          for (let y = Math.floor(H * 0.15); y < Math.floor(H * 0.45); y += 6) {
+            for (let x = 40; x < Math.min(260, W); x += 6) {
+              const d = ctx.getImageData(x, y, 1, 1).data;
+              const max = Math.max(d[0], d[1], d[2]);
+              const min = Math.min(d[0], d[1], d[2]);
+              if (max - min > 40 && max > 80) n++;
+            }
+          }
+          return n;
+        });
+        assert.ok(colorful > 40, `${label}: colour maps wiped (colorful=${colorful})`);
       }
 
       await page.click("#approveBtn");
@@ -327,6 +309,77 @@ async function main() {
     }, `${origin}/ci/deid/fixtures-synthetic/${outName}`);
     assert.deepEqual(decoded, [], `${label}: export still decodes ${JSON.stringify(decoded)}`);
 
+    if (opts.assertDamagedQr && damagedQrFlags.length) {
+      const whiteFrac = await page.evaluate(
+        async ({ url, boxes }) => {
+          const bmp = await createImageBitmap(await (await fetch(url)).blob());
+          const c = document.createElement("canvas");
+          c.width = bmp.width;
+          c.height = bmp.height;
+          const ctx = c.getContext("2d");
+          ctx.drawImage(bmp, 0, 0);
+          bmp.close();
+          const fracs = [];
+          for (const b of boxes) {
+            const [x0, y0, x1, y1] = b.box;
+            let n = 0;
+            let white = 0;
+            const step = 2;
+            for (let y = Math.max(0, Math.floor(y0)); y < Math.min(c.height, Math.ceil(y1)); y += step) {
+              for (let x = Math.max(0, Math.floor(x0)); x < Math.min(c.width, Math.ceil(x1)); x += step) {
+                const d = ctx.getImageData(x, y, 1, 1).data;
+                if (d[0] >= 245 && d[1] >= 245 && d[2] >= 245) white++;
+                n++;
+              }
+            }
+            fracs.push(n ? white / n : 0);
+          }
+          return fracs;
+        },
+        { url: `${origin}/ci/deid/fixtures-synthetic/${outName}`, boxes: damagedQrFlags }
+      );
+      assert.ok(
+        whiteFrac.some((f) => f >= 0.95),
+        `${label}: damaged QR area must be ≥95% white after Blank all; fracs=${JSON.stringify(whiteFrac)}`
+      );
+    }
+
+    if (opts.assertClinicalTokens) {
+      const clinical = await page.evaluate(async (url) => {
+        const bmp = await createImageBitmap(await (await fetch(url)).blob());
+        const c = document.createElement("canvas");
+        // Clinical lines sit near the top of the kept crop
+        c.width = Math.min(bmp.width, 560);
+        c.height = Math.min(200, bmp.height);
+        c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height, 0, 0, c.width, c.height);
+        bmp.close();
+        const T = window.Tesseract;
+        if (!T) return { text: "", err: "no-tesseract" };
+        const worker = await T.createWorker("eng", 1, {
+          workerPath: "/deid/vendor/tesseract/worker.min.js",
+          corePath: "/deid/vendor/tesseract/",
+          langPath: "/deid/vendor/tessdata",
+          gzip: false,
+          workerBlobURL: false,
+        });
+        try {
+          await worker.setParameters({ tessedit_pageseg_mode: "6" });
+          const { data } = await worker.recognize(c);
+          return { text: data?.text || "" };
+        } finally {
+          await worker.terminate();
+        }
+      }, `${origin}/ci/deid/fixtures-synthetic/${outName}`);
+      const text = clinical.text || "";
+      for (const token of [/Right\s*Eye/i, /Left\s*Eye/i, /\bOD\b/i, /\bOS\b/i, /\bMD\b/i, /\bPSD\b/i]) {
+        assert.match(
+          text,
+          token,
+          `${label}: clinical token ${token} must survive Blank all; OCR=${JSON.stringify(clinical)}`
+        );
+      }
+    }
+
     const zb = zbarClear(outPath);
     if (zb.available) {
       assert.equal(zb.hits, false, `${label}: zbarimg reads PHI: ${zb.text}`);
@@ -340,14 +393,20 @@ async function main() {
     { width: 1100, height: 900, tag: "desktop" },
     { width: 390, height: 844, tag: "mobile" },
   ]) {
-    await runCase(vp, `${vp.tag}-60deg`, path.join(FIX, "ui-qr-60.png"));
-    await runCase(vp, `${vp.tag}-damaged`, path.join(FIX, "ui-qr-damaged.png"));
+    await runCase(vp, `${vp.tag}-60deg`, path.join(FIX, "ui-qr-60.png"), {
+      assertClinicalTokens: true,
+    });
+    await runCase(vp, `${vp.tag}-damaged`, path.join(FIX, "ui-qr-damaged.png"), {
+      assertDamagedQr: true,
+      assertClinicalTokens: true,
+    });
     await runCase(vp, `${vp.tag}-colormap`, path.join(FIX, "ui-qr-colormap.png"), {
       expectColorMaps: true,
+      assertClinicalTokens: true,
     });
     await runCase(vp, `${vp.tag}-pdf`, path.join(FIX, "ui-qr-two-page.pdf"), {
       pdfPages: 2,
-      assertRightEye: true,
+      assertClinicalTokens: true,
     });
   }
 

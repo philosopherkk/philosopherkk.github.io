@@ -52,9 +52,9 @@
  * @property {number} shift  Anchor dy fraction
  * @property {string|null} anchor
  * @property {Box[]} removedRegions  Regions cropped/blanked (on upright full page, for debug)
- * @property {FlagHit[]} flags  Unresolved safety-net flags
- * @property {string[]} serialHits
- * @property {boolean} passed  True when no unresolved flags and no serial hits
+ * @property {FlagHit[]} flags  Unresolved safety-net flags (incl. reason `serial`)
+ * @property {string[]} serialHits  Text forms of serial flags (also in `flags`)
+ * @property {boolean} passed  True when no unresolved flags
  */
 
 /**

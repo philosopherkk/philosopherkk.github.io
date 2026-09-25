@@ -56,6 +56,7 @@ export {
   decodeAnyCodes,
   loadJsQR,
   expandLinearBarcodeBox,
+  setBarcodeDecoders,
 } from "./barcode.js";
 export {
   detectQrFinderFlags,

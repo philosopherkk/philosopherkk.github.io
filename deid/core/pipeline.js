@@ -199,9 +199,15 @@ export async function deidPage(page, opts) {
     flags.push({ ...f, box: [...f.box], blanked: false });
   }
 
-  const serials = serialHits(ocrFinal);
+  // Serial hits are normal flags (reason `serial`) — remapped/blanked like the rest.
+  const serialFlags = serialHits(ocrFinal, outImage.width, outImage.height);
+  for (const s of serialFlags) {
+    if (flags.some((f) => boxesOverlap(f.box, s.box))) continue;
+    flags.push({ ...s, box: [...s.box], blanked: false });
+  }
+
   const unresolved = flags.filter((f) => !f.blanked);
-  const passed = unresolved.length === 0 && serials.length === 0;
+  const passed = unresolved.length === 0;
 
   onProgress?.("done", 1);
   return {
@@ -215,7 +221,8 @@ export async function deidPage(page, opts) {
     anchor,
     removedRegions,
     flags,
-    serialHits: serials,
+    /** @deprecated use flags with reason==='serial'; kept as text list for UI/history */
+    serialHits: serialFlags.map((s) => s.text || ""),
     passed,
     keep: cropped.keep,
     erase: cropped.erase,

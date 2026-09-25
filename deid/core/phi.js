@@ -394,7 +394,7 @@ function mergeNearbyFlags(flags) {
         if (flags[j].text) text = (text ? text + " " : "") + flags[j].text;
         // Prefer specific safety reasons over generic identity_or_date
         const rank = (r) =>
-          ({ institution: 3, signature_line: 3, phone: 3, barcode: 3, qr_finder: 3, qr_texture: 3, dense_code_region: 2, cjk_name: 2, identity_or_date: 1 }[
+          ({ institution: 3, signature_line: 3, phone: 3, barcode: 3, qr_finder: 3, qr_texture: 3, serial: 3, too_many_codes: 3, dense_code_region: 2, cjk_name: 2, identity_or_date: 1 }[
             r
           ] || 0);
         if (rank(flags[j].reason) > rank(reason)) reason = flags[j].reason;
@@ -406,11 +406,16 @@ function mergeNearbyFlags(flags) {
 }
 
 /**
+ * Detect serial-number labels/values from OCR rotations.
+ * Returns flag-shaped hits (reason `serial`) with pixel boxes so the UI can
+ * remap/blank them like any other safety flag.
  * @param {Record<number, import('./types.js').Word[]>} ocrByRot
- * @returns {string[]}
+ * @param {number} [W]
+ * @param {number} [H]
+ * @returns {import('./types.js').FlagHit[]}
  */
-export function serialHits(ocrByRot) {
-  /** @type {string[]} */
+export function serialHits(ocrByRot, W = 0, H = 0) {
+  /** @type {import('./types.js').FlagHit[]} */
   const hits = [];
   const keys = Object.keys(ocrByRot).map(Number);
   if (!keys.length) return hits;
@@ -426,16 +431,41 @@ export function serialHits(ocrByRot) {
       const lab = SERIAL_LABEL_RX.test(t) && (k === kUp || !/^sn$/i.test(t));
       const val =
         w.conf >= (k === kUp ? 60 : 80) && SERIAL_VALUE_RX.some((r) => r.test(t));
-      if (lab || val) hits.push(`${k * 90}:${t}`);
-    }
-    const joined = good.map((w) => w.text).join(" ");
-    let m;
-    const rx = new RegExp(SERIAL_TEXT_RX.source, "gi");
-    while ((m = rx.exec(joined))) {
-      hits.push(`${k * 90}:${m[0]}`);
+      const labelish = SERIAL_TEXT_RX.test(t);
+      if (!(lab || val || labelish)) continue;
+      const pad = Math.floor(0.4 * Math.max(4, w.y1 - w.y0));
+      let box = /** @type {[number,number,number,number]} */ ([
+        w.x0 - pad,
+        w.y0 - pad,
+        w.x1 + pad,
+        w.y1 + pad,
+      ]);
+      if (W > 0 && H > 0) {
+        box = unrotateBox(box, k, W, H);
+      }
+      hits.push({
+        box,
+        reason: "serial",
+        text: t,
+        blanked: false,
+      });
     }
   }
-  return [...new Set(hits)].sort();
+
+  // Deduplicate overlapping serial hits (prefer longer text)
+  hits.sort((a, b) => (b.text || "").length - (a.text || "").length);
+  /** @type {import('./types.js').FlagHit[]} */
+  const out = [];
+  for (const h of hits) {
+    if (out.some((o) => boxesOverlapSimple(o.box, h.box))) continue;
+    out.push(h);
+  }
+  return out;
+}
+
+/** @param {[number,number,number,number]} a @param {[number,number,number,number]} b */
+function boxesOverlapSimple(a, b) {
+  return Math.min(a[2], b[2]) > Math.max(a[0], b[0]) && Math.min(a[3], b[3]) > Math.max(a[1], b[1]);
 }
 
 /**

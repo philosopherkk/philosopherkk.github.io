@@ -24,11 +24,16 @@ Topcon Maestro, Topcon letterhead, NIDEK RS-3000, Zeiss HFA SFA, Pentacam Hollad
 ## Develop
 
 ```bash
-# from repo root
+# from repo root — serve the hub + /deid/
 python3 -m http.server 8080
 # open http://127.0.0.1:8080/deid/
 
-cd deid && npm install && npm test
+# install CI test deps (Playwright, qrcode, bwip-js) and run the suite
+npm --prefix ci/deid install
+npm --prefix ci/deid test
+
+# or via the deid package scripts (they forward to ci/deid)
+npm --prefix deid test
 ```
 
 See [PORTING.md](./PORTING.md) for the core module API.

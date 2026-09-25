@@ -1,4 +1,4 @@
-# Synthetic fixtures only (CI — not published to GitHub Pages)
+# Synthetic fixtures only
 
 All images in this folder are **generated mocks** with fake identifiers
 (`CHAN TAI MAN`, `A123456(7)`, etc.). They are **not** real patient scans,

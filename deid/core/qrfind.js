@@ -106,7 +106,24 @@ export function detectQrFinderFlags(imageData) {
     });
   }
 
-  return flags.slice(0, 8);
+  const MAX_CODE_FLAGS = 24;
+  if (flags.length > MAX_CODE_FLAGS) {
+    return [
+      ...flags.slice(0, MAX_CODE_FLAGS),
+      {
+        box: /** @type {[number,number,number,number]} */ ([
+          0,
+          0,
+          imageData.width,
+          Math.min(48, imageData.height),
+        ]),
+        reason: "too_many_codes",
+        text: "too many codes, check manually",
+        blanked: false,
+      },
+    ];
+  }
+  return flags;
 }
 
 /** @param {[number,number,number,number]} a @param {[number,number,number,number]} b */
@@ -620,7 +637,7 @@ function detectQrLikeTextureRegions(imageData) {
       out.push(box);
     }
   }
-  return out.slice(0, 4);
+  return out.slice(0, 24);
 }
 
 /** @param {FinderHit} a @param {FinderHit} b @param {FinderHit} c */

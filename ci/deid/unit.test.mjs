@@ -94,15 +94,17 @@ describe("labelMasks", () => {
 });
 
 describe("serialHits", () => {
-  it("flags S/N and 6-digit serial", () => {
+  it("flags S/N and 6-digit serial as remappable serial flags with boxes", () => {
     const ocr = {
       0: [
         { text: "S/N", conf: 90, x0: 0, y0: 0, x1: 20, y1: 10 },
         { text: "750123", conf: 90, x0: 30, y0: 0, x1: 80, y1: 10 },
       ],
     };
-    const hits = serialHits(ocr);
-    assert.ok(hits.some((h) => /S\/N|750123/i.test(h)));
+    const hits = serialHits(ocr, 200, 100);
+    assert.ok(hits.some((h) => h.reason === "serial" && /S\/N/i.test(h.text || "")));
+    assert.ok(hits.some((h) => h.reason === "serial" && /750123/.test(h.text || "")));
+    assert.ok(hits.every((h) => Array.isArray(h.box) && h.box.length === 4));
   });
 });
 

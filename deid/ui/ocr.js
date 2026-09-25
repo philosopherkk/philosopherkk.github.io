@@ -1,9 +1,12 @@
 /**
  * Same-origin tesseract.js OCR provider — loads scripts/wasm/traineddata lazily on first use.
+ * Honours opts.lang: separate eng and chi_tra workers (still vendored, same-origin, cached).
  */
 
-let workerPromise = null;
+/** @type {Promise<any>|null} */
 let scriptPromise = null;
+/** @type {Record<string, Promise<any>>} */
+const workerPromises = Object.create(null);
 
 function paths() {
   return {
@@ -12,6 +15,13 @@ function paths() {
     langPath: new URL("../vendor/tessdata", import.meta.url).href,
     scriptPath: new URL("../vendor/tesseract/tesseract.min.js", import.meta.url).href,
   };
+}
+
+/** Normalize to a supported traineddata key. */
+function normalizeLang(lang) {
+  const s = String(lang || "eng").toLowerCase();
+  if (s === "chi_tra" || s === "chi-tra" || s === "cht") return "chi_tra";
+  return "eng";
 }
 
 /** Load tesseract.min.js once (not on first page paint). */
@@ -57,28 +67,36 @@ export function toCanvas(image) {
 }
 
 /**
+ * @param {string} lang
+ * @param {(status: string, progress: number) => void} [onProgress]
+ */
+async function ensureWorker(lang, onProgress) {
+  const key = normalizeLang(lang);
+  if (workerPromises[key]) return workerPromises[key];
+  const Tesseract = await ensureTesseractScript();
+  const { workerPath, corePath, langPath } = paths();
+  onProgress?.(`ocr_load_${key}`, 0.02);
+  workerPromises[key] = Tesseract.createWorker(key, 1, {
+    workerPath,
+    corePath,
+    langPath,
+    gzip: false,
+    workerBlobURL: false,
+    logger: (m) => {
+      if (m && typeof m.progress === "number") {
+        onProgress?.(m.status || "ocr", m.progress);
+      }
+    },
+  });
+  return workerPromises[key];
+}
+
+/**
  * @param {(status: string, progress: number) => void} [onProgress]
  */
 export async function createOcrProvider(onProgress) {
-  const Tesseract = await ensureTesseractScript();
-  const { workerPath, corePath, langPath } = paths();
-
-  if (!workerPromise) {
-    onProgress?.("ocr_load", 0.02);
-    workerPromise = Tesseract.createWorker("eng+chi_tra", 1, {
-      workerPath,
-      corePath,
-      langPath,
-      gzip: false,
-      workerBlobURL: false,
-      logger: (m) => {
-        if (m && typeof m.progress === "number") {
-          onProgress?.(m.status || "ocr", m.progress);
-        }
-      },
-    });
-  }
-  const worker = await workerPromise;
+  // Warm the script only — workers stay lazy per lang.
+  await ensureTesseractScript();
 
   return {
     /**
@@ -87,6 +105,8 @@ export async function createOcrProvider(onProgress) {
      * @returns {Promise<import('../core/types.js').Word[]>}
      */
     async recognize(image, opts = {}) {
+      const lang = normalizeLang(opts.lang);
+      const worker = await ensureWorker(lang, onProgress);
       const psm = opts.psm ?? 11;
       try {
         await worker.setParameters({ tessedit_pageseg_mode: String(psm) });
@@ -120,10 +140,15 @@ export async function createOcrProvider(onProgress) {
       return words;
     },
     async terminate() {
-      if (workerPromise) {
-        const w = await workerPromise;
-        workerPromise = null;
-        await w.terminate();
+      const keys = Object.keys(workerPromises);
+      for (const key of keys) {
+        try {
+          const w = await workerPromises[key];
+          delete workerPromises[key];
+          await w.terminate();
+        } catch {
+          delete workerPromises[key];
+        }
       }
     },
   };

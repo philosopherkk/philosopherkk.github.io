@@ -12,6 +12,7 @@ import {
   shouldAutoBlankCjkWord,
   filterClinicalSafeAutoBlanks,
   detectQrFinderFlags,
+  deidPage,
 } from "../../deid/core/index.js";
 import "./helpers/imagedata-polyfill.mjs";
 
@@ -157,6 +158,53 @@ describe("clinical-term auto-blank guard", () => {
     const kept = filterClinicalSafeAutoBlanks(boxes, eng);
     assert.equal(kept.length, 1);
     assert.deepEqual(kept[0], [300, 300, 360, 340]);
+  });
+
+  it("deidPage with fake OCR does not auto-blank Han over Right Eye", async () => {
+    const W = 400;
+    const H = 500;
+    const img = new ImageData(W, H);
+    img.data.fill(255);
+    // Dark clinical glyphs below generic keep top (0.12*H ≈ 60) so they survive crop
+    for (let y = 140; y < 170; y++) {
+      for (let x = 30; x < 320; x++) {
+        if ((x + y) % 5 < 2) {
+          const i = (y * W + x) * 4;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 20;
+        }
+      }
+    }
+    // OCR runs on the *cropped* image — coords relative to keep top (~y-60)
+    const engWords = [
+      w("Right", 30, 80, 90, 106, 92),
+      w("Eye", 95, 80, 140, 106, 92),
+      w("(OD)", 145, 80, 190, 106, 90),
+      w("MD", 200, 80, 240, 106, 91),
+      w("-3.05", 245, 80, 310, 106, 88),
+    ];
+    const hanOverEye = w("右眼視", 32, 78, 142, 108, 92);
+    const ocr = {
+      async recognize(_image, opts = {}) {
+        if (opts.lang === "chi_tra") return [hanOverEye];
+        return engWords;
+      },
+    };
+    const result = await deidPage(img, { ocr, forceDevice: "generic", autoBlankBackstop: true });
+    // Clinical band must still have dark ink (not auto-blanked white)
+    let dark = 0;
+    const band = result.imageData;
+    for (let y = 50; y < 120 && y < band.height; y++) {
+      for (let x = 20; x < Math.min(300, band.width); x++) {
+        const i = (y * band.width + x) * 4;
+        if (band.data[i] < 80) dark++;
+      }
+    }
+    assert.ok(dark > 10, `Right Eye band was auto-blanked (dark=${dark})`);
+    assert.equal(
+      result.flags.filter((f) => f.reason === "cjk_name").length,
+      0,
+      "cjk_name must not flag over Right Eye"
+    );
   });
 });
 
@@ -330,5 +378,51 @@ describe("damaged QR detectors — 1-finder + texture; no HFA/Pentacam FP", () =
     }
     const flags = detectQrFinderFlags(img);
     assert.equal(flags.length, 0, `Pentacam colour map must not flag: ${JSON.stringify(flags)}`);
+  });
+
+  it("assert zero code flags on HFA and Pentacam mock rasters", () => {
+    // HFA-like greyscale plot band
+    const hfa = new ImageData(500, 400);
+    hfa.data.fill(245);
+    for (let y = 120; y < 320; y++) {
+      for (let x = 80; x < 380; x++) {
+        const dx = x - 230;
+        const dy = y - 220;
+        const r = Math.sqrt(dx * dx + dy * dy);
+        const g = Math.max(50, Math.min(235, 190 - r * 0.55 + ((x * 3 + y) % 19)));
+        const i = (y * 500 + x) * 4;
+        hfa.data[i] = hfa.data[i + 1] = hfa.data[i + 2] = g;
+        hfa.data[i + 3] = 255;
+      }
+    }
+    assert.equal(
+      detectQrFinderFlags(hfa).filter((f) =>
+        /qr_finder|qr_texture|dense_code_region|barcode/.test(f.reason)
+      ).length,
+      0,
+      "HFA mock must have zero code flags"
+    );
+
+    // Pentacam-like colourful topography square
+    const penta = new ImageData(500, 400);
+    penta.data.fill(255);
+    for (let y = 80; y < 300; y++) {
+      for (let x = 100; x < 360; x++) {
+        const t = (x - 100) / 260;
+        const u = (y - 80) / 220;
+        const i = (y * 500 + x) * 4;
+        penta.data[i] = Math.round(40 + 200 * t);
+        penta.data[i + 1] = Math.round(80 + 120 * Math.sin(u * 8));
+        penta.data[i + 2] = Math.round(220 * (1 - t));
+        penta.data[i + 3] = 255;
+      }
+    }
+    assert.equal(
+      detectQrFinderFlags(penta).filter((f) =>
+        /qr_finder|qr_texture|dense_code_region|barcode/.test(f.reason)
+      ).length,
+      0,
+      "Pentacam mock must have zero code flags"
+    );
   });
 });
