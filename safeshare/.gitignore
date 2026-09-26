@@ -7,4 +7,5 @@ test-results/
 blob-report/
 playwright/.cache/
 coverage/
+dev/synthetic/out/
 *.tsbuildinfo

@@ -55,9 +55,14 @@ export default defineConfig({
   ],
   server: { headers: securityHeaders },
   preview: { headers: securityHeaders },
+  build: {
+    rollupOptions: {
+      input: 'index.html',
+    },
+  },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'dev/**/*.test.ts'],
     testTimeout: 30000,
   },
 })

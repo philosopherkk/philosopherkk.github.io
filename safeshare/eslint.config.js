@@ -14,6 +14,7 @@ export default tseslint.config(
       'playwright-report',
       'test-results',
       'coverage',
+      'dev/synthetic/out',
       'traineddata',
     ],
   },

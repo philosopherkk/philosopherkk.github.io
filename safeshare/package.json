@@ -13,6 +13,7 @@
     "lint": "eslint . --max-warnings 0 && prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "accuracy": "node dev/synthetic/start.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
