@@ -1,0 +1,29 @@
+---
+description: Core non-negotiable rules for this project
+alwaysApply: true
+---
+# Project: SafeShare MD — on-device redaction of medical reports before sharing (e.g. to WhatsApp)
+
+Full specification: docs/SPEC.md. Read it before starting any task.
+
+## Non-negotiable privacy rules
+1. All processing happens on the user's device, in the browser. There is NO backend that receives user files.
+2. Never send user files, images, OCR text or detection results over the network. No fetch / XMLHttpRequest / WebSocket / sendBeacon / form POST carrying user data.
+3. No cloud or AI APIs of any kind (OpenAI, Grok, Google Vision, AWS, Azure, etc.).
+4. No analytics, telemetry, crash reporting (Sentry etc.), ads, fonts or scripts from third parties.
+5. All libraries, WASM files, ML models and OCR language data are self-hosted from our own origin. No CDN loading at runtime.
+6. Never persist user images or text: no localStorage, IndexedDB, Cache API or service-worker caching of user data. Only user *settings* may be stored in localStorage.
+7. Keep the strict Content Security Policy defined in the spec. Never loosen it without asking me.
+8. Output is always a NEW image re-encoded from a canvas: flattened, no metadata, no text layer. Redaction = opaque solid black fill. Never blur or pixelate. Never output a PDF containing a text layer.
+9. Never put patient data in filenames, page titles, URLs, console logs or error messages. Strip debug logging of OCR text from production builds.
+
+## Design principles
+- Recall over precision: when unsure, redact. Over-redaction is acceptable; a missed identifier is a bug.
+- Preserve clinical data: do not redact lab result values, units or reference ranges unless they are clearly an identifier.
+- The user must always review and confirm before sharing.
+
+## Coding conventions
+- TypeScript (strict), React, Vite. Detection logic lives in small pure functions with unit tests.
+- Before adding any dependency, tell me why, and confirm it can be self-hosted and works offline.
+- After each task: run lint, typecheck and tests, and fix failures before reporting done.
+- If any request conflicts with these rules, stop and ask me instead of proceeding.
