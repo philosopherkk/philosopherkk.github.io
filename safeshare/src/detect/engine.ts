@@ -7,8 +7,14 @@ import {
 } from './labels.ts'
 import { findPatterns } from './patterns.ts'
 import { nameTokensFrom, propagateTokens } from './propagate.ts'
-import { stamp, type DetectionDraft, type PageDetection, type ZoneName } from './types.ts'
-import { detectZones, zoneAt } from './zones.ts'
+import {
+  stamp,
+  type DetectionDraft,
+  type PageDetection,
+  type ZoneLayout,
+  type ZoneName,
+} from './types.ts'
+import { detectZones, isResultLike, zoneAt } from './zones.ts'
 import type { OcrWord } from '../ocr/types.ts'
 import type { Settings } from '../settings.ts'
 
@@ -17,6 +23,7 @@ type PreparedLine = {
   words: OcrWord[]
   labels: LabelHit[]
   zone: ZoneName
+  resultLike: boolean
 }
 
 type PreparedPage = {
@@ -62,6 +69,7 @@ function prepare(words: readonly OcrWord[]): PreparedPage {
     words: line.words,
     labels: labelsInWords(line.words.map((word) => word.text)),
     zone: zoneAt(index, zones),
+    resultLike: isResultLike(line),
   }))
   return { lines, uncertain: zones.uncertain }
 }
@@ -201,6 +209,66 @@ export function detectText(
       hkids,
     )
     const drafts = [...(found?.items ?? []), ...propagated, ...lowConfidence(page, settings)]
-    return { detections: stamp(drafts, index), zonesUncertain: page.uncertain }
+    const width = Math.max(
+      1,
+      ...page.lines.flatMap((line) => line.words.map((word) => word.box.x + word.box.width)),
+    )
+    const height = Math.max(
+      1,
+      ...page.lines.flatMap((line) => line.words.map((word) => word.box.y + word.box.height)),
+    )
+    return {
+      detections: stamp(drafts, index),
+      zonesUncertain: page.uncertain,
+      layout: layoutFromPrepared(page, width, height),
+    }
   })
+}
+
+function lineBand(line: PreparedLine): { y: number; height: number } | null {
+  if (line.words.length === 0) return null
+  const top = Math.min(...line.words.map((word) => word.box.y))
+  const bottom = Math.max(...line.words.map((word) => word.box.y + word.box.height))
+  if (!Number.isFinite(top) || bottom <= top) return null
+  return { y: top, height: bottom - top }
+}
+
+function layoutFromPrepared(page: PreparedPage, pageWidth: number, pageHeight: number): ZoneLayout {
+  const width = Math.max(1, pageWidth)
+  const height = Math.max(1, pageHeight)
+  const zoneLines = page.lines.filter((line) => line.zone === 'results')
+  const bands = zoneLines
+    .map(lineBand)
+    .filter((band): band is { y: number; height: number } => band !== null)
+  const rows = page.lines
+    .filter((line) => line.resultLike)
+    .map(lineBand)
+    .filter((band): band is { y: number; height: number } => band !== null)
+  if (page.uncertain || bands.length === 0) {
+    return {
+      pageWidth: width,
+      pageHeight: height,
+      uncertain: true,
+      resultsBand: null,
+      resultRows: rows,
+    }
+  }
+  const top = Math.min(...bands.map((band) => band.y))
+  const bottom = Math.max(...bands.map((band) => band.y + band.height))
+  return {
+    pageWidth: width,
+    pageHeight: height,
+    uncertain: false,
+    resultsBand: { y: top, height: Math.max(1, bottom - top) },
+    resultRows: rows,
+  }
+}
+
+/** Zone bands in review-bitmap pixels. The result carries positions only. */
+export function zoneLayoutFor(
+  words: readonly OcrWord[],
+  pageWidth: number,
+  pageHeight: number,
+): ZoneLayout {
+  return layoutFromPrepared(prepare(words), pageWidth, pageHeight)
 }

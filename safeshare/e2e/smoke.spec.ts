@@ -1,3 +1,4 @@
+import { deflateSync } from 'node:zlib'
 import { expect, test } from '@playwright/test'
 
 test.describe.configure({ mode: 'serial' })
@@ -235,4 +236,141 @@ test('production ocr stays on this origin and does not log text', async ({ page 
     expect(await response.text()).not.toContain('safeshare-dev-ocr-boxes')
   }
   expect(page.url()).not.toContain('synthetic')
+})
+
+function crc32(data: Buffer): number {
+  let crc = 0xffffffff
+  for (const byte of data) {
+    crc ^= byte
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1))
+    }
+  }
+  return ~crc >>> 0
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const body = Buffer.concat([Buffer.from(type), data])
+  const length = Buffer.alloc(4)
+  length.writeUInt32BE(data.length)
+  const crc = Buffer.alloc(4)
+  crc.writeUInt32BE(crc32(body))
+  return Buffer.concat([length, body, crc])
+}
+
+/** Solid RGB PNG. Used so a drawn box can change a known canvas pixel. */
+function solidPng(width: number, height: number): Buffer {
+  const stride = width * 3 + 1
+  const raw = Buffer.alloc(stride * height)
+  for (let y = 0; y < height; y += 1) {
+    const row = y * stride
+    raw[row] = 0
+    for (let x = 0; x < width; x += 1) {
+      const index = row + 1 + x * 3
+      raw[index] = 210
+      raw[index + 1] = 214
+      raw[index + 2] = 216
+    }
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
+  ihdr[8] = 8
+  ihdr[9] = 2
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(raw)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ])
+}
+
+test('review checkbox gates share and a drawn box updates the canvas', async ({ page }) => {
+  test.setTimeout(120000)
+  await page.setViewportSize({ width: 390, height: 844 })
+  const logs: string[] = []
+  page.on('console', (message) => {
+    logs.push(message.text())
+  })
+  await page.goto('/safeshare/')
+
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Choose image / PDF', exact: true }).click()
+  await (
+    await chooser
+  ).setFiles({
+    name: 'sheet.png',
+    mimeType: 'image/png',
+    buffer: solidPng(160, 200),
+  })
+
+  const share = page.getByRole('button', { name: 'Share', exact: true })
+  await expect(share).toBeVisible({ timeout: 90000 })
+  await expect(share).toBeDisabled()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.getByText(/finding identifiers/i)).toHaveCount(0)
+
+  const confirm = page.getByRole('checkbox', {
+    name: 'I have checked that no patient identifiers are visible',
+  })
+  const targets = [
+    page.getByRole('button', { name: 'Standard', exact: true }),
+    page.getByRole('button', { name: 'Header blackout', exact: true }),
+    page.getByRole('button', { name: 'Results only', exact: true }),
+    page.getByRole('button', { name: 'Manual', exact: true }),
+    page.getByRole('button', { name: 'Peek', exact: true }),
+    share,
+    confirm,
+  ]
+  for (const target of targets) {
+    const box = await target.boundingBox()
+    if (!box) throw new Error('control has no box')
+    expect(box.width).toBeGreaterThanOrEqual(44)
+    expect(box.height).toBeGreaterThanOrEqual(44)
+  }
+
+  await page.getByRole('button', { name: 'Manual', exact: true }).click()
+  const layer = page.locator('.redact-layer')
+  await expect.poll(async () => (await layer.boundingBox())?.height ?? 0).toBeGreaterThan(80)
+
+  const box = await layer.boundingBox()
+  if (!box) throw new Error('overlay has no box')
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.8, { steps: 12 })
+  await page.mouse.up()
+
+  const pixel = () =>
+    layer.evaluate((node) => {
+      const canvas = node as HTMLCanvasElement
+      const context = canvas.getContext('2d')
+      const sample = context?.getImageData(
+        Math.floor(canvas.width / 2),
+        Math.floor(canvas.height / 2),
+        1,
+        1,
+      ).data
+      return {
+        r: sample?.[0] ?? -1,
+        g: sample?.[1] ?? -1,
+        b: sample?.[2] ?? -1,
+        a: sample?.[3] ?? -1,
+      }
+    })
+
+  await expect.poll(pixel).toEqual({ r: 0, g: 0, b: 0, a: 255 })
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await expect.poll(async () => (await pixel()).a).toBe(0)
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await expect.poll(pixel).toEqual({ r: 0, g: 0, b: 0, a: 255 })
+
+  await confirm.check()
+  await expect(share).toBeEnabled()
+  await confirm.uncheck()
+  await expect(share).toBeDisabled()
+
+  const body = await page.locator('body').innerText()
+  expect(body).not.toContain('sheet.png')
+  expect(logs.join('\n')).not.toContain('sheet.png')
+  expect(page.url()).not.toContain('sheet')
 })

@@ -1,4 +1,4 @@
-import { detectText } from './engine.ts'
+import { detectText, zoneLayoutFor } from './engine.ts'
 import { mergeAndPad } from './merge.ts'
 import { stamp, type PageDetection } from './types.ts'
 import { detectVisual } from './visual.ts'
@@ -25,8 +25,12 @@ export async function detectDocument(
       }
     }),
   )
-  return text.map((page, index) => ({
-    zonesUncertain: page.zonesUncertain,
-    detections: mergeAndPad([...page.detections, ...stamp(visual[index] ?? [], index, 'v')]),
-  }))
+  return text.map((page, index) => {
+    const bitmap = document.pages[index]?.display
+    return {
+      zonesUncertain: page.zonesUncertain,
+      detections: mergeAndPad([...page.detections, ...stamp(visual[index] ?? [], index, 'v')]),
+      layout: zoneLayoutFor(words[index] ?? [], bitmap?.width ?? 1, bitmap?.height ?? 1),
+    }
+  })
 }

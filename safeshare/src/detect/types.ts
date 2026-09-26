@@ -32,9 +32,26 @@ export type DetectionDraft = Omit<Detection, 'id'>
 
 export type ZoneName = 'header' | 'results' | 'footer'
 
+export type ZoneBand = {
+  y: number
+  height: number
+}
+
+/** Pixel bands only. No recognized text. */
+export type ZoneLayout = {
+  pageWidth: number
+  pageHeight: number
+  uncertain: boolean
+  /** Full-width results zone, including the gap between its first and last line. */
+  resultsBand: ZoneBand | null
+  /** Result-like rows only. Gaps between these stay covered in Results-only mode. */
+  resultRows: ZoneBand[]
+}
+
 export type PageDetection = {
   detections: Detection[]
   zonesUncertain: boolean
+  layout: ZoneLayout
 }
 
 export function stamp(

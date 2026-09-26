@@ -22,8 +22,10 @@ const NAV: { id: Exclude<Screen, 'processing'>; label: string }[] = [
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
+  const [generation, setGeneration] = useState(0)
   const [loaded, setLoaded] = useState<LoadedDocument | null>(null)
   const [ocr, setOcr] = useState<PageOcr[] | null>(null)
+  const [found, setFound] = useState<PageDetection[] | null>(null)
   const [progress, setProgress] = useState<string | null>(null)
   const [ocrError, setOcrError] = useState<string | null>(null)
   const run = useRef(0)
@@ -33,10 +35,12 @@ export default function App() {
   function handleLoaded(next: LoadedDocument) {
     const token = run.current + 1
     run.current = token
+    setGeneration(token)
     const previous = active.current
     active.current = next
     setLoaded(next)
     setOcr(null)
+    setFound(null)
     setOcrError(null)
     detectionsRef.current = null
     setScreen('processing')
@@ -60,6 +64,7 @@ export default function App() {
       }
       if (previous && previous !== next) releaseDocument(previous)
       detectionsRef.current = detected
+      setFound(detected)
       setOcr(result.pages)
       setOcrError(result.failed ? OCR_FAILED : null)
       setProgress(null)
@@ -78,9 +83,16 @@ export default function App() {
         {screen === 'processing' ? (
           <ProcessingScreen label={progress ?? 'Loading the reader.'} />
         ) : null}
-        {screen === 'review' ? (
-          <ReviewScreen document={loaded} ocr={ocr} status={progress} error={ocrError} />
-        ) : null}
+        <div className="review-mount" hidden={screen !== 'review'}>
+          <ReviewScreen
+            key={loaded ? generation : 'empty'}
+            document={loaded}
+            ocr={ocr}
+            found={found}
+            initialMode={loadSettings().defaultMode}
+            error={ocrError}
+          />
+        </div>
         {screen === 'privacy' ? <PrivacyScreen /> : null}
       </main>
       <nav aria-label="Screens">
