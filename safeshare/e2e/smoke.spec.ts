@@ -67,8 +67,8 @@ test('privacy screen and touch target', async ({ page }) => {
   await expect(
     page.getByText('Nothing leaves your phone except the redacted image you choose to share.'),
   ).toBeVisible()
+  await expect(page.getByText('The photo is read on this phone.')).toBeVisible()
   await expect(page.getByText(/Nothing is uploaded/)).toBeVisible()
-  await expect(page.getByText(/on this phone/i).first()).toBeVisible()
   await expect(page.getByText(/airplane mode/i)).toBeVisible()
   await expect(page.getByText(/turn the network off and run a report/i)).toBeVisible()
 
@@ -269,8 +269,12 @@ test('production ocr stays on this origin and does not log text', async ({ page 
       ? (await indexedDB.databases()).map((entry) => entry.name ?? '')
       : [],
   }))
-  expect(stored.localKeys).toEqual([])
+  expect(stored.localKeys).toEqual(['safeshare-md-settings'])
   expect(stored.databases).toEqual([])
+  const settingsRaw = await page.evaluate(() => localStorage.getItem('safeshare-md-settings'))
+  expect(settingsRaw).not.toContain('synthetic-page')
+  expect(settingsRaw).not.toContain('data:image')
+  expect(settingsRaw?.toLowerCase()).not.toContain('patient')
 
   const logText = logs.join('\n')
   expect(logText).not.toContain('synthetic-page.png')
