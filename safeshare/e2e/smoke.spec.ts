@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deflateSync, inflateSync } from 'node:zlib'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -530,4 +530,189 @@ test('export downloads a redacted png with black boxes and no exif when share is
   await expect(page.getByRole('img', { name: 'Page 1' })).toHaveCount(0)
   expect(logs.join('\n')).not.toContain('sheet.png')
   expect(page.url()).not.toContain('sheet')
+})
+
+const PRECACHE_PARTS = [
+  'index.html',
+  'manifest.webmanifest',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'eng.traineddata.gz',
+  'tesseract/worker.min.js',
+  'tesseract/core/tesseract-core-simd-lstm.wasm.js',
+  'pdf.worker.min.mjs',
+  'zxing_reader.wasm',
+  'vision_wasm_internal.wasm',
+  'vision_wasm_nosimd_internal.wasm',
+  'blaze_face_short_range.tflite',
+]
+
+async function precachePaths(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    const paths: string[] = []
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name)
+      for (const request of await cache.keys()) paths.push(new URL(request.url).pathname)
+    }
+    return paths
+  })
+}
+
+test('full flow records only same-origin loads, then works offline with a black export', async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(180000)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: undefined })
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined })
+  })
+  const hits: { method: string; url: string; fromSw: boolean }[] = []
+  context.on('response', (response) => {
+    hits.push({
+      method: response.request().method(),
+      url: response.url(),
+      fromSw: response.fromServiceWorker(),
+    })
+  })
+  context.on('requestfailed', (request) => {
+    hits.push({ method: request.method(), url: request.url(), fromSw: false })
+  })
+
+  await page.goto('/safeshare/')
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+  await expect
+    .poll(async () => {
+      const paths = await precachePaths(page)
+      return PRECACHE_PARTS.every((part) => paths.some((path) => path.includes(part)))
+    })
+    .toBe(true)
+
+  let stable = hits.length
+  let quiet = false
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await page.waitForTimeout(400)
+    if (hits.length === stable) {
+      quiet = true
+      break
+    }
+    stable = hits.length
+  }
+  expect(quiet).toBe(true)
+  const loaded = hits.length
+  for (const hit of hits) {
+    const url = new URL(hit.url)
+    expect(hit.method, hit.url).toBe('GET')
+    expect(url.origin, hit.url).toBe('http://127.0.0.1:4173')
+  }
+
+  const manifest = await page.evaluate(async () => {
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name)
+      for (const request of await cache.keys()) {
+        if (!request.url.includes('manifest.webmanifest')) continue
+        const response = await cache.match(request)
+        return response
+          ? ((await response.json()) as {
+              display?: string
+              share_target?: {
+                method?: string
+                enctype?: string
+                params?: { files?: { accept?: string[] }[] }
+              }
+            })
+          : null
+      }
+    }
+    return null
+  })
+  expect(manifest?.display).toBe('standalone')
+  expect(manifest?.share_target?.method).toBe('POST')
+  expect(manifest?.share_target?.enctype).toBe('multipart/form-data')
+  expect(manifest?.share_target?.params?.files?.[0]?.accept).toEqual(['image/*', 'application/pdf'])
+
+  await context.setOffline(true)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('heading', { level: 1, name: 'SafeShare MD' })).toBeVisible()
+
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Choose image / PDF', exact: true }).click()
+  await (
+    await chooser
+  ).setFiles({
+    name: 'sheet.png',
+    mimeType: 'image/png',
+    buffer: solidPng(120, 80),
+  })
+
+  const share = page.getByRole('button', { name: 'Share', exact: true })
+  await expect(share).toBeVisible({ timeout: 90000 })
+  await page.getByRole('button', { name: 'Manual', exact: true }).click()
+  await page.getByRole('button', { name: 'PNG', exact: true }).click()
+  const layer = page.locator('.redact-layer')
+  await expect.poll(async () => (await layer.boundingBox())?.height ?? 0).toBeGreaterThan(40)
+  const box = await layer.boundingBox()
+  if (!box) throw new Error('overlay has no box')
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.8, { steps: 12 })
+  await page.mouse.up()
+  await page
+    .getByRole('checkbox', { name: 'I have checked that no patient identifiers are visible' })
+    .check()
+  const downloadPromise = page.waitForEvent('download')
+  await share.click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/^report-redacted-[a-z0-9]{6}-p1\.png$/)
+  const dir = mkdtempSync(join(tmpdir(), 'safeshare-offline-'))
+  const saved = join(dir, 'out.png')
+  await download.saveAs(saved)
+  const bytes = readFileSync(saved)
+  expect(bytes.includes(Buffer.from('Exif'))).toBe(false)
+  expect(bytes.includes(Buffer.from('eXIf'))).toBe(false)
+  const image = decodePng(bytes)
+  expect(image.pixel(60, 40)).toEqual({ r: 0, g: 0, b: 0, a: 255 })
+  expect(image.pixel(1, 1)).toEqual({ r: 210, g: 214, b: 216, a: 255 })
+
+  const later = hits.slice(loaded)
+  const network = later.filter((hit) => !hit.fromSw)
+  expect(network, JSON.stringify(network)).toEqual([])
+  expect(hits.filter((hit) => hit.method !== 'GET')).toEqual([])
+  expect(await page.locator('body').innerText()).not.toContain('sheet.png')
+})
+
+test('a share-target POST stays inside the service worker', async ({ page, context }) => {
+  test.setTimeout(120000)
+  const posts: { url: string; fromSw: boolean }[] = []
+  context.on('response', (response) => {
+    if (response.request().method() !== 'POST') return
+    posts.push({ url: response.url(), fromSw: response.fromServiceWorker() })
+  })
+  context.on('requestfailed', (request) => {
+    if (request.method() !== 'POST') return
+    posts.push({ url: request.url(), fromSw: false })
+  })
+  await page.goto('/safeshare/')
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+  const status = await page.evaluate(async (png) => {
+    const bytes = Uint8Array.from(atob(png), (char) => char.charCodeAt(0))
+    const body = new FormData()
+    body.append('file', new File([bytes], 'from-share.png', { type: 'image/png' }))
+    const response = await fetch('/safeshare/share-target', {
+      method: 'POST',
+      body,
+      redirect: 'manual',
+    })
+    return response.status
+  }, TINY_PNG.toString('base64'))
+  expect(status === 303 || status === 0).toBe(true)
+  await expect(page.getByRole('heading', { level: 2, name: 'Review' })).toBeVisible({
+    timeout: 90000,
+  })
+  expect(posts).toEqual([{ url: 'http://127.0.0.1:4173/safeshare/share-target', fromSw: true }])
+  const cached = await precachePaths(page)
+  expect(cached.some((path) => path.includes('from-share'))).toBe(false)
+  expect(cached.some((path) => path.includes('share-target'))).toBe(false)
+  expect(await page.locator('body').innerText()).not.toContain('from-share')
 })

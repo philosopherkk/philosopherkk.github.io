@@ -8,6 +8,7 @@ export default defineConfig({
   use: {
     ...devices['Pixel 5'],
     baseURL: 'http://127.0.0.1:4173',
+    serviceWorkers: 'allow',
   },
   webServer: {
     command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',

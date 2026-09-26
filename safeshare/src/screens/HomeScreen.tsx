@@ -5,9 +5,10 @@ import type { LoadedDocument } from '../load/types.ts'
 
 type HomeScreenProps = {
   onLoaded: (document: LoadedDocument) => void
+  externalError?: string | null
 }
 
-export function HomeScreen({ onLoaded }: HomeScreenProps) {
+export function HomeScreen({ onLoaded, externalError = null }: HomeScreenProps) {
   const cameraRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -87,9 +88,9 @@ export function HomeScreen({ onLoaded }: HomeScreenProps) {
         onChange={onPick}
       />
       {status ? <p role="status">{status}</p> : null}
-      {error ? (
+      {(error ?? externalError) ? (
         <p role="alert" className="alert">
-          {error}
+          {error ?? externalError}
         </p>
       ) : null}
       <p className="disclaimer">

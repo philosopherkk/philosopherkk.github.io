@@ -19,6 +19,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       injectRegister: null,
       registerType: 'autoUpdate',
       manifest: {
@@ -40,13 +43,25 @@ export default defineConfig({
             purpose: 'any maskable',
           },
         ],
+        share_target: {
+          action: `${APP_BASE}share-target`,
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            files: [
+              {
+                name: 'file',
+                accept: ['image/*', 'application/pdf'],
+              },
+            ],
+          },
+        },
       },
-      workbox: {
+      injectManifest: {
         // App shell, workers, and language data only. No runtime cache of user images or text.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,gz,mjs,wasm,tflite,webmanifest,txt}'],
         globIgnores: ['**/*.map'],
         maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
-        runtimeCaching: [],
       },
       devOptions: {
         enabled: false,

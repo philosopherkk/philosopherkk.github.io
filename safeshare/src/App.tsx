@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { detectDocument } from './detect/run.ts'
 import type { PageDetection } from './detect/types.ts'
 import { clearLiveCanvases, revokeObjectUrls } from './export/cleanup.ts'
 import { deliverFiles, type ShareHost } from './export/deliver.ts'
 import { exportToken } from './export/names.ts'
 import { renderExportFiles, saveDownload, type ShareRequest } from './export/render.ts'
+import { LoadFailure, loadErrorMessage } from './load/classify.ts'
+import { loadSelectedFile } from './load/loadDocument.ts'
 import { releaseDocument } from './load/release.ts'
 import type { LoadedDocument } from './load/types.ts'
 import { OCR_FAILED, ocrProgressLabel } from './ocr/progress.ts'
@@ -14,6 +16,7 @@ import { HomeScreen } from './screens/HomeScreen.tsx'
 import { PrivacyScreen } from './screens/PrivacyScreen.tsx'
 import { ProcessingScreen } from './screens/ProcessingScreen.tsx'
 import { ReviewScreen, type SharePhase } from './screens/ReviewScreen.tsx'
+import { listenForSharedFiles } from './share/inbox.ts'
 import { loadSettings } from './settings.ts'
 
 type Screen = 'home' | 'processing' | 'review' | 'privacy'
@@ -33,6 +36,7 @@ export default function App() {
   const [progress, setProgress] = useState<string | null>(null)
   const [ocrError, setOcrError] = useState<string | null>(null)
   const [phase, setPhase] = useState<SharePhase>('idle')
+  const [shareError, setShareError] = useState<string | null>(null)
   const run = useRef(0)
   const exportRun = useRef(0)
   const active = useRef<LoadedDocument | null>(null)
@@ -104,6 +108,23 @@ export default function App() {
       })
   }
 
+  function acceptShared(file: File) {
+    void loadSelectedFile(file)
+      .then((next) => {
+        setShareError(null)
+        handleLoaded(next)
+      })
+      .catch((caught: unknown) => {
+        const message =
+          caught instanceof LoadFailure ? caught.message : loadErrorMessage('image-decode')
+        setShareError(message)
+        setScreen('home')
+      })
+  }
+
+  const onShared = useEffectEvent(acceptShared)
+  useEffect(() => listenForSharedFiles((file) => onShared(file)), [])
+
   function handleLoaded(next: LoadedDocument) {
     const token = run.current + 1
     run.current = token
@@ -153,7 +174,9 @@ export default function App() {
         <h1>SafeShare MD</h1>
       </header>
       <main>
-        {screen === 'home' ? <HomeScreen onLoaded={handleLoaded} /> : null}
+        {screen === 'home' ? (
+          <HomeScreen onLoaded={handleLoaded} externalError={shareError} />
+        ) : null}
         {screen === 'processing' ? (
           <ProcessingScreen label={progress ?? 'Loading the reader.'} />
         ) : null}
