@@ -1,13 +1,17 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { releaseDocument } from './load/release.ts'
 import type { LoadedDocument } from './load/types.ts'
+import { OCR_FAILED } from './ocr/progress.ts'
+import { recognizeDocument } from './ocr/recognize.ts'
+import type { PageOcr } from './ocr/types.ts'
 import { HomeScreen } from './screens/HomeScreen.tsx'
 import { PrivacyScreen } from './screens/PrivacyScreen.tsx'
+import { ProcessingScreen } from './screens/ProcessingScreen.tsx'
 import { ReviewScreen } from './screens/ReviewScreen.tsx'
 
-type Screen = 'home' | 'review' | 'privacy'
+type Screen = 'home' | 'processing' | 'review' | 'privacy'
 
-const NAV: { id: Screen; label: string }[] = [
+const NAV: { id: Exclude<Screen, 'processing'>; label: string }[] = [
   { id: 'home', label: 'Home' },
   { id: 'review', label: 'Review' },
   { id: 'privacy', label: 'Privacy' },
@@ -16,13 +20,34 @@ const NAV: { id: Screen; label: string }[] = [
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [loaded, setLoaded] = useState<LoadedDocument | null>(null)
+  const [ocr, setOcr] = useState<PageOcr[] | null>(null)
+  const [progress, setProgress] = useState<string | null>(null)
+  const [ocrError, setOcrError] = useState<string | null>(null)
+  const run = useRef(0)
+  const active = useRef<LoadedDocument | null>(null)
 
   function handleLoaded(next: LoadedDocument) {
-    setLoaded((current) => {
-      if (current) releaseDocument(current)
-      return next
+    const token = run.current + 1
+    run.current = token
+    const previous = active.current
+    active.current = next
+    setLoaded(next)
+    setOcr(null)
+    setOcrError(null)
+    setScreen('processing')
+    void recognizeDocument(next, (label) => {
+      if (run.current === token) setProgress(label)
+    }).then((result) => {
+      if (run.current !== token) {
+        releaseDocument(next)
+        return
+      }
+      if (previous && previous !== next) releaseDocument(previous)
+      setOcr(result.pages)
+      setOcrError(result.failed ? OCR_FAILED : null)
+      setProgress(null)
+      setScreen('review')
     })
-    setScreen('review')
   }
 
   return (
@@ -33,7 +58,12 @@ export default function App() {
       </header>
       <main>
         {screen === 'home' ? <HomeScreen onLoaded={handleLoaded} /> : null}
-        {screen === 'review' ? <ReviewScreen document={loaded} /> : null}
+        {screen === 'processing' ? (
+          <ProcessingScreen label={progress ?? 'Loading the reader.'} />
+        ) : null}
+        {screen === 'review' ? (
+          <ReviewScreen document={loaded} ocr={ocr} status={progress} error={ocrError} />
+        ) : null}
         {screen === 'privacy' ? <PrivacyScreen /> : null}
       </main>
       <nav aria-label="Screens">

@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+test.describe.configure({ mode: 'serial' })
+
 const TINY_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
@@ -106,6 +108,7 @@ function onePagePdf(): Buffer {
 }
 
 test('a chosen image opens on the review screen', async ({ page }) => {
+  test.setTimeout(120000)
   const pageErrors: string[] = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
@@ -122,7 +125,9 @@ test('a chosen image opens on the review screen', async ({ page }) => {
     buffer: TINY_PNG,
   })
 
-  await expect(page.getByRole('heading', { level: 2, name: 'Review' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Review' })).toBeVisible({
+    timeout: 90000,
+  })
   await expect(page.getByRole('img', { name: 'Page 1' })).toBeVisible()
   await expect(page.getByText('1 page loaded on this phone.')).toBeVisible()
   expect(page.url()).not.toContain('page.png')
@@ -130,9 +135,14 @@ test('a chosen image opens on the review screen', async ({ page }) => {
 })
 
 test('a one-page pdf opens on the review screen', async ({ page }) => {
+  test.setTimeout(180000)
   const pageErrors: string[] = []
+  const logs: string[] = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
+  })
+  page.on('console', (message) => {
+    logs.push(message.text())
   })
   await page.goto('/safeshare/')
 
@@ -147,11 +157,82 @@ test('a one-page pdf opens on the review screen', async ({ page }) => {
     buffer: onePagePdf(),
   })
 
-  await expect(page.getByRole('heading', { level: 2, name: 'Review' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Review' })).toBeVisible({
+    timeout: 150000,
+  })
   await expect(page.getByRole('img', { name: 'Page 1' })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(await page.locator('body').innerText()).not.toContain(filename)
   expect(await page.locator('body').innerText()).not.toContain('ABC')
+  expect(logs.join('\n')).not.toContain('ABC')
+  expect(logs.join('\n')).not.toContain(filename)
   expect(page.url()).not.toContain(filename)
   expect(pageErrors).toEqual([])
+})
+
+test('production ocr stays on this origin and does not log text', async ({ page }) => {
+  test.setTimeout(120000)
+  const logs: string[] = []
+  const leaked: string[] = []
+  const urls: string[] = []
+  const assetScripts = new Set<string>()
+  page.on('console', (message) => {
+    logs.push(`${message.type()}: ${message.text()}`)
+  })
+  page.on('pageerror', (error) => {
+    logs.push(error.message)
+  })
+  page.on('request', (request) => {
+    urls.push(request.url())
+    const url = new URL(request.url())
+    if (url.origin !== 'http://127.0.0.1:4173') leaked.push(`${request.method()} ${request.url()}`)
+    if (url.pathname.includes('/safeshare/assets/') && url.pathname.endsWith('.js')) {
+      assetScripts.add(request.url())
+    }
+  })
+
+  await page.goto('/safeshare/')
+
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Choose image / PDF', exact: true }).click()
+  await (
+    await chooser
+  ).setFiles({
+    name: 'synthetic-page.png',
+    mimeType: 'image/png',
+    buffer: TINY_PNG,
+  })
+
+  await expect(page.getByRole('status')).toHaveText('Loading the reader.')
+  await expect(page.getByRole('heading', { level: 2, name: 'Review' })).toBeVisible({
+    timeout: 90000,
+  })
+  await expect(page.getByText(/finding identifiers/i)).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+
+  const stored = await page.evaluate(async () => ({
+    localKeys: Object.keys(localStorage),
+    databases: indexedDB.databases
+      ? (await indexedDB.databases()).map((entry) => entry.name ?? '')
+      : [],
+  }))
+  expect(stored.localKeys).toEqual([])
+  expect(stored.databases).toEqual([])
+
+  const logText = logs.join('\n')
+  expect(logText).not.toContain('synthetic-page.png')
+  expect(logText.toLowerCase()).not.toContain('patient')
+  expect(leaked).toEqual([])
+  expect(urls.some((url) => url.includes('/safeshare/vendor/tesseract/worker.min.js'))).toBe(true)
+  expect(
+    urls.some((url) => url.includes('/safeshare/vendor/tesseract/lang/eng.traineddata.gz')),
+  ).toBe(true)
+  expect(urls.some((url) => url.includes('/safeshare/vendor/tesseract/core/'))).toBe(true)
+  expect(assetScripts.size).toBeGreaterThan(0)
+  for (const src of assetScripts) {
+    const response = await page.request.get(src)
+    expect(response.ok()).toBe(true)
+    expect(await response.text()).not.toContain('safeshare-dev-ocr-boxes')
+  }
+  expect(page.url()).not.toContain('synthetic')
 })

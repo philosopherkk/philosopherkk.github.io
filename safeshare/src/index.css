@@ -153,8 +153,28 @@ button:disabled {
   border: 1px solid var(--line);
 }
 
-.page-frame canvas {
+.page-stage {
+  position: relative;
+}
+
+.page-frame canvas,
+.page-stage canvas {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.ocr-debug {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.dev-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
 }
