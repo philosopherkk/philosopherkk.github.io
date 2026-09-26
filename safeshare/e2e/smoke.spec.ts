@@ -2,9 +2,55 @@ import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deflateSync, inflateSync } from 'node:zlib'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 test.describe.configure({ mode: 'serial' })
+
+test.beforeEach(async ({ page }, testInfo) => {
+  if (testInfo.title.startsWith('first launch')) return
+  await page.addInitScript(() => {
+    const key = 'safeshare-md-settings'
+    const raw = localStorage.getItem(key)
+    let parsed: Record<string, unknown> = {}
+    try {
+      const value: unknown = raw ? JSON.parse(raw) : null
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        parsed = value as Record<string, unknown>
+      }
+    } catch {
+      parsed = {}
+    }
+    parsed.disclaimerAccepted = true
+    localStorage.setItem(key, JSON.stringify(parsed))
+  })
+})
+
+function colorChannels(input: string): [number, number, number] {
+  const match = input.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  if (!match) throw new Error(`Unparsed color ${input}`)
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+function channel(value: number): number {
+  const unit = value / 255
+  return unit <= 0.03928 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const [fr, fg, fb] = colorChannels(foreground)
+  const [br, bg, bb] = colorChannels(background)
+  const front = 0.2126 * channel(fr) + 0.7152 * channel(fg) + 0.0722 * channel(fb)
+  const back = 0.2126 * channel(br) + 0.7152 * channel(bg) + 0.0722 * channel(bb)
+  const [hi, lo] = front > back ? [front, back] : [back, front]
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+async function expectTarget(locator: Locator) {
+  const box = await locator.boundingBox()
+  if (!box) throw new Error('Control has no box')
+  expect(box.height).toBeGreaterThanOrEqual(44)
+  expect(box.width).toBeGreaterThanOrEqual(44)
+}
 
 const TINY_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -21,12 +67,15 @@ test('privacy screen and touch target', async ({ page }) => {
   await expect(
     page.getByText('Nothing leaves your phone except the redacted image you choose to share.'),
   ).toBeVisible()
+  await expect(page.getByText(/Nothing is uploaded/)).toBeVisible()
+  await expect(page.getByText(/on this phone/i).first()).toBeVisible()
   await expect(page.getByText(/airplane mode/i)).toBeVisible()
+  await expect(page.getByText(/turn the network off and run a report/i)).toBeVisible()
 
-  const box = await privacy.boundingBox()
-  if (!box) throw new Error('Privacy button has no box')
-  expect(box.height).toBeGreaterThanOrEqual(44)
-  expect(box.width).toBeGreaterThanOrEqual(44)
+  await expectTarget(privacy)
+  await expectTarget(page.getByRole('button', { name: 'Home' }))
+  await expectTarget(page.getByRole('button', { name: 'Review' }))
+  await expectTarget(page.getByRole('button', { name: 'Settings' }))
 })
 
 test('picker error paths stay on the page and hide the file name', async ({ page }) => {
@@ -715,4 +764,145 @@ test('a share-target POST stays inside the service worker', async ({ page, conte
   expect(cached.some((path) => path.includes('from-share'))).toBe(false)
   expect(cached.some((path) => path.includes('share-target'))).toBe(false)
   expect(await page.locator('body').innerText()).not.toContain('from-share')
+})
+
+test('first launch stays blocked until the disclaimer is accepted', async ({ page }) => {
+  await page.goto('/safeshare/')
+  await expect(page.getByRole('heading', { name: 'On this phone' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Take photo' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Home' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Settings' })).toHaveCount(0)
+
+  const next = page.getByRole('button', { name: 'Next' })
+  await expectTarget(next)
+  await next.click()
+  await expect(page.getByRole('heading', { name: 'Nothing is uploaded' })).toBeVisible()
+  await expect(page.getByText(/not sent to a server/i)).toBeVisible()
+  const back = page.getByRole('button', { name: 'Back' })
+  await expectTarget(back)
+  await page.getByRole('button', { name: 'Next' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible()
+  await expect(page.getByText('Automatic detection is not perfect.')).toBeVisible()
+  await expect(
+    page.getByText('You are responsible for checking the image before sharing.'),
+  ).toBeVisible()
+  await expect(page.getByText('This app does not give medical advice.')).toBeVisible()
+  await back.click()
+  await expect(page.getByRole('heading', { name: 'Nothing is uploaded' })).toBeVisible()
+  await page.getByRole('button', { name: 'Next' }).click()
+
+  const accept = page.getByRole('button', { name: 'I understand' })
+  await expectTarget(accept)
+  await accept.click()
+  await expect(page.getByRole('button', { name: 'Take photo', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'On this phone' })).toHaveCount(0)
+
+  const saved = await page.evaluate(() => localStorage.getItem('safeshare-md-settings'))
+  expect(saved).toContain('"disclaimerAccepted":true')
+  expect(saved?.toLowerCase()).not.toContain('patient')
+  expect(saved?.toLowerCase()).not.toContain('image')
+
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Take photo', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Before you start' })).toHaveCount(0)
+})
+
+test('settings are labelled, meet contrast, and stay on this phone', async ({ page }) => {
+  await page.goto('/safeshare/')
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Settings' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Default mode' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Output format' })).toBeVisible()
+
+  const doctor = page.getByRole('checkbox', { name: 'Redact doctor names' })
+  const organisation = page.getByRole('checkbox', { name: 'Redact organisation names' })
+  const dates = page.getByRole('checkbox', { name: 'Redact all dates' })
+  const age = page.getByRole('checkbox', { name: 'Redact age' })
+  const sex = page.getByRole('checkbox', { name: 'Redact sex' })
+  const unsure = page.getByRole('checkbox', { name: 'Redact low-confidence header words' })
+  const watermark = page.getByRole('checkbox', { name: 'Watermark' })
+  await expect(doctor).toBeChecked()
+  await expect(organisation).not.toBeChecked()
+  await expect(dates).not.toBeChecked()
+  await expect(age).not.toBeChecked()
+  await expect(sex).not.toBeChecked()
+  await expect(unsure).toBeChecked()
+  await expect(watermark).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Standard', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(page.getByRole('button', { name: 'JPEG', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  for (const box of [doctor, organisation, dates, age, sex, unsure, watermark]) {
+    await expectTarget(box)
+  }
+  await expectTarget(page.getByRole('button', { name: 'Manual', exact: true }))
+  await expectTarget(page.getByRole('button', { name: 'PNG', exact: true }))
+
+  const disclaimer = page.getByText('Automatic detection is not perfect.')
+  await page.getByRole('button', { name: 'Home' }).click()
+  const paint = await disclaimer.evaluate((node) => {
+    const style = getComputedStyle(node)
+    let background = style.backgroundColor
+    let parent = node.parentElement
+    while (parent && (background === 'rgba(0, 0, 0, 0)' || background === 'transparent')) {
+      background = getComputedStyle(parent).backgroundColor
+      parent = parent.parentElement
+    }
+    return { color: style.color, background }
+  })
+  expect(contrastRatio(paint.color, paint.background)).toBeGreaterThanOrEqual(4.5)
+
+  const primary = await page
+    .getByRole('button', { name: 'Take photo', exact: true })
+    .evaluate((node) => {
+      const style = getComputedStyle(node)
+      return { color: style.color, background: style.backgroundColor }
+    })
+  expect(contrastRatio(primary.color, primary.background)).toBeGreaterThanOrEqual(4.5)
+
+  const disabled = await page.evaluate(() => {
+    const probe = document.createElement('button')
+    probe.className = 'primary'
+    probe.disabled = true
+    probe.textContent = 'Share'
+    document.body.appendChild(probe)
+    const style = getComputedStyle(probe)
+    const result = {
+      color: style.color,
+      background: style.backgroundColor,
+      opacity: style.opacity,
+    }
+    probe.remove()
+    return result
+  })
+  expect(disabled.opacity).toBe('1')
+  expect(contrastRatio(disabled.color, disabled.background)).toBeGreaterThanOrEqual(4.5)
+
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await organisation.check()
+  await age.check()
+  await page.getByRole('button', { name: 'Manual', exact: true }).click()
+  await page.getByRole('button', { name: 'PNG', exact: true }).click()
+  await page.reload()
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await expect(organisation).toBeChecked()
+  await expect(age).toBeChecked()
+  await expect(doctor).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Manual', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(page.getByRole('button', { name: 'PNG', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  const stored = await page.evaluate(() => localStorage.getItem('safeshare-md-settings'))
+  expect(stored?.toLowerCase()).not.toContain('patient')
+  expect(stored).not.toContain('data:image')
 })

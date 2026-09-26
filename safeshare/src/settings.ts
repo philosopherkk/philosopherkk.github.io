@@ -11,6 +11,8 @@ export type Settings = {
   redactLowConfidenceHeaderWords: boolean
   watermark: boolean
   outputFormat: 'jpeg' | 'png'
+  /** First-launch acceptance. A setting only — never an image or recognized text. */
+  disclaimerAccepted: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -23,6 +25,21 @@ export const DEFAULT_SETTINGS: Settings = {
   redactLowConfidenceHeaderWords: true,
   watermark: true,
   outputFormat: 'jpeg',
+  disclaimerAccepted: false,
+}
+
+const DETECTION_KEYS = [
+  'redactDoctorNames',
+  'redactOrganisationNames',
+  'redactAllDates',
+  'redactAge',
+  'redactSex',
+  'redactLowConfidenceHeaderWords',
+] as const satisfies readonly (keyof Settings)[]
+
+/** True when a saved preference would change which boxes the detector draws. */
+export function detectionSettingsChanged(before: Settings, after: Settings): boolean {
+  return DETECTION_KEYS.some((key) => before[key] !== after[key])
 }
 
 const MODES = new Set<Settings['defaultMode']>([
@@ -61,6 +78,10 @@ export function sanitizeSettings(input: unknown): Settings {
     ),
     watermark: booleanSetting(source.watermark, DEFAULT_SETTINGS.watermark),
     outputFormat: output === 'jpeg' || output === 'png' ? output : DEFAULT_SETTINGS.outputFormat,
+    disclaimerAccepted: booleanSetting(
+      source.disclaimerAccepted,
+      DEFAULT_SETTINGS.disclaimerAccepted,
+    ),
   }
 }
 

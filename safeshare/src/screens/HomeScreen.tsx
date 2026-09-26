@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react'
+import { DISCLAIMER_ADVICE, DISCLAIMER_CHECK, DISCLAIMER_DETECTION } from '../copy.ts'
 import { LoadFailure, loadErrorMessage } from '../load/classify.ts'
 import { loadSelectedFile } from '../load/loadDocument.ts'
 import type { LoadedDocument } from '../load/types.ts'
@@ -42,7 +43,10 @@ export function HomeScreen({ onLoaded, externalError = null }: HomeScreenProps) 
   }
 
   return (
-    <section className="stack">
+    <section className="stack screen-scroll" aria-labelledby="home-title">
+      <h2 id="home-title" className="visually-hidden">
+        Home
+      </h2>
       <p className="lead">
         Photograph a lab report, black out patient identifiers on this phone, then share the
         redacted image.
@@ -94,8 +98,7 @@ export function HomeScreen({ onLoaded, externalError = null }: HomeScreenProps) 
         </p>
       ) : null}
       <p className="disclaimer">
-        Automatic detection is not perfect. You are responsible for checking the image before
-        sharing. This app does not give medical advice.
+        {DISCLAIMER_DETECTION} {DISCLAIMER_CHECK} {DISCLAIMER_ADVICE}
       </p>
     </section>
   )

@@ -105,13 +105,17 @@ h2 {
 
 nav {
   display: grid;
-  grid-template-columns: repeat(3, minmax(44px, 1fr));
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
   gap: 0.5rem;
   padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
   position: sticky;
   bottom: 0;
   background: var(--card);
   border-top: 1px solid var(--line);
+}
+
+nav button {
+  padding: 0.55rem 0.2rem;
 }
 
 nav button[aria-current='page'] {
@@ -121,7 +125,71 @@ nav button[aria-current='page'] {
 }
 
 button:disabled {
-  opacity: 0.7;
+  opacity: 1;
+  background: #d5e2e6;
+  color: #1c3338;
+  border-color: #8aa0a6;
+}
+
+button.primary:disabled {
+  background: #3d5c63;
+  color: #ffffff;
+  border-color: #3d5c63;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.screen-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 1rem;
+}
+
+.onboard {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+}
+
+.onboard-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.onboard h2 {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.onboard h2 .step {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.onboard-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .file-input {

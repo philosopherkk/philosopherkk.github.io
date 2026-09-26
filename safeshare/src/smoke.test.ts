@@ -5,9 +5,24 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import { describe, expect, test } from 'vitest'
-import { AIRPLANE_MODE_CHECK, CORE_PROMISE } from './copy.ts'
+import {
+  AIRPLANE_MODE_CHECK,
+  CORE_PROMISE,
+  DISCLAIMER_ADVICE,
+  DISCLAIMER_CHECK,
+  DISCLAIMER_DETECTION,
+  ONBOARDING_STEPS,
+  PRIVACY_ON_DEVICE,
+  PRIVACY_VERIFY,
+} from './copy.ts'
 import { CONTENT_SECURITY_POLICY, PERMISSIONS_POLICY, REFERRER_POLICY } from './securityHeaders.ts'
-import { sanitizeSettings, saveSettings, SETTINGS_STORAGE_KEY } from './settings.ts'
+import {
+  DEFAULT_SETTINGS,
+  detectionSettingsChanged,
+  sanitizeSettings,
+  saveSettings,
+  SETTINGS_STORAGE_KEY,
+} from './settings.ts'
 import { vendorPaths } from './vendorPaths.ts'
 
 const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -31,6 +46,18 @@ test('core promise and airplane-mode check are stated', () => {
     'Nothing leaves your phone except the redacted image you choose to share.',
   )
   expect(AIRPLANE_MODE_CHECK.toLowerCase()).toContain('airplane mode')
+  expect(PRIVACY_ON_DEVICE).toContain('Nothing is uploaded')
+  expect(PRIVACY_ON_DEVICE.toLowerCase()).toContain('on this phone')
+  expect(PRIVACY_VERIFY.toLowerCase()).toContain('turn the network off')
+  expect(PRIVACY_VERIFY.toLowerCase()).toContain('run a report')
+  expect(ONBOARDING_STEPS.map((step) => step.title)).toEqual([
+    'On this phone',
+    'Nothing is uploaded',
+    'Before you start',
+  ])
+  expect(ONBOARDING_STEPS[2]?.body).toContain(DISCLAIMER_DETECTION)
+  expect(ONBOARDING_STEPS[2]?.body).toContain(DISCLAIMER_CHECK)
+  expect(ONBOARDING_STEPS[2]?.body).toContain(DISCLAIMER_ADVICE)
 })
 
 test('CSP and privacy headers match SPEC §9', () => {
@@ -64,7 +91,24 @@ test('settings storage keeps settings only', () => {
   })
   expect(cleaned).not.toHaveProperty('image')
   expect(cleaned).not.toHaveProperty('ocrText')
+  expect(cleaned.disclaimerAccepted).toBe(false)
   expect(JSON.stringify(cleaned)).not.toContain('patient')
+
+  const accepted = sanitizeSettings({
+    disclaimerAccepted: true,
+    image: 'not-a-setting',
+    ocrText: 'patient name',
+  })
+  expect(accepted.disclaimerAccepted).toBe(true)
+  expect(accepted).not.toHaveProperty('image')
+  expect(accepted).not.toHaveProperty('ocrText')
+  expect(JSON.stringify(accepted)).not.toContain('patient')
+  expect(detectionSettingsChanged(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, redactAge: true })).toBe(
+    true,
+  )
+  expect(
+    detectionSettingsChanged(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, watermark: false }),
+  ).toBe(false)
 
   const saved: Record<string, string> = {}
   saveSettings(cleaned, {

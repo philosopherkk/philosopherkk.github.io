@@ -15,7 +15,6 @@ import {
 } from '../review/modes.ts'
 import { toggleById } from '../review/hitTest.ts'
 import type { ReviewBox, ReviewMode } from '../review/types.ts'
-import { loadSettings, saveSettings } from '../settings.ts'
 import { ReviewStage } from './ReviewStage.tsx'
 
 export type SharePhase = 'idle' | 'busy' | 'downloaded' | 'failed'
@@ -46,8 +45,11 @@ type ReviewScreenProps = {
   ocr: readonly PageOcr[] | null
   found: readonly PageDetection[] | null
   initialMode: ReviewMode
+  watermark: boolean
+  format: ExportFormat
   error: string | null
   phase: SharePhase
+  onOutputChange: (next: { watermark?: boolean; outputFormat?: ExportFormat }) => void
   onShare: (request: ShareRequest) => void
   onDone: () => void
 }
@@ -67,14 +69,15 @@ export function ReviewScreen({
   ocr,
   found,
   initialMode,
+  watermark,
+  format,
   error,
   phase,
+  onOutputChange,
   onShare,
   onDone,
 }: ReviewScreenProps) {
   const [showBoxes, setShowBoxes] = useState(false)
-  const [watermark, setWatermark] = useState(() => loadSettings().watermark)
-  const [format, setFormat] = useState<ExportFormat>(() => loadSettings().outputFormat)
   const [DevToggle, setDevToggle] = useState<DevToggle | null>(null)
   const [DevOverlay, setDevOverlay] = useState<DevOverlay | null>(null)
   const [mode, setMode] = useState<ReviewMode>(initialMode)
@@ -84,11 +87,7 @@ export function ReviewScreen({
   const [peeking, setPeeking] = useState(false)
   const [source, setSource] = useState({ document, found, initialMode })
   const drawnIds = useRef(0)
-  if (
-    source.document !== document ||
-    source.found !== found ||
-    source.initialMode !== initialMode
-  ) {
+  if (source.document !== document || source.initialMode !== initialMode) {
     setSource({ document, found, initialMode })
     setMode(initialMode)
     setConfirmed(false)
@@ -103,6 +102,17 @@ export function ReviewScreen({
             disabledZones: [],
           }))
         : null,
+    )
+  } else if (source.found !== found && document) {
+    setSource({ document, found, initialMode })
+    setConfirmed(false)
+    setEdits((current) =>
+      document.pages.map((page, index) => ({
+        detections: found?.[index]?.detections ?? [],
+        layout: found?.[index]?.layout ?? emptyLayout(page.display.width, page.display.height),
+        drawn: current?.[index]?.drawn ?? [],
+        disabledZones: current?.[index]?.disabledZones ?? [],
+      })),
     )
   }
 
@@ -121,8 +131,8 @@ export function ReviewScreen({
 
   if (!document || document.pages.length === 0) {
     return (
-      <section className="stack">
-        <h2>Review</h2>
+      <section className="stack" aria-labelledby="review-title">
+        <h2 id="review-title">Review</h2>
         <p>
           No image is loaded. Black boxes will cover identifiers here. You confirm the page before
           anything is shared. Images and text stay in memory only and are not saved on this phone.
@@ -182,10 +192,7 @@ export function ReviewScreen({
   }
 
   function storeOutput(next: { watermark?: boolean; outputFormat?: ExportFormat }) {
-    const saved = { ...loadSettings(), ...next }
-    saveSettings(saved)
-    setWatermark(saved.watermark)
-    setFormat(saved.outputFormat)
+    onOutputChange(next)
   }
 
   function share() {
@@ -219,9 +226,9 @@ export function ReviewScreen({
   }
 
   return (
-    <section className="review">
+    <section className="review" aria-labelledby="review-title">
       <div className="review-head">
-        <h2>Review</h2>
+        <h2 id="review-title">Review</h2>
         <p>{count === 1 ? '1 page' : `${count} pages`} loaded on this phone. Nothing is saved.</p>
         {error ? (
           <p role="alert" className="alert">
@@ -347,6 +354,7 @@ export function ReviewScreen({
             <button
               type="button"
               className="primary"
+              aria-label="Share"
               disabled={!confirmed || phase === 'busy'}
               onClick={share}
             >
