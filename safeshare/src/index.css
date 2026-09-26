@@ -245,13 +245,15 @@ button:disabled {
 }
 
 .modes,
-.pager {
+.pager,
+.output {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
 
-.modes button[aria-pressed='true'] {
+.modes button[aria-pressed='true'],
+.output button[aria-pressed='true'] {
   background: var(--accent);
   color: var(--accent-ink);
   border-color: var(--accent);

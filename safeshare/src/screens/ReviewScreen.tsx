@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import type { Detection, PageDetection, ZoneLayout } from '../detect/types.ts'
+import { exportTarget } from '../export/target.ts'
+import type { ShareRequest } from '../export/render.ts'
+import type { ExportFormat } from '../export/names.ts'
+import { WATERMARK_TEXT } from '../export/names.ts'
 import type { LoadedDocument } from '../load/types.ts'
 import type { OcrWord } from '../ocr/types.ts'
 import type { PageOcr } from '../ocr/types.ts'
@@ -11,7 +15,10 @@ import {
 } from '../review/modes.ts'
 import { toggleById } from '../review/hitTest.ts'
 import type { ReviewBox, ReviewMode } from '../review/types.ts'
+import { loadSettings, saveSettings } from '../settings.ts'
 import { ReviewStage } from './ReviewStage.tsx'
+
+export type SharePhase = 'idle' | 'busy' | 'downloaded' | 'failed'
 
 type DevToggle = ComponentType<{ show: boolean; onChange: (show: boolean) => void }>
 type DevOverlay = ComponentType<{
@@ -40,6 +47,9 @@ type ReviewScreenProps = {
   found: readonly PageDetection[] | null
   initialMode: ReviewMode
   error: string | null
+  phase: SharePhase
+  onShare: (request: ShareRequest) => void
+  onDone: () => void
 }
 
 function emptyLayout(width: number, height: number): ZoneLayout {
@@ -52,8 +62,19 @@ function emptyLayout(width: number, height: number): ZoneLayout {
   }
 }
 
-export function ReviewScreen({ document, ocr, found, initialMode, error }: ReviewScreenProps) {
+export function ReviewScreen({
+  document,
+  ocr,
+  found,
+  initialMode,
+  error,
+  phase,
+  onShare,
+  onDone,
+}: ReviewScreenProps) {
   const [showBoxes, setShowBoxes] = useState(false)
+  const [watermark, setWatermark] = useState(() => loadSettings().watermark)
+  const [format, setFormat] = useState<ExportFormat>(() => loadSettings().outputFormat)
   const [DevToggle, setDevToggle] = useState<DevToggle | null>(null)
   const [DevOverlay, setDevOverlay] = useState<DevOverlay | null>(null)
   const [mode, setMode] = useState<ReviewMode>(initialMode)
@@ -160,6 +181,43 @@ export function ReviewScreen({ document, ocr, found, initialMode, error }: Revie
     setEdits((current) => current?.map((item) => ({ ...item, disabledZones: [] })) ?? current)
   }
 
+  function storeOutput(next: { watermark?: boolean; outputFormat?: ExportFormat }) {
+    const saved = { ...loadSettings(), ...next }
+    saveSettings(saved)
+    setWatermark(saved.watermark)
+    setFormat(saved.outputFormat)
+  }
+
+  function share() {
+    if (!document || !confirmed || phase === 'busy') return
+    const pages = document.pages.map((page, index) => {
+      const edit = edits?.[index]
+      const target = exportTarget(
+        { width: page.display.width, height: page.display.height },
+        page.exportBitmap
+          ? { width: page.exportBitmap.width, height: page.exportBitmap.height }
+          : null,
+      )
+      return {
+        bitmap: page.exportBitmap ?? page.display,
+        width: target.width,
+        height: target.height,
+        scale: target.scale,
+        pageNumber: page.index + 1,
+        boxes: edit
+          ? boxesForMode(
+              mode,
+              edit.detections,
+              edit.drawn,
+              edit.layout,
+              new Set(edit.disabledZones),
+            )
+          : [],
+      }
+    })
+    onShare({ pages, format, watermark })
+  }
+
   return (
     <section className="review">
       <div className="review-head">
@@ -233,6 +291,30 @@ export function ReviewScreen({ document, ocr, found, initialMode, error }: Revie
           >
             Peek
           </button>
+          <div className="output" role="group" aria-label="Output format">
+            <button
+              type="button"
+              aria-pressed={format === 'jpeg'}
+              onClick={() => storeOutput({ outputFormat: 'jpeg' })}
+            >
+              JPEG
+            </button>
+            <button
+              type="button"
+              aria-pressed={format === 'png'}
+              onClick={() => storeOutput({ outputFormat: 'png' })}
+            >
+              PNG
+            </button>
+          </div>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={watermark}
+              onChange={(event) => storeOutput({ watermark: event.target.checked })}
+            />
+            <span>Footer: {WATERMARK_TEXT}</span>
+          </label>
           <p className="counts">{formatCategoryCounts(visible)}</p>
           {low ? <p className="banner">Text confidence is low. Check the page carefully.</p> : null}
           {missing ? <p className="banner">Nothing detected — please check carefully</p> : null}
@@ -253,9 +335,24 @@ export function ReviewScreen({ document, ocr, found, initialMode, error }: Revie
             />
             <span>I have checked that no patient identifiers are visible</span>
           </label>
-          <button type="button" className="primary" disabled={!confirmed}>
-            Share
-          </button>
+          {phase === 'downloaded' ? (
+            <p className="banner">The redacted image is saved on this phone.</p>
+          ) : null}
+          {phase === 'failed' ? <p className="banner">Sharing did not finish.</p> : null}
+          {phase === 'downloaded' || phase === 'failed' ? (
+            <button type="button" className="primary" onClick={onDone}>
+              Done
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="primary"
+              disabled={!confirmed || phase === 'busy'}
+              onClick={share}
+            >
+              Share
+            </button>
+          )}
         </div>
       </div>
     </section>

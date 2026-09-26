@@ -102,6 +102,19 @@ async function recognizePage(worker: OcrWorker, page: LoadedPage): Promise<PageO
   }
 }
 
+/** Drop the reader so its last image can be collected. The next page starts a new one. */
+export async function releaseReader(): Promise<void> {
+  const pending = workerPromise
+  workerPromise = null
+  if (!pending) return
+  try {
+    const worker = await pending
+    await worker.terminate()
+  } catch {
+    // Already stopped.
+  }
+}
+
 export async function recognizeDocument(
   document: LoadedDocument,
   onProgress: (label: string) => void,

@@ -1,4 +1,7 @@
-import { deflateSync } from 'node:zlib'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { deflateSync, inflateSync } from 'node:zlib'
 import { expect, test } from '@playwright/test'
 
 test.describe.configure({ mode: 'serial' })
@@ -371,6 +374,160 @@ test('review checkbox gates share and a drawn box updates the canvas', async ({ 
 
   const body = await page.locator('body').innerText()
   expect(body).not.toContain('sheet.png')
+  expect(logs.join('\n')).not.toContain('sheet.png')
+  expect(page.url()).not.toContain('sheet')
+})
+
+function decodePng(png: Buffer): {
+  width: number
+  height: number
+  pixel: (x: number, y: number) => { r: number; g: number; b: number; a: number }
+} {
+  if (!png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    throw new Error('not a png')
+  }
+  let offset = 8
+  const idat: Buffer[] = []
+  let width = 0
+  let height = 0
+  let depth = 0
+  let color = 0
+  let interlace = 0
+  while (offset + 12 <= png.length) {
+    const length = png.readUInt32BE(offset)
+    const type = png.subarray(offset + 4, offset + 8).toString('ascii')
+    const data = png.subarray(offset + 8, offset + 8 + length)
+    if (type === 'eXIf') throw new Error('exif chunk')
+    if (type === 'IHDR') {
+      width = data.readUInt32BE(0)
+      height = data.readUInt32BE(4)
+      depth = data[8] ?? 0
+      color = data[9] ?? 0
+      interlace = data[12] ?? 0
+    } else if (type === 'IDAT') {
+      idat.push(Buffer.from(data))
+    } else if (type === 'IEND') {
+      break
+    }
+    offset += 12 + length
+  }
+  if (depth !== 8 || interlace !== 0 || (color !== 2 && color !== 6)) {
+    throw new Error(`unexpected png ${width}x${height} color ${color}`)
+  }
+  const channels = color === 6 ? 4 : 3
+  const raw = inflateSync(Buffer.concat(idat))
+  const stride = width * channels
+  const rows = new Uint8Array(height * stride)
+  let src = 0
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[src] ?? 0
+    src += 1
+    const row = y * stride
+    for (let x = 0; x < stride; x += 1) {
+      const value = raw[src] ?? 0
+      src += 1
+      const left = x >= channels ? (rows[row + x - channels] ?? 0) : 0
+      const up = y > 0 ? (rows[row - stride + x] ?? 0) : 0
+      const upLeft = y > 0 && x >= channels ? (rows[row - stride + x - channels] ?? 0) : 0
+      let next = value
+      if (filter === 1) next = (value + left) & 255
+      else if (filter === 2) next = (value + up) & 255
+      else if (filter === 3) next = (value + Math.floor((left + up) / 2)) & 255
+      else if (filter === 4) {
+        const estimate = left + up - upLeft
+        const pa = Math.abs(estimate - left)
+        const pb = Math.abs(estimate - up)
+        const pc = Math.abs(estimate - upLeft)
+        const paeth = pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft
+        next = (value + paeth) & 255
+      } else if (filter !== 0) {
+        throw new Error(`png filter ${filter}`)
+      }
+      rows[row + x] = next
+    }
+  }
+  return {
+    width,
+    height,
+    pixel(x, y) {
+      const index = (y * width + x) * channels
+      return {
+        r: rows[index] ?? -1,
+        g: rows[index + 1] ?? -1,
+        b: rows[index + 2] ?? -1,
+        a: channels === 4 ? (rows[index + 3] ?? -1) : 255,
+      }
+    },
+  }
+}
+
+test('export downloads a redacted png with black boxes and no exif when share is absent', async ({
+  page,
+}) => {
+  test.setTimeout(120000)
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: undefined })
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  const logs: string[] = []
+  page.on('console', (message) => {
+    logs.push(message.text())
+  })
+  await page.goto('/safeshare/')
+
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Choose image / PDF', exact: true }).click()
+  await (
+    await chooser
+  ).setFiles({
+    name: 'sheet.png',
+    mimeType: 'image/png',
+    buffer: solidPng(120, 80),
+  })
+
+  const share = page.getByRole('button', { name: 'Share', exact: true })
+  await expect(share).toBeVisible({ timeout: 90000 })
+  await expect(share).toBeDisabled()
+  await page.getByRole('button', { name: 'Manual', exact: true }).click()
+  await page.getByRole('button', { name: 'PNG', exact: true }).click()
+
+  const layer = page.locator('.redact-layer')
+  await expect.poll(async () => (await layer.boundingBox())?.height ?? 0).toBeGreaterThan(40)
+  const box = await layer.boundingBox()
+  if (!box) throw new Error('overlay has no box')
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.8, { steps: 12 })
+  await page.mouse.up()
+
+  await page
+    .getByRole('checkbox', { name: 'I have checked that no patient identifiers are visible' })
+    .check()
+  const downloadPromise = page.waitForEvent('download')
+  await share.click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/^report-redacted-[a-z0-9]{6}-p1\.png$/)
+  expect(download.suggestedFilename()).not.toContain('sheet')
+
+  const dir = mkdtempSync(join(tmpdir(), 'safeshare-export-'))
+  const saved = join(dir, 'out.png')
+  await download.saveAs(saved)
+  const bytes = readFileSync(saved)
+  expect(bytes.subarray(0, 4).toString('ascii')).not.toBe('%PDF')
+  expect(bytes.includes(Buffer.from('Exif'))).toBe(false)
+  expect(bytes.includes(Buffer.from('eXIf'))).toBe(false)
+  expect(bytes.includes(Buffer.from([0xff, 0xe1]))).toBe(false)
+
+  const image = decodePng(bytes)
+  expect(image.width).toBe(120)
+  expect(image.height).toBeGreaterThan(80)
+  expect(image.pixel(60, 40)).toEqual({ r: 0, g: 0, b: 0, a: 255 })
+  expect(image.pixel(1, 1)).toEqual({ r: 210, g: 214, b: 216, a: 255 })
+
+  await page.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('img', { name: 'Page 1' })).toHaveCount(0)
   expect(logs.join('\n')).not.toContain('sheet.png')
   expect(page.url()).not.toContain('sheet')
 })
