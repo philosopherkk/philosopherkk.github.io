@@ -43,9 +43,9 @@ export default defineConfig({
       },
       workbox: {
         // App shell, workers, and language data only. No runtime cache of user images or text.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,gz,mjs,webmanifest,txt}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,gz,mjs,wasm,tflite,webmanifest,txt}'],
         globIgnores: ['**/*.map'],
-        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
         runtimeCaching: [],
       },
       devOptions: {

@@ -1,6 +1,10 @@
 import { expect, test } from 'vitest'
 import { OCR_FAILED, ocrProgressLabel } from './progress.ts'
 
+test('finding identifiers is its own step after the text has been read', () => {
+  expect(ocrProgressLabel('finding', 0, 2)).toBe('Finding identifiers.')
+})
+
 test('progress names loading and then reading, one page at a time', () => {
   expect(ocrProgressLabel('loading', 0, 3)).toBe('Loading the reader.')
   expect(ocrProgressLabel('reading', 0, 1)).toBe('Reading text.')

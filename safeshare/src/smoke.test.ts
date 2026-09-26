@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
@@ -13,6 +14,7 @@ const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SPEC_CSP =
   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 const FAST_RAW_BYTES = 4113088
+const FACE_SHA256 = 'b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f'
 
 function walk(dir: string): string[] {
   const files: string[] = []
@@ -108,6 +110,12 @@ describe('vendor copy', () => {
     expect(names).toContain('tesseract/core/tesseract-core.wasm.js')
     expect(names).toContain('tesseract/lang/eng.traineddata.gz')
     expect(names).toContain('pdfjs/pdf.worker.min.mjs')
+    expect(names).toContain('zxing/zxing_reader.wasm')
+    expect(names).toContain('mediapipe/vision_wasm_internal.js')
+    expect(names).toContain('mediapipe/vision_wasm_internal.wasm')
+    expect(names).toContain('mediapipe/vision_wasm_nosimd_internal.js')
+    expect(names).toContain('mediapipe/vision_wasm_nosimd_internal.wasm')
+    expect(names).toContain('mediapipe/blaze_face_short_range.tflite')
 
     const eng = gunzipSync(readFileSync(join(vendor, 'tesseract', 'lang', 'eng.traineddata.gz')))
     expect(eng.length).toBe(FAST_RAW_BYTES)
@@ -116,5 +124,8 @@ describe('vendor copy', () => {
       expect(name.toLowerCase()).not.toMatch(/msa|chi_tra|chi_sim|best_int|mykad/)
     }
     expect(statSync(join(vendor, 'pdfjs', 'pdf.worker.min.mjs')).size).toBeGreaterThan(10000)
+    expect(statSync(join(vendor, 'zxing', 'zxing_reader.wasm')).size).toBeGreaterThan(100000)
+    const face = readFileSync(join(vendor, 'mediapipe', 'blaze_face_short_range.tflite'))
+    expect(createHash('sha256').update(face).digest('hex')).toBe(FACE_SHA256)
   })
 })

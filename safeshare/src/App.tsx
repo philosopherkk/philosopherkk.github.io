@@ -1,13 +1,16 @@
 import { useRef, useState } from 'react'
+import { detectDocument } from './detect/run.ts'
+import type { PageDetection } from './detect/types.ts'
 import { releaseDocument } from './load/release.ts'
 import type { LoadedDocument } from './load/types.ts'
-import { OCR_FAILED } from './ocr/progress.ts'
+import { OCR_FAILED, ocrProgressLabel } from './ocr/progress.ts'
 import { recognizeDocument } from './ocr/recognize.ts'
 import type { PageOcr } from './ocr/types.ts'
 import { HomeScreen } from './screens/HomeScreen.tsx'
 import { PrivacyScreen } from './screens/PrivacyScreen.tsx'
 import { ProcessingScreen } from './screens/ProcessingScreen.tsx'
 import { ReviewScreen } from './screens/ReviewScreen.tsx'
+import { loadSettings } from './settings.ts'
 
 type Screen = 'home' | 'processing' | 'review' | 'privacy'
 
@@ -25,6 +28,7 @@ export default function App() {
   const [ocrError, setOcrError] = useState<string | null>(null)
   const run = useRef(0)
   const active = useRef<LoadedDocument | null>(null)
+  const detectionsRef = useRef<PageDetection[] | null>(null)
 
   function handleLoaded(next: LoadedDocument) {
     const token = run.current + 1
@@ -34,15 +38,28 @@ export default function App() {
     setLoaded(next)
     setOcr(null)
     setOcrError(null)
+    detectionsRef.current = null
     setScreen('processing')
     void recognizeDocument(next, (label) => {
       if (run.current === token) setProgress(label)
-    }).then((result) => {
+    }).then(async (result) => {
+      if (run.current !== token) {
+        releaseDocument(next)
+        return
+      }
+      setProgress(ocrProgressLabel('finding', 0, result.pages.length))
+      let detected: PageDetection[] | null
+      try {
+        detected = await detectDocument(next, result.pages, loadSettings())
+      } catch {
+        detected = null
+      }
       if (run.current !== token) {
         releaseDocument(next)
         return
       }
       if (previous && previous !== next) releaseDocument(previous)
+      detectionsRef.current = detected
       setOcr(result.pages)
       setOcrError(result.failed ? OCR_FAILED : null)
       setProgress(null)

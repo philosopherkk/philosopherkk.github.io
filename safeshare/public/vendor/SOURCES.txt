@@ -3,4 +3,7 @@ tesseract.js-core@5.1.1 tesseract-core.wasm.js, tesseract-core-simd.wasm.js, tes
 eng tessdata_fast uncompressed 4113088 bytes
 eng source: traineddata/eng.tessdata_fast.traineddata.gz (npm package has no 4.0.0_fast)
 pdfjs-dist@6.3.289 build/pdf.worker.min.mjs
+zxing-wasm@3.1.4 dist/reader/zxing_reader.wasm
+@mediapipe/tasks-vision@1.0.1 wasm vision_wasm_internal.js, vision_wasm_internal.wasm, vision_wasm_nosimd_internal.js, vision_wasm_nosimd_internal.wasm
+face model models/blaze_face_short_range.tflite sha256 b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f (229746 bytes, not shipped inside the npm package)
 Languages copied: eng only.

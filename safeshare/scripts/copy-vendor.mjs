@@ -8,6 +8,7 @@
  * The fast gzip is committed at traineddata/eng.tessdata_fast.traineddata.gz
  * (naptha/tessdata 4.0.0_fast). If a future npm package ships a *fast* path, use that.
  */
+import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import {
   cpSync,
@@ -27,6 +28,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const vendorRoot = join(root, 'public', 'vendor')
 
 const FAST_RAW_BYTES = 4113088
+const FACE_BYTES = 229746
+const FACE_SHA256 = 'b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f'
+const MEDIAPIPE_FILES = [
+  'vision_wasm_internal.js',
+  'vision_wasm_internal.wasm',
+  'vision_wasm_nosimd_internal.js',
+  'vision_wasm_nosimd_internal.wasm',
+]
 const CORE_FILES = [
   'tesseract-core.wasm.js',
   'tesseract-core-simd.wasm.js',
@@ -36,6 +45,12 @@ const CORE_FILES = [
 
 function packageDir(name) {
   return dirname(require.resolve(`${name}/package.json`))
+}
+
+function moduleDir(name) {
+  const dir = join(root, 'node_modules', ...name.split('/'))
+  if (!existsSync(join(dir, 'package.json'))) throw new Error(`missing ${name}`)
+  return dir
 }
 
 function readPackage(dir) {
@@ -103,6 +118,30 @@ if (!existsSync(pdfWorker)) {
 }
 cpSync(pdfWorker, join(vendorRoot, 'pdfjs', 'pdf.worker.min.mjs'))
 
+const zxingDir = moduleDir('zxing-wasm')
+const zxingWasm = join(zxingDir, 'dist', 'reader', 'zxing_reader.wasm')
+if (!existsSync(zxingWasm)) throw new Error('zxing-wasm reader wasm is missing')
+mkdirSync(join(vendorRoot, 'zxing'), { recursive: true })
+cpSync(zxingWasm, join(vendorRoot, 'zxing', 'zxing_reader.wasm'))
+
+const visionDir = moduleDir('@mediapipe/tasks-vision')
+mkdirSync(join(vendorRoot, 'mediapipe'), { recursive: true })
+for (const name of MEDIAPIPE_FILES) {
+  const src = join(visionDir, 'wasm', name)
+  if (!existsSync(src)) throw new Error(`@mediapipe/tasks-vision is missing ${name}`)
+  cpSync(src, join(vendorRoot, 'mediapipe', name))
+}
+
+const faceSrc = join(root, 'models', 'blaze_face_short_range.tflite')
+const faceRaw = existsSync(faceSrc) ? readFileSync(faceSrc) : null
+const faceHash = faceRaw ? createHash('sha256').update(faceRaw).digest('hex') : ''
+if (!faceRaw || faceRaw.length !== FACE_BYTES || faceHash !== FACE_SHA256) {
+  throw new Error('Refusing face model. Expected the committed blaze_face_short_range.tflite.')
+}
+cpSync(faceSrc, join(vendorRoot, 'mediapipe', 'blaze_face_short_range.tflite'))
+
+const zxingPkg = readPackage(zxingDir)
+const visionPkg = readPackage(visionDir)
 const tessPkg = readPackage(tessDir)
 const corePkg = readPackage(coreDir)
 const pdfPkg = readPackage(pdfDir)
@@ -117,6 +156,9 @@ const sources = [
   `eng tessdata_fast uncompressed ${FAST_RAW_BYTES} bytes`,
   `eng source: ${engLabel}`,
   `pdfjs-dist@${pdfPkg.version} build/pdf.worker.min.mjs`,
+  `zxing-wasm@${zxingPkg.version} dist/reader/zxing_reader.wasm`,
+  `@mediapipe/tasks-vision@${visionPkg.version} wasm ${MEDIAPIPE_FILES.join(', ')}`,
+  `face model models/blaze_face_short_range.tflite sha256 ${FACE_SHA256} (${FACE_BYTES} bytes, not shipped inside the npm package)`,
   'Languages copied: eng only.',
   '',
 ].join('\n')
