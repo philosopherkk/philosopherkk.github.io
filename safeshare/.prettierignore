@@ -1,0 +1,9 @@
+node_modules
+dist
+public/vendor
+traineddata
+playwright-report
+test-results
+coverage
+package-lock.json
+*.png

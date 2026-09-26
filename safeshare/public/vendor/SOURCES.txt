@@ -1,0 +1,6 @@
+tesseract.js@5.1.1 dist/worker.min.js
+tesseract.js-core@5.1.1 tesseract-core.wasm.js, tesseract-core-simd.wasm.js, tesseract-core-lstm.wasm.js, tesseract-core-simd-lstm.wasm.js
+eng tessdata_fast uncompressed 4113088 bytes
+eng source: traineddata/eng.tessdata_fast.traineddata.gz (npm package has no 4.0.0_fast)
+pdfjs-dist@6.3.289 build/pdf.worker.min.mjs
+Languages copied: eng only.

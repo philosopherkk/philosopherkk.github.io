@@ -1,0 +1,5 @@
+# SPEC §9. Used when this folder is the site root (Netlify / Cloudflare Pages).
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(self)

@@ -1,0 +1,4 @@
+*.gz binary
+*.png binary
+*.wasm binary
+public/vendor/**/*.wasm.js binary
