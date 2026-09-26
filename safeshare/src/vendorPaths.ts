@@ -25,3 +25,6 @@ export const tesseractWorkerOptions = {
   cacheMethod: 'none',
   gzip: true,
 } as const
+
+/** LSTM models loaded together. Both files are under langPath. */
+export const OCR_LANGUAGES = 'chi_tra+eng'

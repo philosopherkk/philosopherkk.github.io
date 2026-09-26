@@ -4,7 +4,7 @@ import { prepareOcrPixels } from './preprocess.ts'
 import { ocrProgressLabel, type OcrPhase } from './progress.ts'
 import type { OcrRun, PageOcr } from './types.ts'
 import type { LoadedDocument, LoadedPage } from '../load/types.ts'
-import { tesseractWorkerOptions } from '../vendorPaths.ts'
+import { OCR_LANGUAGES, tesseractWorkerOptions } from '../vendorPaths.ts'
 
 type TesseractModule = typeof import('tesseract.js')
 type OcrWorker = Awaited<ReturnType<TesseractModule['createWorker']>>
@@ -67,7 +67,7 @@ async function startWorker(): Promise<OcrWorker> {
     errorHandler: () => {},
     logging: false,
   }
-  const worker = await tesseract.createWorker('eng', tesseract.OEM.LSTM_ONLY, options)
+  const worker = await tesseract.createWorker(OCR_LANGUAGES, tesseract.OEM.LSTM_ONLY, options)
   await worker.setParameters({
     user_defined_dpi: '300',
     tessedit_pageseg_mode: tesseract.PSM.AUTO,

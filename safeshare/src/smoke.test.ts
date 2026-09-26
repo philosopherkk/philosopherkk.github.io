@@ -23,12 +23,14 @@ import {
   saveSettings,
   SETTINGS_STORAGE_KEY,
 } from './settings.ts'
-import { vendorPaths } from './vendorPaths.ts'
+import { OCR_LANGUAGES, tesseractWorkerOptions, vendorPaths } from './vendorPaths.ts'
 
 const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SPEC_CSP =
   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 const FAST_RAW_BYTES = 4113088
+const CHI_TRA_FAST_RAW_BYTES = 2366642
+const CHI_TRA_FAST_SHA256 = '529c5b5797d64b126065cd55f2bb4c7fd7b15790798091b1ff259941a829330b'
 const FACE_SHA256 = 'b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f'
 
 function walk(dir: string): string[] {
@@ -80,6 +82,10 @@ test('vendor paths stay on our origin', () => {
     expect(path.startsWith('/safeshare/vendor/')).toBe(true)
     expect(path.includes('://')).toBe(false)
   }
+  expect(tesseractWorkerOptions.langPath).toBe('/safeshare/vendor/tesseract/lang')
+  expect(tesseractWorkerOptions.cacheMethod).toBe('none')
+  expect(OCR_LANGUAGES).toBe('chi_tra+eng')
+  expect(OCR_LANGUAGES.split('+').sort()).toEqual(['chi_tra', 'eng'])
 })
 
 test('settings storage keeps settings only', () => {
@@ -153,6 +159,7 @@ describe('vendor copy', () => {
     expect(names).toContain('tesseract/core/tesseract-core-simd-lstm.wasm.js')
     expect(names).toContain('tesseract/core/tesseract-core.wasm.js')
     expect(names).toContain('tesseract/lang/eng.traineddata.gz')
+    expect(names).toContain('tesseract/lang/chi_tra.traineddata.gz')
     expect(names).toContain('pdfjs/pdf.worker.min.mjs')
     expect(names).toContain('zxing/zxing_reader.wasm')
     expect(names).toContain('mediapipe/vision_wasm_internal.js')
@@ -163,9 +170,14 @@ describe('vendor copy', () => {
 
     const eng = gunzipSync(readFileSync(join(vendor, 'tesseract', 'lang', 'eng.traineddata.gz')))
     expect(eng.length).toBe(FAST_RAW_BYTES)
+    const chi = gunzipSync(
+      readFileSync(join(vendor, 'tesseract', 'lang', 'chi_tra.traineddata.gz')),
+    )
+    expect(chi.length).toBe(CHI_TRA_FAST_RAW_BYTES)
+    expect(createHash('sha256').update(chi).digest('hex')).toBe(CHI_TRA_FAST_SHA256)
 
     for (const name of names) {
-      expect(name.toLowerCase()).not.toMatch(/msa|chi_tra|chi_sim|best_int|mykad/)
+      expect(name.toLowerCase()).not.toMatch(/msa|chi_sim|best_int|mykad/)
     }
     expect(statSync(join(vendor, 'pdfjs', 'pdf.worker.min.mjs')).size).toBeGreaterThan(10000)
     expect(statSync(join(vendor, 'zxing', 'zxing_reader.wasm')).size).toBeGreaterThan(100000)

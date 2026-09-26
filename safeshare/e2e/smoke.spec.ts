@@ -284,6 +284,9 @@ test('production ocr stays on this origin and does not log text', async ({ page 
   expect(
     urls.some((url) => url.includes('/safeshare/vendor/tesseract/lang/eng.traineddata.gz')),
   ).toBe(true)
+  expect(
+    urls.some((url) => url.includes('/safeshare/vendor/tesseract/lang/chi_tra.traineddata.gz')),
+  ).toBe(true)
   expect(urls.some((url) => url.includes('/safeshare/vendor/tesseract/core/'))).toBe(true)
   expect(assetScripts.size).toBeGreaterThan(0)
   for (const src of assetScripts) {
@@ -591,6 +594,7 @@ const PRECACHE_PARTS = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'eng.traineddata.gz',
+  'chi_tra.traineddata.gz',
   'tesseract/worker.min.js',
   'tesseract/core/tesseract-core-simd-lstm.wasm.js',
   'pdf.worker.min.mjs',
@@ -731,6 +735,8 @@ test('full flow records only same-origin loads, then works offline with a black 
   const later = hits.slice(loaded)
   const network = later.filter((hit) => !hit.fromSw)
   expect(network, JSON.stringify(network)).toEqual([])
+  const chiLater = later.filter((hit) => hit.url.includes('chi_tra.traineddata.gz'))
+  expect(chiLater.every((hit) => hit.fromSw)).toBe(true)
   expect(hits.filter((hit) => hit.method !== 'GET')).toEqual([])
   expect(await page.locator('body').innerText()).not.toContain('sheet.png')
 })

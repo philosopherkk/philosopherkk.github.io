@@ -3,10 +3,13 @@
  *
  * Worker, core, and pdf.js come from node_modules.
  * eng traineddata must be tessdata_fast (uncompressed 4113088 bytes).
- * @tesseract.js-data/eng@1.0.0 does not publish that file: its 4.0.0 gzip is
+ * chi_tra traineddata must be tessdata_fast (uncompressed 2366642 bytes,
+ * sha256 529c5b5797d64b126065cd55f2bb4c7fd7b15790798091b1ff259941a829330b).
+ * @tesseract.js-data/eng@1.0.0 does not publish the fast file: its 4.0.0 gzip is
  * standard tessdata (23466654 bytes) and 4.0.0_best_int is the best integer model.
- * The fast gzip is committed at traineddata/eng.tessdata_fast.traineddata.gz
+ * The fast gzips are committed at traineddata/*.tessdata_fast.traineddata.gz
  * (naptha/tessdata 4.0.0_fast). If a future npm package ships a *fast* path, use that.
+ * best_int chi_tra is 2368636 bytes uncompressed and must be refused.
  */
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
@@ -28,6 +31,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const vendorRoot = join(root, 'public', 'vendor')
 
 const FAST_RAW_BYTES = 4113088
+const CHI_TRA_FAST_RAW_BYTES = 2366642
+const CHI_TRA_FAST_SHA256 = '529c5b5797d64b126065cd55f2bb4c7fd7b15790798091b1ff259941a829330b'
 const FACE_BYTES = 229746
 const FACE_SHA256 = 'b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f'
 const MEDIAPIPE_FILES = [
@@ -57,7 +62,16 @@ function readPackage(dir) {
   return JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
 }
 
-function findFastInPackage(dir) {
+function optionalPackageDir(name) {
+  try {
+    return dirname(require.resolve(`${name}/package.json`))
+  } catch {
+    return null
+  }
+}
+
+function findFastGzip(dir, fileName) {
+  if (!dir || !existsSync(dir)) return []
   const found = []
   const stack = [dir]
   while (stack.length > 0) {
@@ -66,12 +80,19 @@ function findFastInPackage(dir) {
       const full = join(current, entry.name)
       if (entry.isDirectory()) {
         stack.push(full)
-      } else if (entry.name === 'eng.traineddata.gz' && full.includes('fast')) {
+      } else if (entry.name === fileName && full.toLowerCase().includes('fast')) {
         found.push(full)
       }
     }
   }
   return found
+}
+
+function refuseWrongModel(sourcePath) {
+  const lower = sourcePath.toLowerCase()
+  if (/best_int|chi_sim|mykad|\/msa[./]|msa\.traineddata/.test(lower)) {
+    throw new Error(`Refusing traineddata that is not tessdata_fast eng/chi_tra: ${sourcePath}`)
+  }
 }
 
 const tessDir = packageDir('tesseract.js')
@@ -99,8 +120,9 @@ for (const name of CORE_FILES) {
 }
 
 const bundledFast = join(root, 'traineddata', 'eng.tessdata_fast.traineddata.gz')
-const fastFromPackage = findFastInPackage(engDir)
+const fastFromPackage = findFastGzip(engDir, 'eng.traineddata.gz')
 const engSrc = fastFromPackage[0] ?? bundledFast
+refuseWrongModel(engSrc)
 if (!existsSync(engSrc)) {
   throw new Error('tessdata_fast eng.traineddata.gz was not found')
 }
@@ -111,6 +133,22 @@ if (engRaw.length !== FAST_RAW_BYTES) {
   )
 }
 cpSync(engSrc, join(vendorRoot, 'tesseract', 'lang', 'eng.traineddata.gz'))
+
+const bundledChi = join(root, 'traineddata', 'chi_tra.tessdata_fast.traineddata.gz')
+const chiDir = optionalPackageDir('@tesseract.js-data/chi_tra')
+const chiSrc = findFastGzip(chiDir, 'chi_tra.traineddata.gz')[0] ?? bundledChi
+refuseWrongModel(chiSrc)
+if (!existsSync(chiSrc)) {
+  throw new Error('tessdata_fast chi_tra.traineddata.gz was not found')
+}
+const chiRaw = gunzipSync(readFileSync(chiSrc))
+const chiHash = createHash('sha256').update(chiRaw).digest('hex')
+if (chiRaw.length !== CHI_TRA_FAST_RAW_BYTES || chiHash !== CHI_TRA_FAST_SHA256) {
+  throw new Error(
+    `Refusing chi_tra traineddata (${chiRaw.length} bytes, ${chiHash}). Expected tessdata_fast (${CHI_TRA_FAST_RAW_BYTES}, ${CHI_TRA_FAST_SHA256}).`,
+  )
+}
+cpSync(chiSrc, join(vendorRoot, 'tesseract', 'lang', 'chi_tra.traineddata.gz'))
 
 const pdfWorker = join(pdfDir, 'build', 'pdf.worker.min.mjs')
 if (!existsSync(pdfWorker)) {
@@ -149,17 +187,23 @@ const engPkg = readPackage(engDir)
 const engLabel = engSrc.startsWith(engDir)
   ? `@tesseract.js-data/eng@${engPkg.version} (fast path)`
   : 'traineddata/eng.tessdata_fast.traineddata.gz (npm package has no 4.0.0_fast)'
+const chiLabel =
+  chiDir && chiSrc.startsWith(chiDir)
+    ? '@tesseract.js-data/chi_tra (fast path)'
+    : 'traineddata/chi_tra.tessdata_fast.traineddata.gz (naptha/tessdata 4.0.0_fast)'
 
 const sources = [
   `tesseract.js@${tessPkg.version} dist/worker.min.js`,
   `tesseract.js-core@${corePkg.version} ${CORE_FILES.join(', ')}`,
   `eng tessdata_fast uncompressed ${FAST_RAW_BYTES} bytes`,
   `eng source: ${engLabel}`,
+  `chi_tra tessdata_fast uncompressed ${CHI_TRA_FAST_RAW_BYTES} bytes sha256 ${CHI_TRA_FAST_SHA256}`,
+  `chi_tra source: ${chiLabel}`,
   `pdfjs-dist@${pdfPkg.version} build/pdf.worker.min.mjs`,
   `zxing-wasm@${zxingPkg.version} dist/reader/zxing_reader.wasm`,
   `@mediapipe/tasks-vision@${visionPkg.version} wasm ${MEDIAPIPE_FILES.join(', ')}`,
   `face model models/blaze_face_short_range.tflite sha256 ${FACE_SHA256} (${FACE_BYTES} bytes, not shipped inside the npm package)`,
-  'Languages copied: eng only.',
+  'Languages copied: eng and chi_tra (tessdata_fast). Malay, MyKad, and NRIC data are not copied.',
   '',
 ].join('\n')
 writeFileSync(join(vendorRoot, 'SOURCES.txt'), sources)
