@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { dragBox, isTap, pinchView } from '../review/gestures.ts'
+import { dragBox, isTap, panBy, pinchView, zoomAround } from '../review/gestures.ts'
 import { hitTest } from '../review/hitTest.ts'
 import { paintReview } from '../review/paint.ts'
 import type { Point, ReviewBox, View } from '../review/types.ts'
@@ -10,6 +10,7 @@ type ReviewStageProps = {
   label: string
   boxes: readonly ReviewBox[]
   peeking: boolean
+  expanded: boolean
   onToggle: (id: string) => void
   onDraw: (box: ReviewBox['bbox']) => void
 }
@@ -25,7 +26,15 @@ function toBitmap(clientX: number, clientY: number, canvas: HTMLCanvasElement): 
   }
 }
 
-export function ReviewStage({ bitmap, label, boxes, peeking, onToggle, onDraw }: ReviewStageProps) {
+export function ReviewStage({
+  bitmap,
+  label,
+  boxes,
+  peeking,
+  expanded,
+  onToggle,
+  onDraw,
+}: ReviewStageProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const fitRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLCanvasElement>(null)
@@ -36,6 +45,8 @@ export function ReviewStage({ bitmap, label, boxes, peeking, onToggle, onDraw }:
   const [view, setView] = useState<View>({ scale: 1, x: 0, y: 0 })
   const viewRef = useRef(view)
   const [draft, setDraft] = useState<ReviewBox['bbox'] | null>(null)
+  const [moving, setMoving] = useState(false)
+  const panLast = useRef<Point | null>(null)
 
   useEffect(() => {
     const viewport = viewportRef.current
@@ -95,9 +106,16 @@ export function ReviewStage({ bitmap, label, boxes, peeking, onToggle, onDraw }:
     if (pointers.current.size >= 2) {
       drawStart.current = null
       drawing.current = false
+      panLast.current = null
       setDraft(null)
       const pair = pinchFromPointers()
       if (pair) pinchOrigin.current = { ...viewRef.current, ...pair }
+      return
+    }
+    if (moving) {
+      panLast.current = { x: event.clientX, y: event.clientY }
+      drawStart.current = null
+      drawing.current = false
       return
     }
     const canvas = overlayRef.current
@@ -114,6 +132,17 @@ export function ReviewStage({ bitmap, label, boxes, peeking, onToggle, onDraw }:
       if (pair && pinchOrigin.current) updateView(pinchView(pinchOrigin.current, pair))
       return
     }
+    if (moving && panLast.current) {
+      updateView(
+        panBy(
+          viewRef.current,
+          event.clientX - panLast.current.x,
+          event.clientY - panLast.current.y,
+        ),
+      )
+      panLast.current = { x: event.clientX, y: event.clientY }
+      return
+    }
     const canvas = overlayRef.current
     const start = drawStart.current
     if (!canvas || !start) return
@@ -128,6 +157,7 @@ export function ReviewStage({ bitmap, label, boxes, peeking, onToggle, onDraw }:
   function finishPointer(event: ReactPointerEvent<HTMLDivElement>) {
     pointers.current.delete(event.pointerId)
     if (pointers.current.size < 2) pinchOrigin.current = null
+    if (pointers.current.size === 0) panLast.current = null
     if (pointers.current.size > 0) {
       drawStart.current = null
       drawing.current = false
@@ -152,6 +182,15 @@ export function ReviewStage({ bitmap, label, boxes, peeking, onToggle, onDraw }:
     if (id) onToggle(id)
   }
 
+  function zoomBy(factor: number) {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const host = viewport.getBoundingClientRect()
+    updateView(
+      zoomAround(viewRef.current, viewRef.current.scale * factor, host.width / 2, host.height / 2),
+    )
+  }
+
   return (
     <div
       ref={viewportRef}
@@ -170,6 +209,32 @@ export function ReviewStage({ bitmap, label, boxes, peeking, onToggle, onDraw }:
           <canvas ref={overlayRef} className="redact-layer" aria-hidden="true" />
         </div>
       </div>
+      {expanded ? (
+        <div className="stage-tools" onPointerDown={(event) => event.stopPropagation()}>
+          <button type="button" onClick={() => zoomBy(1.5)}>
+            Larger
+          </button>
+          <button type="button" onClick={() => zoomBy(1 / 1.5)}>
+            Smaller
+          </button>
+          <button type="button" onClick={() => updateView({ scale: 1, x: 0, y: 0 })}>
+            Fit
+          </button>
+          <button
+            type="button"
+            aria-pressed={moving}
+            onClick={() => {
+              setMoving((current) => !current)
+              panLast.current = null
+              drawStart.current = null
+              drawing.current = false
+              setDraft(null)
+            }}
+          >
+            Move
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

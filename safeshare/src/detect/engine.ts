@@ -75,7 +75,12 @@ function prepare(words: readonly OcrWord[]): PreparedPage {
 }
 
 function gapLimit(word: OcrWord): number {
-  return Math.max(48, word.box.height * 3)
+  // A column gap on a phone photo is often several times the text height.
+  return Math.max(48, word.box.height * 6)
+}
+
+function hasValueText(text: string): boolean {
+  return /[A-Za-z0-9\u4e00-\u9fff]/.test(text)
 }
 
 function valueWords(
@@ -96,7 +101,8 @@ function valueWords(
     collected.push(word)
     cursor = word.box.x + word.box.width
   }
-  const following = label.kind === 'address' ? 3 : collected.length === 0 ? 1 : 0
+  const meaningful = collected.filter((word) => hasValueText(word.text))
+  const following = label.kind === 'address' ? 3 : meaningful.length === 0 ? 1 : 0
   for (let offset = 1; offset <= following; offset += 1) {
     const next = lines[line.index + offset]
     if (!next) break

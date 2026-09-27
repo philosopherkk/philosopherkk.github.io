@@ -304,7 +304,44 @@ button.primary:disabled {
 .review-dock {
   flex: none;
   min-height: 0;
-  max-height: 58%;
+  max-height: 46%;
+}
+
+.review-enlarged .review-head p,
+.review-enlarged .review-tools,
+.review-enlarged .cover-note {
+  display: none;
+}
+
+.review-enlarged .review-dock {
+  max-height: none;
+}
+
+.cover-note {
+  margin: 0;
+}
+
+.stage-tools {
+  position: absolute;
+  z-index: 2;
+  left: 0.35rem;
+  right: 0.35rem;
+  bottom: 0.35rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.stage-tools button {
+  min-width: 0;
+  padding: 0.4rem 0.2rem;
+  background: #ffffff;
+}
+
+.stage-tools button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
 }
 
 .review-tools {

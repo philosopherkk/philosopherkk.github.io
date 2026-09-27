@@ -118,6 +118,32 @@ test('fuzzy english and traditional chinese labels redact the value, age and sex
   expect(covered(result.detections, find(words, 'Mira'), 'other-person')).toBe(true)
 })
 
+test('a wide column still reaches the name, a larger gap stops, and a colon alone uses the next line', () => {
+  const name = word('Name', 10, 0, 0)
+  const near = word('Chan', name.box.x + name.box.width + 80, 0, 0)
+  const reached = detectText([[name, near]], DEFAULT_SETTINGS)[0]
+  expect(covered(reached?.detections ?? [], near, 'name')).toBe(true)
+
+  const far = word('Chan', name.box.x + name.box.width + 200, 0, 0)
+  const missed = detectText([[name, far]], DEFAULT_SETTINGS)[0]
+  expect(covered(missed?.detections ?? [], far)).toBe(false)
+
+  const label = word('Name', 10, 0, 0)
+  const colon = word(':', label.box.x + label.box.width + 8, 0, 0)
+  const below = word('Chan', 10, 40, 1)
+  const wrapped = detectText([[label, colon, below]], DEFAULT_SETTINGS)[0]
+  expect(covered(wrapped?.detections ?? [], below, 'name')).toBe(true)
+})
+
+test('a labelled day/month/year with a two-digit year is covered, and an unlabelled date stays', () => {
+  const { words, result } = run([
+    ['DOB', '1/2/80'],
+    ['Report', '15-03-1980'],
+  ])
+  expect(covered(result.detections, find(words, '1/2/80'), 'date')).toBe(true)
+  expect(covered(result.detections, find(words, '15-03-1980'))).toBe(false)
+})
+
 test('a four-letter label does not fuzzy-match, and address needs a district plus a street token', () => {
   const { words, result } = run([
     ['Nane', 'Chan'],

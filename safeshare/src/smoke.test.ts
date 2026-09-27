@@ -13,6 +13,7 @@ import {
   DISCLAIMER_DETECTION,
   ONBOARDING_STEPS,
   PRIVACY_ON_DEVICE,
+  REDACTION_COVER,
   PRIVACY_VERIFY,
 } from './copy.ts'
 import { CONTENT_SECURITY_POLICY, PERMISSIONS_POLICY, REFERRER_POLICY } from './securityHeaders.ts'
@@ -60,6 +61,8 @@ test('core promise and airplane-mode check are stated', () => {
   expect(ONBOARDING_STEPS[2]?.body).toContain(DISCLAIMER_DETECTION)
   expect(ONBOARDING_STEPS[2]?.body).toContain(DISCLAIMER_CHECK)
   expect(ONBOARDING_STEPS[2]?.body).toContain(DISCLAIMER_ADVICE)
+  expect(REDACTION_COVER).toContain('cannot be uncovered')
+  expect(REDACTION_COVER.toLowerCase()).toContain('blur')
 })
 
 test('CSP and privacy headers match SPEC §9', () => {

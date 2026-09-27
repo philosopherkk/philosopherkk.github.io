@@ -13,6 +13,9 @@ export const DISCLAIMER_ADVICE = 'This app does not give medical advice.'
 export const PRIVACY_ON_DEVICE =
   'The photo is read on this phone. Finding identifiers and covering them in black also happen on this phone. Nothing is uploaded.'
 
+export const REDACTION_COVER =
+  'The black is painted into the photo you share. The letters underneath are replaced, so they cannot be uncovered. A blur can sometimes be undone, so SafeShare does not use one.'
+
 export const PRIVACY_NOT_SAVED =
   'There is no account. The report and the black boxes stay in memory only and are not sent anywhere.'
 

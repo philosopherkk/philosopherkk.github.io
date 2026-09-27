@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { dragBox, isTap, pinchView } from './gestures.ts'
+import { dragBox, isTap, MAX_SCALE, panBy, pinchView, zoomAround } from './gestures.ts'
 
 test('a short movement is a tap and a longer drag becomes a box', () => {
   expect(isTap({ x: 0, y: 0 }, { x: 4, y: 3 })).toBe(true)
@@ -29,4 +29,14 @@ test('pinch scales around the midpoint and follows a two-finger pan', () => {
   expect(panned.scale).toBe(2)
   expect(panned.x).toBe(-30)
   expect(panned.y).toBe(-60)
+})
+
+test('zoom stays between the page fit and six times, around the tapped point', () => {
+  const larger = zoomAround({ scale: 1, x: 0, y: 0 }, 2, 40, 20)
+  expect(larger).toEqual({ scale: 2, x: -40, y: -20 })
+  const capped = zoomAround({ scale: 4, x: 0, y: 0 }, 20, 0, 0)
+  expect(capped.scale).toBe(MAX_SCALE)
+  const fitted = zoomAround({ scale: 2, x: -10, y: -10 }, 0.2, 0, 0)
+  expect(fitted.scale).toBe(1)
+  expect(panBy({ scale: 2, x: 1, y: 2 }, 3, -4)).toEqual({ scale: 2, x: 4, y: -2 })
 })

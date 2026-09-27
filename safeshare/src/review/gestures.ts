@@ -22,9 +22,28 @@ export function dragBox(start: Point, end: Point, min = 8): Box | null {
   }
 }
 
+export const MIN_SCALE = 1
+export const MAX_SCALE = 6
+
 export function clampScale(scale: number): number {
   if (!Number.isFinite(scale)) return 1
-  return Math.min(4, Math.max(1, scale))
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale))
+}
+
+/** Grow or shrink around a point in the viewport, so that point stays under the finger. */
+export function zoomAround(view: View, nextScale: number, originX: number, originY: number): View {
+  const scale = clampScale(nextScale)
+  if (view.scale === 0) return { scale, x: view.x, y: view.y }
+  const ratio = scale / view.scale
+  return {
+    scale,
+    x: originX - (originX - view.x) * ratio,
+    y: originY - (originY - view.y) * ratio,
+  }
+}
+
+export function panBy(view: View, dx: number, dy: number): View {
+  return { scale: view.scale, x: view.x + dx, y: view.y + dy }
 }
 
 /**

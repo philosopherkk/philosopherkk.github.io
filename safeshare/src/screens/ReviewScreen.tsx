@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { padBox } from '../detect/merge.ts'
 import type { Detection, PageDetection, ZoneLayout } from '../detect/types.ts'
+import { REDACTION_COVER } from '../copy.ts'
 import { exportTarget } from '../export/target.ts'
 import type { ShareRequest } from '../export/render.ts'
 import type { ExportFormat } from '../export/names.ts'
@@ -15,6 +17,7 @@ import {
 } from '../review/modes.ts'
 import { toggleById } from '../review/hitTest.ts'
 import type { ReviewBox, ReviewMode } from '../review/types.ts'
+import type { Box } from '../ocr/boxes.ts'
 import { ReviewStage } from './ReviewStage.tsx'
 
 export type SharePhase = 'idle' | 'busy' | 'downloaded' | 'failed'
@@ -54,6 +57,14 @@ type ReviewScreenProps = {
   onDone: () => void
 }
 
+function clampBox(box: Box, width: number, height: number): Box {
+  const x = Math.max(0, Math.min(box.x, width))
+  const y = Math.max(0, Math.min(box.y, height))
+  const right = Math.max(x, Math.min(width, box.x + box.width))
+  const bottom = Math.max(y, Math.min(height, box.y + box.height))
+  return { x, y, width: right - x, height: bottom - y }
+}
+
 function emptyLayout(width: number, height: number): ZoneLayout {
   return {
     pageWidth: Math.max(1, width),
@@ -85,6 +96,7 @@ export function ReviewScreen({
   const [pageIndex, setPageIndex] = useState(0)
   const [confirmed, setConfirmed] = useState(false)
   const [peeking, setPeeking] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [source, setSource] = useState({ document, found, initialMode })
   const drawnIds = useRef(0)
   if (source.document !== document || source.initialMode !== initialMode) {
@@ -93,6 +105,7 @@ export function ReviewScreen({
     setConfirmed(false)
     setPageIndex(0)
     setPeeking(false)
+    setExpanded(false)
     setEdits(
       document
         ? document.pages.map((page, index) => ({
@@ -176,9 +189,10 @@ export function ReviewScreen({
 
   function addBox(bbox: ReviewBox['bbox']) {
     drawnIds.current += 1
+    const pageBox = page ? clampBox(padBox(bbox), page.display.width, page.display.height) : bbox
     const box: ReviewBox = {
       id: `drawn-${safeIndex}-${drawnIds.current}`,
-      bbox,
+      bbox: pageBox,
       category: 'drawn',
       enabled: true,
       origin: 'drawn',
@@ -226,7 +240,10 @@ export function ReviewScreen({
   }
 
   return (
-    <section className="review" aria-labelledby="review-title">
+    <section
+      className={expanded ? 'review review-enlarged' : 'review'}
+      aria-labelledby="review-title"
+    >
       <div className="review-head">
         <h2 id="review-title">Review</h2>
         <p>{count === 1 ? '1 page' : `${count} pages`} loaded on this phone. Nothing is saved.</p>
@@ -244,6 +261,7 @@ export function ReviewScreen({
             label={`Page ${page.index + 1}`}
             boxes={visible}
             peeking={peeking}
+            expanded={expanded}
             onToggle={toggle}
             onDraw={addBox}
           />
@@ -331,6 +349,14 @@ export function ReviewScreen({
             </p>
           ) : null}
         </div>
+        <p className="cover-note">{REDACTION_COVER}</p>
+        <button
+          type="button"
+          aria-pressed={expanded}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          Enlarge
+        </button>
         <div className="review-confirm">
           <label className="check">
             <input
