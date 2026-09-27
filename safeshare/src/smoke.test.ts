@@ -25,6 +25,7 @@ import {
   SETTINGS_STORAGE_KEY,
 } from './settings.ts'
 import { OCR_LANGUAGES, tesseractWorkerOptions, vendorPaths } from './vendorPaths.ts'
+import { APP_UPDATED, APP_VERSION, HISTORY_URL } from './version.ts'
 
 const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SPEC_CSP =
@@ -63,6 +64,18 @@ test('core promise and airplane-mode check are stated', () => {
   expect(ONBOARDING_STEPS[2]?.body).toContain(DISCLAIMER_ADVICE)
   expect(REDACTION_COVER).toContain('cannot be uncovered')
   expect(REDACTION_COVER.toLowerCase()).toContain('blur')
+})
+
+test('the marked version matches VERSION.txt and points at the GitHub history', () => {
+  const stamp = readFileSync(join(appRoot, 'VERSION.txt'), 'utf8')
+  const history = readFileSync(join(appRoot, 'CHANGELOG.md'), 'utf8')
+  expect(stamp).toContain(`Version: ${APP_VERSION}`)
+  expect(stamp).toContain(APP_UPDATED)
+  expect(history).toContain(`## [${APP_VERSION}]`)
+  expect(history).toContain(APP_UPDATED)
+  expect(HISTORY_URL).toBe(
+    'https://github.com/philosopherkk/philosopherkk.github.io/blob/cursor/safeshare-md-scaffold-b4f9/safeshare/CHANGELOG.md',
+  )
 })
 
 test('CSP and privacy headers match SPEC §9', () => {

@@ -1,4 +1,5 @@
 import type { Settings } from '../settings.ts'
+import { VersionStamp } from './VersionStamp.tsx'
 
 type FlagKey = {
   [K in keyof Settings]: Settings[K] extends boolean ? K : never
@@ -81,6 +82,7 @@ export function SettingsScreen({ settings, onChange }: SettingsScreenProps) {
           PNG
         </button>
       </div>
+      <VersionStamp />
     </section>
   )
 }

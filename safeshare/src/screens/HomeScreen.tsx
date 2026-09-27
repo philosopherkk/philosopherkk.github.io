@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { DISCLAIMER_ADVICE, DISCLAIMER_CHECK, DISCLAIMER_DETECTION } from '../copy.ts'
+import { VersionStamp } from './VersionStamp.tsx'
 import { LoadFailure, loadErrorMessage } from '../load/classify.ts'
 import { loadSelectedFile } from '../load/loadDocument.ts'
 import type { LoadedDocument } from '../load/types.ts'
@@ -100,6 +101,7 @@ export function HomeScreen({ onLoaded, externalError = null }: HomeScreenProps) 
       <p className="disclaimer">
         {DISCLAIMER_DETECTION} {DISCLAIMER_CHECK} {DISCLAIMER_ADVICE}
       </p>
+      <VersionStamp />
     </section>
   )
 }

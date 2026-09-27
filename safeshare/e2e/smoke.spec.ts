@@ -835,6 +835,13 @@ test('settings are labelled, meet contrast, and stay on this phone', async ({ pa
   await page.goto('/safeshare/')
   await page.getByRole('button', { name: 'Settings' }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Settings' })).toBeVisible()
+  await expect(page.getByText('SafeShare MD 0.2.0')).toBeVisible()
+  const history = page.getByRole('link', { name: 'History' })
+  await expect(history).toHaveAttribute(
+    'href',
+    'https://github.com/philosopherkk/philosopherkk.github.io/blob/cursor/safeshare-md-scaffold-b4f9/safeshare/CHANGELOG.md',
+  )
+  await expectTarget(history)
   await expect(page.getByRole('group', { name: 'Default mode' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Output format' })).toBeVisible()
 
