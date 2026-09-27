@@ -1,0 +1,42 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/safeshare/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/safeshare",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/safeshare/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/safeshare/:path*",
+      "destination": "/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self)"
+        }
+      ]
+    }
+  ]
+}

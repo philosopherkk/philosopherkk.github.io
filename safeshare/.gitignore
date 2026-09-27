@@ -1,0 +1,11 @@
+node_modules
+node_modules/
+dist/
+.vite/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+coverage/
+dev/synthetic/out/
+*.tsbuildinfo
