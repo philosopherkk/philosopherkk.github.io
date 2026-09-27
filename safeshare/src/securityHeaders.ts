@@ -1,4 +1,4 @@
-/** SPEC §9. Keep this string identical in index.html and public/_headers. */
+/** SPEC §9. Keep this string identical in index.html, public/_headers, and vercel.json. */
 export const CONTENT_SECURITY_POLICY =
   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 

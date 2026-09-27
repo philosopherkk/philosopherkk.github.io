@@ -69,12 +69,16 @@ test('CSP and privacy headers match SPEC §9', () => {
 
   const html = readFileSync(join(appRoot, 'index.html'), 'utf8')
   const headers = readFileSync(join(appRoot, 'public', '_headers'), 'utf8')
+  const vercel = readFileSync(join(appRoot, 'vercel.json'), 'utf8')
   expect(html).toContain(SPEC_CSP)
   expect(html).toContain('content="no-referrer"')
   expect(html).toContain('content="camera=(self)"')
   expect(headers).toContain(`Content-Security-Policy: ${SPEC_CSP}`)
   expect(headers).toContain('Referrer-Policy: no-referrer')
   expect(headers).toContain('Permissions-Policy: camera=(self)')
+  expect(vercel).toContain(SPEC_CSP)
+  expect(vercel).toContain('"no-referrer"')
+  expect(vercel).toContain('"camera=(self)"')
 })
 
 test('vendor paths stay on our origin', () => {
