@@ -1,5 +1,5 @@
 Outflow
-Version: 2.1.9
-Updated: 2026-09-20 (HKT)
+Version: 2.1.10
+Updated: 2026-09-30 (HKT)
 Pages: /outflow/
-Adds: restore JPY as a usable currency (CODES, FX fallback/live parse, currency select); publish bumps VERSION.txt + CHANGELOG then sync github.io /outflow/ via PR.
+Adds: group the home list by date only; Delete stays on the edit sheet. Publish bumps VERSION.txt + CHANGELOG then sync github.io /outflow/ via PR.
