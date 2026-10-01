@@ -6,6 +6,12 @@ Git-sourced history for this app. Entries follow commits on this private repo (`
 
 Live mirror: https://philosopherkk.github.io/outflow/ (publish copy only).
 
+## [2.1.10] — 2026-09-30
+
+- **Commit:** `cad1e8d` (`cad1e8d4d5a7b973a7731abb6f926a2718b9f93d`)
+- **Summary:** Group home list by date; delete only on the edit sheet
+- **Notes:** Home rows group by date only. List rows keep Edit. Delete is on the edit sheet (`cccaf3a` / `cccaf3a96352c2e3e13ba15f1fc6294f55ab1e6e`). Version stamps: `VERSION.txt`, `app.js`, `sw.js` cache, `manifest.webmanifest`, `index.html`.
+
 ## [2.1.9] — 2026-09-20
 
 - **Commit:** `88588c8` (`88588c883fdcb23cf8412c2ee0d5c121a0f285f1`)
