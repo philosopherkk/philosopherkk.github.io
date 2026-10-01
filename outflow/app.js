@@ -1,6 +1,7 @@
 (() => {
-  const VERSION = "2.1.10";
-  const UPDATED = "2026-09-30";
+  const APP_NAME = "Smart money 使錢靈";
+  const VERSION = "2.1.11";
+  const UPDATED = "2026-10-01";
   const HISTORY_URL = "https://github.com/philosopherkk/outflow-app/blob/main/CHANGELOG.md";
   const LEDGER_KEY = "outflow.v4.ledger";
   const OLD_VAULT_KEY = "outflow.v3.vault";
@@ -102,8 +103,8 @@
     const cred = await navigator.credentials.create({
       publicKey: {
         challenge: randomBytes(32),
-        rp: { name: "Outflow" },
-        user: { id: userId, name: "outflow-local", displayName: "Outflow" },
+        rp: { name: APP_NAME },
+        user: { id: userId, name: "outflow-local", displayName: APP_NAME },
         pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
         authenticatorSelection: {
           authenticatorAttachment: "platform",
@@ -140,7 +141,7 @@
   function showGate(mode) {
     document.body.classList.remove("open");
     $("gateErr").textContent = "";
-    $("verLine").textContent = "Outflow " + VERSION + " · " + UPDATED;
+    $("verLine").textContent = APP_NAME + " " + VERSION + " · " + UPDATED;
     stampAbout();
     const label = bioLabel();
     if (mode === "setup") {
@@ -401,7 +402,7 @@
     } catch (err) { toast(bioError(err)); }
   }
   async function boot() {
-    $("verLine").textContent = "Outflow " + VERSION + " · " + UPDATED;
+    $("verLine").textContent = APP_NAME + " " + VERSION + " · " + UPDATED;
     stampAbout();
     bioOk = await bioAvailable();
     const cfg = loadBio();
@@ -494,14 +495,14 @@
   }
   function stampAbout() {
     const about = $("aboutVer");
-    if (about) about.textContent = "Outflow " + VERSION + " · updated " + UPDATED;
+    if (about) about.textContent = APP_NAME + " " + VERSION + " · updated " + UPDATED;
     ["gateHistory", "homeHistory", "setHistory"].forEach((id) => {
       const a = $(id);
       if (a) a.href = HISTORY_URL;
     });
   }
   function render() {
-    $("verFoot").textContent = "Outflow " + VERSION + " · updated " + UPDATED;
+    $("verFoot").textContent = APP_NAME + " " + VERSION + " · updated " + UPDATED;
     stampAbout();
     const scoped = db.entries.filter(inRange);
     const net = netOf(scoped);

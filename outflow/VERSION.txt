@@ -1,5 +1,5 @@
-Outflow
-Version: 2.1.10
-Updated: 2026-09-30 (HKT)
+Smart money 使錢靈
+Version: 2.1.11
+Updated: 2026-10-01 (HKT)
 Pages: /outflow/
-Adds: group the home list by date only; Delete stays on the edit sheet. Publish bumps VERSION.txt + CHANGELOG then sync github.io /outflow/ via PR.
+Adds: rename app to Smart money 使錢靈 (UI, PWA, Face ID). Publish bumps VERSION.txt + CHANGELOG then sync github.io /outflow/ via PR.

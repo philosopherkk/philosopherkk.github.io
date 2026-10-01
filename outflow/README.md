@@ -1,6 +1,6 @@
-# Outflow
+# Smart money 使錢靈
 
-Local-first income / outflow ledger. **Version 2.1.10 · 2026-09-30.**
+Local-first income / outflow ledger (repo: `outflow-app`). **Version 2.1.11 · 2026-10-01.**
 
 **Live (public):** https://philosopherkk.github.io/outflow/
 
