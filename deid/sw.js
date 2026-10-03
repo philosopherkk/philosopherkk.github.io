@@ -1,5 +1,5 @@
 /* Offline cache: shell only on install. OCR/wasm/traineddata = cache-first on first use. */
-const SHELL_CACHE = "deid-shell-v6";
+const SHELL_CACHE = "deid-shell-v7";
 const OCR_CACHE = "deid-ocr-v1";
 
 /** First-visit shell — no OCR wasm / traineddata / pdf.js. */
