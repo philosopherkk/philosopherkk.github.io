@@ -46,6 +46,7 @@ export {
   isClinicalLatinToken,
   isGenuineHanText,
   shouldAutoBlankCjkWord,
+  mergeAdjacentHanWords,
   filterClinicalSafeAutoBlanks,
   boxOverlapsClinicalLatin,
   hasClearIdentifier,

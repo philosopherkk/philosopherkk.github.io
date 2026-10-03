@@ -101,6 +101,56 @@ export function isGenuineHanText(t) {
 }
 
 /**
+ * chi_tra often emits each Han glyph as its own word. Merge same-row neighbours
+ * into name runs so "陳"+"大"+"文" becomes a flaggable genuine-Han box.
+ * @param {import('./types.js').Word[]} words
+ * @returns {import('./types.js').Word[]}
+ */
+export function mergeAdjacentHanWords(words) {
+  if (!words?.length) return [];
+  const hanOnly = words
+    .filter((w) => {
+      const s = String(w.text || "").trim();
+      if (!s || (w.conf ?? 0) < 70) return false;
+      return /[\u3400-\u9fff\uf900-\ufaff]/.test(s);
+    })
+    .sort((a, b) => {
+      const ya = (a.y0 + a.y1) / 2;
+      const yb = (b.y0 + b.y1) / 2;
+      // Same visual line → left-to-right so 陳大文 stay in reading order.
+      if (Math.abs(ya - yb) > 22) return ya - yb;
+      return a.x0 - b.x0;
+    });
+
+  /** @type {import('./types.js').Word[]} */
+  const merged = [];
+  let i = 0;
+  while (i < hanOnly.length) {
+    let cur = { ...hanOnly[i], text: String(hanOnly[i].text || "").trim() };
+    let j = i + 1;
+    while (j < hanOnly.length) {
+      const nxt = hanOnly[j];
+      const nh = Math.max(1, cur.y1 - cur.y0, nxt.y1 - nxt.y0);
+      const sameRow = Math.abs((cur.y0 + cur.y1) / 2 - (nxt.y0 + nxt.y1) / 2) < Math.max(0.9 * nh, 20);
+      const gap = nxt.x0 - cur.x1;
+      if (!sameRow || gap < -nh * 0.5 || gap > nh * 2.2) break;
+      cur = {
+        text: cur.text + String(nxt.text || "").trim(),
+        conf: Math.min(cur.conf ?? 0, nxt.conf ?? 0),
+        x0: Math.min(cur.x0, nxt.x0),
+        y0: Math.min(cur.y0, nxt.y0),
+        x1: Math.max(cur.x1, nxt.x1),
+        y1: Math.max(cur.y1, nxt.y1),
+      };
+      j++;
+    }
+    merged.push(cur);
+    i = j;
+  }
+  return merged;
+}
+
+/**
  * True when box overlaps an English OCR word that is a clinical Latin token/line.
  * @param {[number,number,number,number]} box
  * @param {import('./types.js').Word[]} engWords
@@ -344,9 +394,9 @@ export function collectFlags(ocrByRot, W, H, cjkWords = []) {
     }
   }
 
-  // CJK name flags: only genuine Han; never Latin clinical tokens (Right Eye, MD…).
+  // CJK name flags: merge split Han glyphs, then only genuine Han runs.
   const engForGuard = (ocrByRot[kUp] || []).filter((w) => (w.conf ?? 0) >= 35);
-  for (const w of cjkWords) {
+  for (const w of mergeAdjacentHanWords(cjkWords)) {
     if (!shouldAutoBlankCjkWord(w, engForGuard)) continue;
     const p = Math.floor(0.6 * (w.y1 - w.y0));
     flags.push({
