@@ -6,6 +6,11 @@ Git-sourced history for this app. Entries follow commits on this private repo (`
 
 Live mirror: https://philosopherkk.github.io/outflow/ (publish copy only).
 
+## [2.1.12] — 2026-10-07
+
+- **Summary:** UX review fixes (usability + accessibility)
+- **Notes:** Recurring tab lists every recurring row (no 6-cap), overdue first in red, with **Paid** (logs a copy dated today, advances next due by its interval) and Edit. Add/edit sheet is a native `<dialog>` (backdrop, Escape, focus to Amount, focus returns). Labels tied to inputs; search/filter/chip groups labelled; chips expose `aria-pressed`; dock `aria-current`; toast is a live region with an Undo action (delete, Paid, import, erase). User text escaped before rendering. Import asks before replacing existing rows and is undoable. Next due hidden for one-time rows and defaults to date + interval. 44px tap targets, whole list rows open edit, `:focus-visible` ring, small text ≥ .8rem. Desktop: content capped at 560px, sheet centred ≥ 900px. Shorter version line; Add-to-Home-Screen banner only on iOS Safari outside standalone, dismissal remembered. Amount step 0.01; FAB labelled "Add outflow". Ledger format and `localStorage` keys unchanged.
+
 ## [2.1.11] — 2026-10-01
 
 - **Commit:** `d1be133` (`d1be133180014656e06df3c78f5d3369d174b544`)
