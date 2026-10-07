@@ -1,7 +1,7 @@
 (() => {
   const APP_NAME = "Smart money 使錢靈";
-  const VERSION = "2.1.11";
-  const UPDATED = "2026-10-01";
+  const VERSION = "2.1.12";
+  const UPDATED = "2026-10-07";
   const HISTORY_URL = "https://github.com/philosopherkk/outflow-app/blob/main/CHANGELOG.md";
   const LEDGER_KEY = "outflow.v4.ledger";
   const OLD_VAULT_KEY = "outflow.v3.vault";
@@ -29,13 +29,33 @@
   const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Hong_Kong" });
   const monthOf = (d) => String(d || "").slice(0, 7);
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-  const toast = (msg) => {
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const toast = (msg, action) => {
     const el = $("toast");
-    el.textContent = msg;
+    el.textContent = "";
+    el.append(document.createTextNode(msg));
+    if (action && action.label && typeof action.run === "function") {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "toast-act"; b.textContent = action.label;
+      b.onclick = () => { el.classList.add("hidden"); action.run(); };
+      el.append(" ", b);
+    }
     el.classList.remove("hidden");
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => el.classList.add("hidden"), 2200);
+    toast._t = setTimeout(() => el.classList.add("hidden"), action ? 5000 : 2200);
   };
+  function addInterval(date, interval) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ""));
+    if (!m) return date;
+    const y = +m[1], mo = +m[2] - 1, d = +m[3];
+    let dt;
+    if (interval === "week") dt = new Date(Date.UTC(y, mo, d + 7));
+    else {
+      const last = new Date(Date.UTC(y, mo + 2, 0)).getUTCDate();
+      dt = new Date(Date.UTC(y, mo + 1, Math.min(d, last)));
+    }
+    return dt.toISOString().slice(0, 10);
+  }
   let undo = null, idle = null, idleBound = false, db = emptyDb(), range = "this", customFrom = "", customTo = "", filterType = "all", q = "", editing = null, fx = null, bioOk = false;
   function emptyDb() {
     return { version: VERSION, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), currency: "HKD", categories: { income: IN_CATS.slice(), outflow: OUT_CATS.slice() }, entries: [] };
@@ -72,8 +92,8 @@
     document.documentElement.style.setProperty("--font-scale", String(FONT_SCALES[font]));
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", themeColorFor(theme));
-    document.querySelectorAll("#themeChips .chip").forEach((c) => c.classList.toggle("on", c.dataset.theme === theme));
-    document.querySelectorAll("#fontChips .chip").forEach((c) => c.classList.toggle("on", c.dataset.font === font));
+    document.querySelectorAll("#themeChips .chip").forEach((c) => { c.classList.toggle("on", c.dataset.theme === theme); c.setAttribute("aria-pressed", String(c.dataset.theme === theme)); });
+    document.querySelectorAll("#fontChips .chip").forEach((c) => { c.classList.toggle("on", c.dataset.font === font); c.setAttribute("aria-pressed", String(c.dataset.font === font)); });
   }
   function setTheme(theme) {
     const prefs = loadUiPrefs();
@@ -141,7 +161,7 @@
   function showGate(mode) {
     document.body.classList.remove("open");
     $("gateErr").textContent = "";
-    $("verLine").textContent = APP_NAME + " " + VERSION + " · " + UPDATED;
+    $("verLine").textContent = VERSION + " · " + UPDATED;
     stampAbout();
     const label = bioLabel();
     if (mode === "setup") {
@@ -402,7 +422,7 @@
     } catch (err) { toast(bioError(err)); }
   }
   async function boot() {
-    $("verLine").textContent = APP_NAME + " " + VERSION + " · " + UPDATED;
+    $("verLine").textContent = VERSION + " · " + UPDATED;
     stampAbout();
     bioOk = await bioAvailable();
     const cfg = loadBio();
@@ -418,7 +438,7 @@
   }
   function fillCatSelect(sel, type, value) {
     const list = cats(type);
-    sel.innerHTML = list.map((c) => `<option${c === value ? " selected" : ""}>${c}</option>`).join("");
+    sel.innerHTML = list.map((c) => `<option value="${esc(c)}"${c === value ? " selected" : ""}>${esc(c)}</option>`).join("");
   }
   function visibleEntries() {
     const needle = q.trim().toLowerCase();
@@ -430,9 +450,8 @@
     }).sort((a, b) => String(b.date).localeCompare(String(a.date)));
   }
   function upcoming() {
-    const t = today();
-    return db.entries.filter((e) => e.recurring && e.recurring.nextDue && e.recurring.nextDue >= t)
-      .sort((a, b) => a.recurring.nextDue.localeCompare(b.recurring.nextDue)).slice(0, 6);
+    return db.entries.filter((e) => e.recurring && e.recurring.nextDue)
+      .sort((a, b) => String(a.recurring.nextDue).localeCompare(String(b.recurring.nextDue)));
   }
   function rowAmount(e) {
     const code = codeOf(e);
@@ -469,28 +488,35 @@
   function listRowHtml(e, mode) {
     const sign = e.type === "income" ? "+" : "\u2212";
     const kind = e.type === "income" ? "Income" : "Outflow";
-    const rec = e.recurring ? ` · due ${e.recurring.nextDue || ""}` : "";
-    const amt = `<span class="${e.type === "income" ? "ok" : "bad"}">${sign}${rowAmount(e)}</span> <button class="ghost" data-ed="${e.id}">Edit</button>`;
+    const rec = e.recurring ? ` · due ${esc(e.recurring.nextDue || "")}` : "";
+    const id = esc(e.id);
+    const amt = `<span class="${e.type === "income" ? "ok" : "bad"}">${sign}${esc(rowAmount(e))}</span> <span class="edit-tag" aria-hidden="true">Edit</span>`;
+    const label = esc(`Edit ${kind} ${e.category} ${e.date} ${sign}${rowAmount(e)}`);
     if (mode === "grouped") {
-      const note = e.note ? " · " + e.note : "";
-      return `<div class="tx tx-sub"><div><b>${e.category}</b><div class="hint">${kind}${note}${rec}</div></div><div class="amt">${amt}</div></div>`;
+      const note = e.note ? " · " + esc(e.note) : "";
+      return `<div class="tx tx-sub tx-tap" role="button" tabindex="0" data-ed="${id}" aria-label="${label}"><div><b>${esc(e.category)}</b><div class="hint">${kind}${note}${rec}</div></div><div class="amt">${amt}</div></div>`;
     }
-    return `<div class="tx"><div><b>${e.category}</b><div class="hint">${e.date} · ${kind}${rec}${e.note ? " · " + e.note : ""}</div></div><div class="amt">${amt}</div></div>`;
+    return `<div class="tx tx-tap" role="button" tabindex="0" data-ed="${id}" aria-label="${label}"><div><b>${esc(e.category)}</b><div class="hint">${esc(e.date)} · ${kind}${rec}${e.note ? " · " + esc(e.note) : ""}</div></div><div class="amt">${amt}</div></div>`;
   }
   function homeListHtml(rows) {
     return groupHomeEntries(rows).map((g) => {
       if (g.items.length === 1) return listRowHtml(g.items[0], "single");
-      const head = `<div class="tx-group-h"><b>${g.date}</b><span class="hint">${g.items.length} items</span></div>`;
+      const head = `<div class="tx-group-h"><b>${esc(g.date)}</b><span class="hint">${g.items.length} items</span></div>`;
       return `<div class="tx-group">${head}${g.items.map((e) => listRowHtml(e, "grouped")).join("")}</div>`;
     }).join("");
   }
   function dueListHtml() {
     const rows = upcoming();
+    const t = today();
     if (!rows.length) return `<div class="hint">No subscriptions or recurring bills with a next due date.</div>`;
     return rows.map((e) => {
       const sign = e.type === "income" ? "+" : "\u2212";
-      const note = e.note ? ` · ${e.note}` : "";
-      return `<div class="due-row"><div><b>${e.category}</b><div class="hint">Next due ${e.recurring.nextDue}${note}</div></div><div class="amt ${e.type === "income" ? "ok" : "bad"}">${sign}${rowAmount(e)}</div></div>`;
+      const note = e.note ? ` · ${esc(e.note)}` : "";
+      const overdue = e.recurring.nextDue < t;
+      const when = overdue ? `<span class="bad"><b>Overdue</b> · was due ${esc(e.recurring.nextDue)}</span>` : `Next due ${esc(e.recurring.nextDue)}`;
+      const every = e.recurring.interval === "week" ? "Every week" : "Every month";
+      const id = esc(e.id);
+      return `<div class="due-row${overdue ? " overdue" : ""}"><div><b>${esc(e.category)}</b><div class="hint">${when} · ${every}${note}</div></div><div class="due-side"><div class="amt ${e.type === "income" ? "ok" : "bad"}">${sign}${esc(rowAmount(e))}</div><div class="due-acts"><button type="button" class="btn small" data-paid="${id}" aria-label="Mark ${esc(e.category)} paid">Paid</button><button type="button" class="ghost" data-ed="${id}" aria-label="Edit ${esc(e.category)}">Edit</button></div></div></div>`;
     }).join("");
   }
   function stampAbout() {
@@ -502,7 +528,7 @@
     });
   }
   function render() {
-    $("verFoot").textContent = APP_NAME + " " + VERSION + " · updated " + UPDATED;
+    $("verFoot").textContent = VERSION + " · updated " + UPDATED;
     stampAbout();
     const scoped = db.entries.filter(inRange);
     const net = netOf(scoped);
@@ -515,24 +541,49 @@
     $("rangeLabel").textContent = range === "this" ? "This month" : range === "last" ? "Last month" : "Custom range";
     renderFx();
     const rows = visibleEntries();
-    if (!db.entries.length) $("list").innerHTML = `<p class="hint">No rows yet. Add first income, then first outflow.</p>`;
+    if (!db.entries.length) $("list").innerHTML = `<p class="hint">No rows yet.</p>`;
     else if (!rows.length) $("list").innerHTML = `<p class="hint">Nothing in this filter.</p>`;
     else $("list").innerHTML = homeListHtml(rows);
-    $("list").querySelectorAll("[data-ed]").forEach((b) => b.onclick = () => openEdit(b.dataset.ed));
     $("dueBox").innerHTML = dueListHtml();
+    document.querySelectorAll("#list [data-ed], #dueBox [data-ed]").forEach((b) => {
+      b.onclick = () => openEdit(b.dataset.ed);
+      if (b.getAttribute("role") === "button") b.onkeydown = (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openEdit(b.dataset.ed); } };
+    });
+    $("dueBox").querySelectorAll("[data-paid]").forEach((b) => b.onclick = () => markPaid(b.dataset.paid));
     $("catEdit").value = cats("outflow").join("\n");
     $("catEditIn").value = cats("income").join("\n");
-    document.querySelectorAll("[data-range]").forEach((c) => c.classList.toggle("on", c.dataset.range === range));
+    document.querySelectorAll("[data-range]").forEach((c) => { c.classList.toggle("on", c.dataset.range === range); c.setAttribute("aria-pressed", String(c.dataset.range === range)); });
     renderBioUi();
   }
-  function openSheet(show) { $("sheet").classList.toggle("hidden", !show); }
+  let sheetOpener = null;
+  function openSheet(show) {
+    const d = $("sheet");
+    if (show) {
+      if (!d.open) {
+        sheetOpener = document.activeElement;
+        if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
+      }
+      setTimeout(() => $("fAmt").focus(), 0);
+    } else if (d.open) {
+      if (typeof d.close === "function") d.close(); else { d.removeAttribute("open"); onSheetClosed(); }
+    }
+  }
+  function onSheetClosed() {
+    const o = sheetOpener; sheetOpener = null;
+    if (o && document.contains(o) && typeof o.focus === "function") o.focus();
+  }
+  function syncDue() {
+    const one = $("fRec").value === "none";
+    $("fDueWrap").classList.toggle("hidden", one);
+  }
   function openAdd(type) {
     editing = null;
     $("sheetTitle").textContent = "Add";
     $("fType").value = type || "outflow";
-    $("fAmt").value = ""; $("fCur").value = "HKD"; $("fDate").value = today(); $("fNote").value = ""; $("fRec").value = "none"; $("fDue").value = today();
+    $("fAmt").value = ""; $("fCur").value = "HKD"; $("fDate").value = today(); $("fNote").value = ""; $("fRec").value = "none"; $("fDue").value = addInterval(today(), "month");
     fillCatSelect($("fCat"), $("fType").value);
     updateFxHint();
+    syncDue();
     $("delRow").classList.add("hidden");
     openSheet(true);
   }
@@ -542,9 +593,10 @@
     $("sheetTitle").textContent = "Edit";
     $("fType").value = e.type; $("fAmt").value = e.amount; $("fCur").value = codeOf(e); $("fDate").value = e.date; $("fNote").value = e.note || "";
     $("fRec").value = (e.recurring && e.recurring.interval) || "none";
-    $("fDue").value = (e.recurring && e.recurring.nextDue) || e.date;
+    $("fDue").value = (e.recurring && e.recurring.nextDue) || addInterval(e.date, "month");
     fillCatSelect($("fCat"), e.type, e.category);
     updateFxHint();
+    syncDue();
     $("delRow").classList.remove("hidden");
     openSheet(true);
   }
@@ -556,7 +608,7 @@
     const currency = CODES.includes($("fCur").value) ? $("fCur").value : "HKD";
     const rec = $("fRec").value;
     const row = { id: editing || uid(), type, amount, currency, date: $("fDate").value || today(), category: $("fCat").value || "Other", note: $("fNote").value.trim() };
-    if (rec === "month" || rec === "week") row.recurring = { interval: rec, nextDue: $("fDue").value || row.date };
+    if (rec === "month" || rec === "week") row.recurring = { interval: rec, nextDue: $("fDue").value || addInterval(row.date, rec) };
     snapshot();
     if (editing) db.entries = db.entries.map((e) => e.id === editing ? row : e);
     else db.entries.push(row);
@@ -570,7 +622,18 @@
     editing = null;
     openSheet(false);
     render();
-    toast("Deleted · Undo in Settings");
+    toast("Deleted", { label: "Undo", run: undoLast });
+  }
+  function markPaid(id) {
+    const e = db.entries.find((x) => x.id === id);
+    if (!e || !e.recurring) return;
+    snapshot();
+    const copy = { id: uid(), type: e.type, amount: e.amount, currency: codeOf(e), date: today(), category: e.category, note: e.note || "" };
+    db.entries.push(copy);
+    const interval = e.recurring.interval === "week" ? "week" : "month";
+    e.recurring = Object.assign({}, e.recurring, { interval, nextDue: addInterval(e.recurring.nextDue, interval) });
+    persist(); render();
+    toast("Paid · next due " + e.recurring.nextDue, { label: "Undo", run: undoLast });
   }
   function undoLast() {
     if (!undo) { toast("Nothing to undo"); return; }
@@ -579,7 +642,9 @@
   function showPage(name) {
     ["home", "due", "set"].forEach((p) => {
       $(p).classList.toggle("hidden", p !== name);
-      document.querySelector(`.dock [data-p="${p}"]`).classList.toggle("on", p === name);
+      const tab = document.querySelector(`.dock [data-p="${p}"]`);
+      tab.classList.toggle("on", p === name);
+      if (p === name) tab.setAttribute("aria-current", "page"); else tab.removeAttribute("aria-current");
     });
   }
   function exportLedger() {
@@ -588,12 +653,21 @@
     a.href = URL.createObjectURL(new Blob([JSON.stringify(file)], { type: "application/json" }));
     a.download = "outflow-backup-" + today() + ".json"; a.click(); URL.revokeObjectURL(a.href);
   }
+  function confirmReplace(incoming) {
+    const have = db.entries.length;
+    const next = (incoming && Array.isArray(incoming.entries)) ? incoming.entries.length : 0;
+    if (!have) return true;
+    return confirm(`Replace ${have} row${have === 1 ? "" : "s"} on this device with ${next} row${next === 1 ? "" : "s"} from the backup?`);
+  }
   async function importLedger(file) {
     const text = await file.text(); let blob;
     try { blob = JSON.parse(text); } catch (e) { toast("Not a backup file"); return; }
     if (blob && (blob.kind === "outflow-ledger" || Array.isArray(blob.entries) || (blob.ledger && Array.isArray(blob.ledger.entries)))) {
-      adopt(blob.ledger || blob);
-      render(); toast("Backup imported");
+      const incoming = blob.ledger || blob;
+      if (!confirmReplace(incoming)) return;
+      snapshot();
+      adopt(incoming);
+      render(); toast("Backup imported", { label: "Undo", run: undoLast });
       return;
     }
     if (!blob || !blob.ct || !blob.salt || !blob.iv) { toast("Not a backup file"); return; }
@@ -602,8 +676,10 @@
     try {
       const opened = await openSeal(pass, blob);
       if (!opened || !Array.isArray(opened.entries)) throw new Error("bad");
+      if (!confirmReplace(opened)) return;
+      snapshot();
       adopt(opened);
-      render(); toast("Locked backup imported");
+      render(); toast("Locked backup imported", { label: "Undo", run: undoLast });
     } catch (err) { toast("Could not open backup"); }
   }
   $("bioBtn").onclick = () => (loadBio().enabled ? unlockBio() : enableBio());
@@ -616,6 +692,12 @@
   $("saveRow").onclick = saveRow;
   $("delRow").onclick = () => { if (editing) removeRow(editing); };
   $("closeSheet").onclick = () => openSheet(false);
+  $("sheet").addEventListener("close", onSheetClosed);
+  $("sheet").addEventListener("click", (ev) => { if (ev.target === $("sheet")) openSheet(false); });
+  $("fRec").onchange = () => {
+    syncDue();
+    if ($("fRec").value !== "none") $("fDue").value = addInterval($("fDate").value || today(), $("fRec").value);
+  };
   $("fType").onchange = () => fillCatSelect($("fCat"), $("fType").value);
   $("fCur").onchange = updateFxHint;
   $("fAmt").oninput = updateFxHint;
@@ -644,16 +726,27 @@
   $("undoBtn").onclick = undoLast;
   $("wipeBtn").onclick = () => {
     if (!confirm("Erase the ledger on this device?")) return;
+    snapshot();
     localStorage.removeItem(LEDGER_KEY);
     localStorage.removeItem(OLD_VAULT_KEY);
     db = emptyDb();
     persist();
     $("firstHint").classList.remove("hidden");
     render();
-    toast("Ledger erased");
+    toast("Ledger erased", { label: "Undo", run: undoLast });
   };
   document.querySelectorAll(".dock button").forEach((b) => b.onclick = () => showPage(b.dataset.p));
-  $("hideBanner").onclick = () => $("iosBanner").classList.add("hidden");
+  (function initBanner() {
+    const ua = navigator.userAgent || "";
+    const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    const standalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+    const dismissed = !!loadUiPrefs().bannerHidden;
+    $("iosBanner").classList.toggle("hidden", !ios || standalone || dismissed);
+  })();
+  $("hideBanner").onclick = () => {
+    $("iosBanner").classList.add("hidden");
+    const p = loadUiPrefs(); p.bannerHidden = true; saveUiPrefs(p);
+  };
   boot();
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/outflow/sw.js", { scope: "/outflow/" }).catch(() => {});
