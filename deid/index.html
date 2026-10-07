@@ -25,7 +25,7 @@
     僅為自動化輔助。分享前請自行檢查結果。本工具並非經認證的去識別化產品。
   </p>
   <p class="privacy" data-i18n="privacy">私隱：無伺服器、無分析、無第三方請求。影像只存於記憶體。</p>
-  <p class="privacy" data-i18n="help">框選空白／裁切：啟用後在「裁切後」圖上拖曳。條碼／QR：本機 jsQR／ZXing 解碼（無 CDN）；偵測到的區域會標紅，請空白後再核准。OCR 資料首次使用時才下載並快取。</p>
+  <p class="privacy" data-i18n="help">上傳：「選擇相片或 PDF」開相簿／檔案，「拍照」另開相機；不支援 HEIC／HEIF，請改 JPEG／PNG。框選空白／裁切：啟用後在「裁切後」圖上拖曳。條碼／QR：本機 jsQR／ZXing 與尋像偵測（含約 48px 模糊碼）會標紅。中文姓名會標為覆核標記（不會自動空白），請點紅框或「全部空白覆蓋」；未清完標記時「核准」維持停用。OCR 資料首次使用時才下載並快取。</p>
 
   <section id="dropZone" class="drop" tabindex="0" aria-labelledby="dropHint">
     <input
@@ -42,7 +42,7 @@
       accept="image/*"
       capture="environment"
     />
-    <p id="dropHint" data-i18n="drop">拖放 PDF／JPG／PNG 到此處，或使用下方按鈕選擇檔案／拍照。</p>
+    <p id="dropHint" data-i18n="drop">拖放 PDF／JPG／PNG 到此處，或使用下方按鈕：選擇相片或 PDF／拍照。</p>
     <div class="drop-actions">
       <label for="fileInput" class="file-btn primary" data-i18n="chooseFile">選擇相片或 PDF / Choose photo or PDF</label>
       <label for="cameraInput" class="file-btn" data-i18n="takePhoto">拍照 / Take photo</label>
