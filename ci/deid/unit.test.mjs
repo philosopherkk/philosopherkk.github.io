@@ -145,3 +145,27 @@ describe("fillWhite", () => {
     assert.equal(img.data[i], 255);
   });
 });
+
+describe("sniffFileKind", () => {
+  it("detects PDF / JPEG / PNG / HEIC magic bytes", async () => {
+    const { sniffFileKind } = await import("../../deid/ui/loader.js");
+    const pdf = new TextEncoder().encode("%PDF-1.4").buffer;
+    assert.equal(sniffFileKind(pdf), "pdf");
+    assert.equal(sniffFileKind(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]).buffer), "jpeg");
+    assert.equal(
+      sniffFileKind(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).buffer),
+      "png"
+    );
+    // ftyp heic at offset 4
+    const heic = new Uint8Array(16);
+    heic[4] = 0x66; // f
+    heic[5] = 0x74; // t
+    heic[6] = 0x79; // y
+    heic[7] = 0x70; // p
+    heic[8] = 0x68; // h
+    heic[9] = 0x65; // e
+    heic[10] = 0x69; // i
+    heic[11] = 0x63; // c
+    assert.equal(sniffFileKind(heic.buffer), "heic");
+  });
+});

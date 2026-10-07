@@ -1,4 +1,4 @@
-const CACHE = "outflow-shell-v2.1.9-nohist";
+const CACHE = "outflow-shell-v2.1.11";
 const SHELL = ["/outflow/", "/outflow/index.html", "/outflow/app.js", "/outflow/styles.css", "/outflow/manifest.webmanifest", "/outflow/icon.svg"];
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));

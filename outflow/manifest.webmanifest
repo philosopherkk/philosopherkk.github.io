@@ -1,7 +1,7 @@
 {
-  "name": "Outflow",
-  "short_name": "Outflow",
-  "description": "Outflow 2.1.9. Local ledger with Face ID, theme/font settings, recurring expenses, and HKD FX. Income and outflow in HKD, USD, TWD, CAD, EUR, JPY. Base HKD.",
+  "name": "Smart money 使錢靈",
+  "short_name": "使錢靈",
+  "description": "Smart money 使錢靈 2.1.11. Local ledger with Face ID, theme/font settings, recurring expenses, and HKD FX. Income and outflow in HKD, USD, TWD, CAD, EUR, JPY. Base HKD.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,10 +1,22 @@
-# CHANGELOG — Outflow
+# CHANGELOG — Smart money 使錢靈
 
 Git-sourced history for this app. Entries follow commits on this private repo (`philosopherkk/outflow-app`), not chat notes.
 
 **Vault / ledger data is never in git history.** Face ID secrets, `localStorage` ledgers, and JSON/CSV backups stay on-device. Do not commit them.
 
 Live mirror: https://philosopherkk.github.io/outflow/ (publish copy only).
+
+## [2.1.11] — 2026-10-01
+
+- **Commit:** `d1be133` (`d1be133180014656e06df3c78f5d3369d174b544`)
+- **Summary:** Rename app to Smart money 使錢靈
+- **Notes:** User-facing title, PWA `name` / `short_name`, Face ID relying party, and version stamps. Expense rows still labeled Outflow; ledger `localStorage` keys and `/outflow/` URL unchanged.
+
+## [2.1.10] — 2026-09-30
+
+- **Commit:** `cad1e8d` (`cad1e8d4d5a7b973a7731abb6f926a2718b9f93d`)
+- **Summary:** Group home list by date; delete only on the edit sheet
+- **Notes:** Home rows group by date only. List rows keep Edit. Delete is on the edit sheet (`cccaf3a` / `cccaf3a96352c2e3e13ba15f1fc6294f55ab1e6e`). Version stamps: `VERSION.txt`, `app.js`, `sw.js` cache, `manifest.webmanifest`, `index.html`.
 
 ## [2.1.9] — 2026-09-20
 

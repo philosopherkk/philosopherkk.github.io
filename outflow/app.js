@@ -1,6 +1,8 @@
 (() => {
-  const VERSION = "2.1.9";
-  const UPDATED = "2026-09-20";
+  const APP_NAME = "Smart money 使錢靈";
+  const VERSION = "2.1.11";
+  const UPDATED = "2026-10-01";
+  const HISTORY_URL = "https://github.com/philosopherkk/outflow-app/blob/main/CHANGELOG.md";
   const LEDGER_KEY = "outflow.v4.ledger";
   const OLD_VAULT_KEY = "outflow.v3.vault";
   const BIO_KEY = "outflow.v4.bio";
@@ -101,8 +103,8 @@
     const cred = await navigator.credentials.create({
       publicKey: {
         challenge: randomBytes(32),
-        rp: { name: "Outflow" },
-        user: { id: userId, name: "outflow-local", displayName: "Outflow" },
+        rp: { name: APP_NAME },
+        user: { id: userId, name: "outflow-local", displayName: APP_NAME },
         pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
         authenticatorSelection: {
           authenticatorAttachment: "platform",
@@ -139,7 +141,7 @@
   function showGate(mode) {
     document.body.classList.remove("open");
     $("gateErr").textContent = "";
-    $("verLine").textContent = "Outflow " + VERSION + " · " + UPDATED;
+    $("verLine").textContent = APP_NAME + " " + VERSION + " · " + UPDATED;
     stampAbout();
     const label = bioLabel();
     if (mode === "setup") {
@@ -400,7 +402,7 @@
     } catch (err) { toast(bioError(err)); }
   }
   async function boot() {
-    $("verLine").textContent = "Outflow " + VERSION + " · " + UPDATED;
+    $("verLine").textContent = APP_NAME + " " + VERSION + " · " + UPDATED;
     stampAbout();
     bioOk = await bioAvailable();
     const cfg = loadBio();
@@ -442,10 +444,10 @@
     const groups = [];
     const map = new Map();
     rows.forEach((e) => {
-      const key = e.date + "\0" + e.type + "\0" + e.category;
+      const key = e.date || "";
       let g = map.get(key);
       if (!g) {
-        g = { date: e.date, type: e.type, category: e.category, items: [] };
+        g = { date: e.date, items: [] };
         map.set(key, g);
         groups.push(g);
       }
@@ -455,6 +457,10 @@
       g.items.sort((a, b) => {
         const da = toHkd(b.amount, codeOf(b)) - toHkd(a.amount, codeOf(a));
         if (da) return da;
+        const ta = String(a.type).localeCompare(String(b.type));
+        if (ta) return ta;
+        const ca = String(a.category || "").localeCompare(String(b.category || ""));
+        if (ca) return ca;
         return String(a.note || "").localeCompare(String(b.note || ""));
       });
     });
@@ -462,19 +468,19 @@
   }
   function listRowHtml(e, mode) {
     const sign = e.type === "income" ? "+" : "\u2212";
+    const kind = e.type === "income" ? "Income" : "Outflow";
     const rec = e.recurring ? ` · due ${e.recurring.nextDue || ""}` : "";
-    const amt = `<span class="${e.type === "income" ? "ok" : "bad"}">${sign}${rowAmount(e)}</span> <button class="ghost" data-ed="${e.id}">Edit</button> <button class="ghost" data-del="${e.id}">Delete</button>`;
+    const amt = `<span class="${e.type === "income" ? "ok" : "bad"}">${sign}${rowAmount(e)}</span> <button class="ghost" data-ed="${e.id}">Edit</button>`;
     if (mode === "grouped") {
-      const sub = (e.note || "—") + rec;
-      return `<div class="tx tx-sub"><div class="hint">${sub}</div><div class="amt">${amt}</div></div>`;
+      const note = e.note ? " · " + e.note : "";
+      return `<div class="tx tx-sub"><div><b>${e.category}</b><div class="hint">${kind}${note}${rec}</div></div><div class="amt">${amt}</div></div>`;
     }
-    return `<div class="tx"><div><b>${e.category}</b><div class="hint">${e.date}${rec}${e.note ? " · " + e.note : ""}</div></div><div class="amt">${amt}</div></div>`;
+    return `<div class="tx"><div><b>${e.category}</b><div class="hint">${e.date} · ${kind}${rec}${e.note ? " · " + e.note : ""}</div></div><div class="amt">${amt}</div></div>`;
   }
   function homeListHtml(rows) {
     return groupHomeEntries(rows).map((g) => {
       if (g.items.length === 1) return listRowHtml(g.items[0], "single");
-      const kind = g.type === "income" ? "Income" : "Outflow";
-      const head = `<div class="tx-group-h"><b>${g.category}</b><span class="hint">${g.date} · ${kind} · ${g.items.length}</span></div>`;
+      const head = `<div class="tx-group-h"><b>${g.date}</b><span class="hint">${g.items.length} items</span></div>`;
       return `<div class="tx-group">${head}${g.items.map((e) => listRowHtml(e, "grouped")).join("")}</div>`;
     }).join("");
   }
@@ -489,10 +495,14 @@
   }
   function stampAbout() {
     const about = $("aboutVer");
-    if (about) about.textContent = "Outflow " + VERSION + " · updated " + UPDATED;
+    if (about) about.textContent = APP_NAME + " " + VERSION + " · updated " + UPDATED;
+    ["gateHistory", "homeHistory", "setHistory"].forEach((id) => {
+      const a = $(id);
+      if (a) a.href = HISTORY_URL;
+    });
   }
   function render() {
-    $("verFoot").textContent = "Outflow " + VERSION + " · updated " + UPDATED;
+    $("verFoot").textContent = APP_NAME + " " + VERSION + " · updated " + UPDATED;
     stampAbout();
     const scoped = db.entries.filter(inRange);
     const net = netOf(scoped);
@@ -509,7 +519,6 @@
     else if (!rows.length) $("list").innerHTML = `<p class="hint">Nothing in this filter.</p>`;
     else $("list").innerHTML = homeListHtml(rows);
     $("list").querySelectorAll("[data-ed]").forEach((b) => b.onclick = () => openEdit(b.dataset.ed));
-    $("list").querySelectorAll("[data-del]").forEach((b) => b.onclick = () => removeRow(b.dataset.del));
     $("dueBox").innerHTML = dueListHtml();
     $("catEdit").value = cats("outflow").join("\n");
     $("catEditIn").value = cats("income").join("\n");
@@ -524,6 +533,7 @@
     $("fAmt").value = ""; $("fCur").value = "HKD"; $("fDate").value = today(); $("fNote").value = ""; $("fRec").value = "none"; $("fDue").value = today();
     fillCatSelect($("fCat"), $("fType").value);
     updateFxHint();
+    $("delRow").classList.add("hidden");
     openSheet(true);
   }
   function openEdit(id) {
@@ -535,6 +545,7 @@
     $("fDue").value = (e.recurring && e.recurring.nextDue) || e.date;
     fillCatSelect($("fCat"), e.type, e.category);
     updateFxHint();
+    $("delRow").classList.remove("hidden");
     openSheet(true);
   }
   function snapshot() { undo = JSON.parse(JSON.stringify(db.entries)); }
@@ -553,7 +564,13 @@
   }
   function removeRow(id) {
     if (!confirm("Delete this row?")) return;
-    snapshot(); db.entries = db.entries.filter((e) => e.id !== id); persist(); render(); toast("Deleted · Undo in Settings");
+    snapshot();
+    db.entries = db.entries.filter((e) => e.id !== id);
+    persist();
+    editing = null;
+    openSheet(false);
+    render();
+    toast("Deleted · Undo in Settings");
   }
   function undoLast() {
     if (!undo) { toast("Nothing to undo"); return; }
@@ -597,6 +614,7 @@
   $("addIn").onclick = () => openAdd("income");
   $("addOut").onclick = () => openAdd("outflow");
   $("saveRow").onclick = saveRow;
+  $("delRow").onclick = () => { if (editing) removeRow(editing); };
   $("closeSheet").onclick = () => openSheet(false);
   $("fType").onchange = () => fillCatSelect($("fCat"), $("fType").value);
   $("fCur").onchange = updateFxHint;
