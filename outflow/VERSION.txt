@@ -1,5 +1,5 @@
 Smart money 使錢靈
-Version: 2.1.11
-Updated: 2026-10-01 (HKT)
+Version: 2.1.12
+Updated: 2026-10-07 (HKT)
 Pages: /outflow/
-Adds: rename app to Smart money 使錢靈 (UI, PWA, Face ID). Publish bumps VERSION.txt + CHANGELOG then sync github.io /outflow/ via PR.
+Adds: UX review fixes — overdue recurring with Paid, real dialog sheet, labels/a11y, escaping, import confirm, undo toast, desktop width.
