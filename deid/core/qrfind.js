@@ -3,12 +3,22 @@
  * Adaptive/local-contrast binarisation for grey/smudged codes.
  * Accepts 3 finders, 2 finders + dense square, 1 finder + dense square,
  * or a finder-less square region with module-grid periodicity in both axes.
+ * Size floors target ~48px so phone-photo smudged codes still flag.
  * @module core/qrfind
  */
+
+/** Minimum QR candidate side length (px). Aligned across finder/texture paths. */
+const MIN_QR_PX = 48;
 
 /**
  * @typedef {{ x: number, y: number, moduleSize: number }} FinderHit
  */
+
+/** Max QR box as a fraction of the shorter image side. */
+function maxQrFrac(W, H) {
+  // Small canvases (unit/e2e crops) often fill most of the frame with the code.
+  return Math.min(W, H) < 220 ? 0.82 : 0.5;
+}
 
 /**
  * Detect QR-like regions via finder squares and/or module-grid texture.
@@ -20,6 +30,7 @@ export function detectQrFinderFlags(imageData) {
   /** @type {import('./types.js').FlagHit[]} */
   const flags = [];
   const usedFinder = new Set();
+  const maxFrac = maxQrFrac(imageData.width, imageData.height);
 
   /** @type {{ score: number, idxs: number[], box: [number,number,number,number], reason?: string, text?: string }[]} */
   const candidates = [];
@@ -35,8 +46,8 @@ export function detectQrFinderFlags(imageData) {
           if (!box) continue;
           const bw = box[2] - box[0];
           const bh = box[3] - box[1];
-          if (bw < 60 || bh < 60) continue;
-          if (bw > Math.min(imageData.width, imageData.height) * 0.5) continue;
+          if (bw < MIN_QR_PX || bh < MIN_QR_PX) continue;
+          if (bw > Math.min(imageData.width, imageData.height) * maxFrac) continue;
           candidates.push({ score: scored, idxs: [i, j, k], box });
         }
       }
@@ -52,8 +63,8 @@ export function detectQrFinderFlags(imageData) {
         if (!box) continue;
         const bw = box[2] - box[0];
         const bh = box[3] - box[1];
-        if (bw < 60 || bh < 60) continue;
-        if (bw > Math.min(imageData.width, imageData.height) * 0.5) continue;
+        if (bw < MIN_QR_PX || bh < MIN_QR_PX) continue;
+        if (bw > Math.min(imageData.width, imageData.height) * maxFrac) continue;
         candidates.push({
           score: 0.55,
           idxs: [i, j],
@@ -70,8 +81,8 @@ export function detectQrFinderFlags(imageData) {
       if (!box) continue;
       const bw = box[2] - box[0];
       const bh = box[3] - box[1];
-      if (bw < 60 || bh < 60) continue;
-      if (bw > Math.min(imageData.width, imageData.height) * 0.5) continue;
+      if (bw < MIN_QR_PX || bh < MIN_QR_PX) continue;
+      if (bw > Math.min(imageData.width, imageData.height) * maxFrac) continue;
       candidates.push({
         score: 0.4,
         idxs: [i],
@@ -159,13 +170,13 @@ export function expandQrCodeBox(imageData, box, points = []) {
     if (fromPts) {
       const fw = fromPts[2] - fromPts[0];
       const fh = fromPts[3] - fromPts[1];
-      if (fw >= 60 && fh >= 60 && fw <= maxSide * 1.15 && fh <= maxSide * 1.15) {
+      if (fw >= MIN_QR_PX && fh >= MIN_QR_PX && fw <= maxSide * 1.15 && fh <= maxSide * 1.15) {
         return fromPts;
       }
     }
   }
 
-  if (w >= 72 && h >= 72 && w / h > 0.7 && w / h < 1.4 && w <= maxSide && h <= maxSide) {
+  if (w >= MIN_QR_PX && h >= MIN_QR_PX && w / h > 0.7 && w / h < 1.4 && w <= maxSide && h <= maxSide) {
     const pad = 16;
     return [
       Math.max(0, x0 - pad),
@@ -322,14 +333,15 @@ function qrBoxFromOneFinder(f, imageData) {
   const { width: W, height: H } = imageData;
   const mod = f.moduleSize;
   if (mod < 2 || mod > 36) return null;
-  const maxSide = Math.min(W, H) * 0.42;
+  const maxSide = Math.min(W, H) * (Math.min(W, H) < 220 ? 0.85 : 0.42);
 
-  const mults = [11, 14, 17, 21, 25, 29, 33];
+  // Include sides that land near the rendered bitmap size (~48–120px codes).
+  const mults = [11, 14, 17, 21, 25, 29, 33, 37];
   /** @type {[number,number,number,number][]} */
   const tried = [];
   for (const mult of mults) {
     const side = mod * mult;
-    if (side < 60 || side > maxSide) continue;
+    if (side < 40 || side > maxSide) continue;
     const insets = mod * 3.5;
     const half = side / 2;
     /** @type {[number,number][]} */
@@ -357,9 +369,10 @@ function qrBoxFromOneFinder(f, imageData) {
       // Finder must lie inside the candidate box
       if (f.x < box[0] || f.x > box[2] || f.y < box[1] || f.y > box[3]) continue;
       tried.push(box);
-      // Partial damage: allow lower dark fraction (left wipe / blot)
+      // Partial damage: allow lower dark fraction (left wipe / blot / smudged finder)
       if (!regionLooksLikeQrModules(imageData, box, mod, { partial: true })) continue;
-      if (!hasModulePeriodicity(imageData, box, mod)) continue;
+      // Multi-line periodicity — centre blot / smudge often kills the mid scanline.
+      if (!hasModulePeriodicity(imageData, box, mod, { multi: true })) continue;
       if (regionIsColorful(imageData, box)) continue;
       return box;
     }
@@ -403,7 +416,7 @@ function regionLooksLikeQrModules(imageData, box, moduleSize, opts = {}) {
   const [x0, y0, x1, y1] = box;
   const bw = x1 - x0;
   const bh = y1 - y0;
-  if (bw < 50 || bh < 50) return false;
+  if (bw < MIN_QR_PX - 8 || bh < MIN_QR_PX - 8) return false;
 
   let n = 0;
   let dark = 0;
@@ -412,25 +425,32 @@ function regionLooksLikeQrModules(imageData, box, moduleSize, opts = {}) {
   const step = Math.max(1, Math.floor(moduleSize / 2));
   for (let y = Math.floor(y0); y < y1; y += step) {
     let prev = -1;
+    let prevValid = false;
     for (let x = Math.floor(x0); x < x1; x += step) {
       const i = (y * W + x) * 4;
       const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
+      // Partial/smudge: skip washed mid-grey so left-wipe / blot does not dilute rates.
+      if (opts.partial && g > 175 && g < 245) {
+        prevValid = false;
+        continue;
+      }
       const b = g < 128 ? 1 : 0;
       if (g < 40 || g > 220) extreme++;
       if (b) dark++;
-      if (prev >= 0 && b !== prev) transitions++;
+      if (prevValid && b !== prev) transitions++;
       prev = b;
+      prevValid = true;
       n++;
     }
   }
-  if (n < 40) return false;
+  if (n < (opts.partial ? 16 : 24)) return false;
   const dRate = dark / n;
   const eRate = extreme / n;
-  const tRate = transitions / n;
-  const minDark = opts.partial ? 0.12 : 0.22;
-  const maxDark = opts.partial ? 0.85 : 0.78;
-  const minExtreme = opts.partial ? 0.28 : 0.35;
-  const minTrans = opts.partial ? 0.08 : 0.12;
+  const tRate = transitions / Math.max(1, n);
+  const minDark = opts.partial ? 0.08 : 0.22;
+  const maxDark = opts.partial ? 0.9 : 0.78;
+  const minExtreme = opts.partial ? 0.18 : 0.35;
+  const minTrans = opts.partial ? 0.05 : 0.12;
   if (dRate < minDark || dRate > maxDark) return false;
   if (eRate < minExtreme) return false;
   if (tRate < minTrans) return false;
@@ -463,42 +483,56 @@ function regionIsColorful(imageData, box) {
 /**
  * Module-grid periodicity along both axes near `moduleSize`.
  * Rejects HFA greyscale symbol plots (smooth gradients / sparse glyphs).
+ * When `opts.multi`, samples several scanlines so a centre blot / smudge
+ * does not kill detection on real rendered QR bitmaps.
  * @param {ImageData} imageData
  * @param {[number,number,number,number]} box
  * @param {number} [hintMod]
+ * @param {{ multi?: boolean }} [opts]
  */
-function hasModulePeriodicity(imageData, box, hintMod = 0) {
+function hasModulePeriodicity(imageData, box, hintMod = 0, opts = {}) {
   const { width: W, data } = imageData;
   const [x0, y0, x1, y1] = box;
   const bw = Math.floor(x1 - x0);
   const bh = Math.floor(y1 - y0);
-  if (bw < 48 || bh < 48) return false;
+  if (bw < MIN_QR_PX - 8 || bh < MIN_QR_PX - 8) return false;
 
-  const midY = Math.floor((y0 + y1) / 2);
-  const midX = Math.floor((x0 + x1) / 2);
-  const row = [];
-  const col = [];
-  for (let x = Math.floor(x0); x < x1; x++) {
-    const i = (midY * W + x) * 4;
-    const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
-    row.push(g < 128 ? 1 : 0);
-  }
-  for (let y = Math.floor(y0); y < y1; y++) {
-    const i = (y * W + midX) * 4;
-    const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
-    col.push(g < 128 ? 1 : 0);
-  }
+  const fracs = opts.multi ? [0.28, 0.42, 0.5, 0.58, 0.72] : [0.5];
 
-  const px = bestPeriod(row, hintMod);
-  const py = bestPeriod(col, hintMod);
-  if (!px || !py) return false;
-  const ratio = Math.min(px, py) / Math.max(px, py);
-  if (ratio < 0.55) return false;
-  if (hintMod > 0) {
-    const avg = (px + py) / 2;
-    if (avg < hintMod * 0.45 || avg > hintMod * 2.4) return false;
+  /** @param {number} fy @param {number} fx */
+  const pairOk = (fy, fx) => {
+    const scanY = Math.floor(y0 + (y1 - y0) * fy);
+    const scanX = Math.floor(x0 + (x1 - x0) * fx);
+    const row = [];
+    const col = [];
+    for (let x = Math.floor(x0); x < x1; x++) {
+      const i = (scanY * W + x) * 4;
+      const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
+      row.push(g < 128 ? 1 : 0);
+    }
+    for (let y = Math.floor(y0); y < y1; y++) {
+      const i = (y * W + scanX) * 4;
+      const g = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) | 0;
+      col.push(g < 128 ? 1 : 0);
+    }
+    const px = bestPeriod(row, hintMod);
+    const py = bestPeriod(col, hintMod);
+    if (!px || !py) return false;
+    const ratio = Math.min(px, py) / Math.max(px, py);
+    if (ratio < 0.5) return false;
+    if (hintMod > 0) {
+      const avg = (px + py) / 2;
+      if (avg < hintMod * 0.4 || avg > hintMod * 2.6) return false;
+    }
+    return true;
+  };
+
+  for (const fy of fracs) {
+    for (const fx of fracs) {
+      if (pairOk(fy, fx)) return true;
+    }
   }
-  return true;
+  return false;
 }
 
 /**
@@ -509,9 +543,9 @@ function hasModulePeriodicity(imageData, box, hintMod = 0) {
  */
 function bestPeriod(signal, hintMod) {
   const n = signal.length;
-  if (n < 24) return null;
-  const minP = Math.max(3, hintMod ? Math.floor(hintMod * 0.65) : 3);
-  const maxP = Math.min(Math.floor(n / 4), hintMod ? Math.ceil(hintMod * 2.6) : 28);
+  if (n < 16) return null;
+  const minP = Math.max(2, hintMod ? Math.floor(hintMod * 0.55) : 2);
+  const maxP = Math.min(Math.floor(n / 3), hintMod ? Math.ceil(hintMod * 2.8) : 28);
   if (maxP < minP) return null;
   let best = -Infinity;
   let bestP = 0;
@@ -535,7 +569,7 @@ function bestPeriod(signal, hintMod) {
       bestP = p;
     }
   }
-  if (bestP < 3 || best < 0.03) return null;
+  if (bestP < 2 || best < 0.025) return null;
   return bestP;
 }
 
@@ -547,11 +581,12 @@ function bestPeriod(signal, hintMod) {
  */
 function detectQrLikeTextureRegions(imageData) {
   const { width: W, height: H, data } = imageData;
-  if (W < 80 || H < 80) return [];
-  const cell = 24;
+  if (W < MIN_QR_PX || H < MIN_QR_PX) return [];
+  // Smaller cells so ~50px codes still form a cluster (≥4 cells).
+  const cell = Math.max(8, Math.min(24, Math.floor(Math.min(W, H) / 28)));
   const gw = Math.floor(W / cell);
   const gh = Math.floor(H / cell);
-  if (gw < 3 || gh < 3) return [];
+  if (gw < 2 || gh < 2) return [];
 
   const hot = new Uint8Array(gw * gh);
   for (let gy = 0; gy < gh; gy++) {
@@ -643,8 +678,9 @@ function detectQrLikeTextureRegions(imageData) {
       const aspect = bw / Math.max(1, bh);
       const pxW = bw * cell;
       const pxH = bh * cell;
-      if (count < 9 || aspect < 0.75 || aspect > 1.35) continue;
-      if (pxW < 72 || pxH < 72) continue;
+      const minCells = cell <= 12 ? 4 : 9;
+      if (count < minCells || aspect < 0.75 || aspect > 1.35) continue;
+      if (pxW < MIN_QR_PX || pxH < MIN_QR_PX) continue;
       if (pxW > maxSide || pxH > maxSide) continue;
       const pad = Math.floor(cell * 0.5);
       const box = /** @type {[number,number,number,number]} */ ([
@@ -654,9 +690,9 @@ function detectQrLikeTextureRegions(imageData) {
         Math.min(H, (maxY + 1) * cell + pad),
       ]);
       if (regionIsColorful(imageData, box)) continue;
-      const estMod = Math.max(3, Math.round(Math.min(box[2] - box[0], box[3] - box[1]) / 25));
-      if (!regionLooksLikeQrModules(imageData, box, estMod)) continue;
-      if (!hasModulePeriodicity(imageData, box, estMod)) continue;
+      const estMod = Math.max(2, Math.round(Math.min(box[2] - box[0], box[3] - box[1]) / 25));
+      if (!regionLooksLikeQrModules(imageData, box, estMod, { partial: true })) continue;
+      if (!hasModulePeriodicity(imageData, box, estMod, { multi: true })) continue;
       out.push(box);
     }
   }
@@ -688,7 +724,7 @@ function identifyTopLeft(a, b, c) {
  */
 export function findFinderPatterns(imageData) {
   const { width: W, height: H, data } = imageData;
-  if (W < 60 || H < 60) return [];
+  if (W < MIN_QR_PX || H < MIN_QR_PX) return [];
 
   const gray = new Uint8Array(W * H);
   for (let i = 0, j = 0; i < data.length; i += 4, j++) {
@@ -706,7 +742,8 @@ export function findFinderPatterns(imageData) {
  * @param {number} H
  */
 function adaptiveBinarize(gray, W, H) {
-  const block = Math.max(16, Math.floor(Math.min(W, H) / 24));
+  // Smaller blocks on phone-photo / small-code canvases so ~2px modules survive.
+  const block = Math.max(8, Math.min(24, Math.floor(Math.min(W, H) / 28)));
   const binary = new Uint8Array(W * H);
   for (let by = 0; by < H; by += block) {
     for (let bx = 0; bx < W; bx += block) {
@@ -740,7 +777,8 @@ function adaptiveBinarize(gray, W, H) {
 function scanFinders(binary, W, H) {
   /** @type {FinderHit[]} */
   const raw = [];
-  for (let y = 3; y < H - 3; y += 2) {
+  const yStep = Math.min(W, H) < 160 ? 1 : 2;
+  for (let y = 3; y < H - 3; y += yStep) {
     let x = 0;
     while (x < W - 7) {
       while (x < W && binary[y * W + x] === 0) x++;
@@ -777,9 +815,11 @@ function scanFinders(binary, W, H) {
 /** @param {number[]} runs */
 function matchFinderRatio(runs) {
   const total = runs[0] + runs[1] + runs[2] + runs[3] + runs[4];
-  if (total < 14) return false;
+  // Allow ~2px modules (finder ≈ 14px); slightly under for anti-aliased renders.
+  if (total < 11) return false;
   const unit = total / 7;
-  const ok = (v, n) => Math.abs(v - n * unit) <= Math.max(1.1, unit * 0.75);
+  const tol = Math.max(1.15, unit * 0.85);
+  const ok = (v, n) => Math.abs(v - n * unit) <= tol;
   return ok(runs[0], 1) && ok(runs[1], 1) && ok(runs[2], 3) && ok(runs[3], 1) && ok(runs[4], 1);
 }
 

@@ -53,8 +53,11 @@ type OcrProvider = {
 ```
 
 - `ui/ocr.js` honours `opts.lang`: separate lazy **eng** and **chi_tra** workers (vendored, same-origin, cache-first).
-- Pipeline uses `eng` for orientation / labels / serial, and `chi_tra` for Han name backstop.
-- Auto-blank only high-confidence **genuine Han** boxes that do **not** overlap Latin clinical tokens (`Right Eye`, `OD`/`OS`, `MD`, `PSD`, …).
+- Pipeline uses `eng` for orientation / labels / serial, and `chi_tra` for Han name flags.
+- High-confidence **genuine Han** name boxes that do **not** overlap Latin clinical tokens
+  (`Right Eye`, `OD`/`OS`, `MD`, `PSD`, …) become `cjk_name` **review flags** — they are
+  **not** auto-blanked on PNG or PDF (Approve stays gated until Blank all / tap-to-blank).
+- QR finder / texture / dense floors target ~48px so smudged phone-photo codes still flag.
 
 ## `deidPage` options & result
 
