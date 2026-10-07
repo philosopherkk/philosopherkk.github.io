@@ -5,7 +5,7 @@
   "scripts": {
     "fixtures": "node generate-fixtures.mjs",
     "test:unit": "node --test --test-reporter=spec unit.test.mjs layouts.test.mjs safety-flags.test.mjs",
-    "test:e2e": "node e2e.mjs && node touch-draw.e2e.mjs && node size-report.e2e.mjs && node qr-export.e2e.mjs && node flags-undo.e2e.mjs && node serial-gate.e2e.mjs && node partial-blank.e2e.mjs && node code128-export.e2e.mjs && node qr-rotated-pdf.e2e.mjs && node ui-pipeline.e2e.mjs",
+    "test:e2e": "node e2e.mjs && node touch-draw.e2e.mjs && node size-report.e2e.mjs && node qr-export.e2e.mjs && node flags-undo.e2e.mjs && node serial-gate.e2e.mjs && node partial-blank.e2e.mjs && node code128-export.e2e.mjs && node qr-rotated-pdf.e2e.mjs && node ui-pipeline.e2e.mjs && node picker-upload.e2e.mjs",
     "test": "npm run fixtures && npm run test:unit && npm run test:e2e",
     "test:pages-stage": "bash ../../scripts/stage-pages.sh && bash ../../scripts/verify-pages-stage.sh"
   },
