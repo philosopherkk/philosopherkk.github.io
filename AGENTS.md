@@ -11,6 +11,7 @@ Hong Kong timezone (HKT) for dates and version notes.
    - Purple Sectors → `purple/`
    - HA waiting times → `waiting/`
    - Scan De-identifier → `deid/`
+   - ReportNReferral → `reportnreferral/`
 3. **EyesInfo** lives at https://eyesinfo.org (work: https://github.com/philosopherkk/eyesinfo). This hub **links out only** — do not copy that site here; do not edit that repo from a github.io task.
 4. **Simracing web — Apex Trace** is **PENDING** until KK resends the handoff. Do not scaffold a fake app, folder, or placeholder (`/apex/`, `/simracing/`, etc.). Not the same project as Purple Sectors.
 5. **Never commit** Outflow ledger JSON/CSV, vault blobs, or passphrase data. That data is private and on-device only.
@@ -26,6 +27,7 @@ Hong Kong timezone (HKT) for dates and version notes.
 5. Outflow — https://philosopherkk.github.io/outflow/
 6. HA waiting times — https://philosopherkk.github.io/waiting/
 7. Scan De-identifier — https://philosopherkk.github.io/deid/
+8. ReportNReferral — https://philosopherkk.github.io/reportnreferral/
 
 ## Publish loop (one Pages app)
 
