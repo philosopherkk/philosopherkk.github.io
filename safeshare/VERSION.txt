@@ -1,0 +1,5 @@
+SafeShare MD
+Version: 0.2.0
+Updated: 2026-09-27 (HKT)
+Phone: https://safeshare-md.vercel.app/safeshare/
+History: safeshare/CHANGELOG.md
