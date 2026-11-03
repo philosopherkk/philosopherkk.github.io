@@ -1,5 +1,5 @@
 const SITE = {
-  version: "1.1.0",
+  version: "1.2.0",
   lastUpdated: "2026-11-03",
   dataFrom: "2025-10-01",
   dataTo: "2026-09-30",
@@ -7,6 +7,8 @@ const SITE = {
   nextHa: "2027-01-29",
 };
 const HISTORY={"periods":[{"dateFrom":20221001,"dateTo":20230930,"label":"2022-10→09","endLabel":"2023-09"},{"dateFrom":20230101,"dateTo":20231231,"label":"2023-01→12","endLabel":"2023-12"},{"dateFrom":20230401,"dateTo":20240331,"label":"2023-04→03","endLabel":"2024-03"},{"dateFrom":20230701,"dateTo":20240630,"label":"2023-07→06","endLabel":"2024-06"},{"dateFrom":20231001,"dateTo":20240930,"label":"2023-10→09","endLabel":"2024-09"},{"dateFrom":20240101,"dateTo":20241231,"label":"2024-01→12","endLabel":"2024-12"},{"dateFrom":20240401,"dateTo":20250331,"label":"2024-04→03","endLabel":"2025-03"},{"dateFrom":20240701,"dateTo":20250630,"label":"2024-07→06","endLabel":"2025-06"},{"dateFrom":20241001,"dateTo":20250930,"label":"2024-10→09","endLabel":"2025-09"},{"dateFrom":20250101,"dateTo":20251231,"label":"2025-01→12","endLabel":"2025-12"},{"dateFrom":20250401,"dateTo":20260331,"label":"2025-04→03","endLabel":"2026-03"},{"dateFrom":20250701,"dateTo":20260630,"label":"2025-07→06","endLabel":"2026-06"},{"dateFrom":20251001,"dateTo":20260930,"label":"2025-10→09","endLabel":"2026-09"}],"sop":{"Ear, Nose, Throat":{"Hong Kong East Cluster":{"stableMedianWeeks":[12,12,14,20,25,26,25,24,25,25,21,24,25],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Hong Kong West Cluster":{"stableMedianWeeks":[27,26,26,26,34,41,41,41,36,29,29,24,25],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon East Cluster":{"stableMedianWeeks":[88,88,70,72,71,71,80,80,80,80,80,54,53],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon Central Cluster":{"stableMedianWeeks":[45,41,40,40,40,45,38,41,42,40,41,40,38],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories East Cluster":{"stableMedianWeeks":[39,38,37,35,32,32,32,33,38,40,39,34,32],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories West Cluster":{"stableMedianWeeks":[53,34,35,35,42,51,51,51,49,45,41,39,33],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon West Cluster":{"stableMedianWeeks":[33,31,33,35,38,39,39,39,34,34,34,36,40],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]}},"Eye":{"Hong Kong East Cluster":{"stableMedianWeeks":[36,38,42,55,67,56,35,31,26,29,26,24,25],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Hong Kong West Cluster":{"stableMedianWeeks":[60,61,61,63,64,62,61,60,58,54,40,36,34],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon East Cluster":{"stableMedianWeeks":[66,81,84,85,83,81,79,90,91,58,49,38,36],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon Central Cluster":{"stableMedianWeeks":[77,81,85,97,78,85,82,26,26,26,28,32,62],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories East Cluster":{"stableMedianWeeks":[63,74,78,83,87,86,87,72,68,61,61,70,65],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories West Cluster":{"stableMedianWeeks":[77,83,82,78,76,74,74,74,73,61,33,31,31],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon West Cluster":{"stableMedianWeeks":[17,23,75,104,95,88,88,67,96,47,42,43,42],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]}},"Gynaecology":{"Hong Kong East Cluster":{"stableMedianWeeks":[25,25,25,25,25,25,25,25,24,24,25,26,26],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Hong Kong West Cluster":{"stableMedianWeeks":[34,28,27,26,26,27,27,33,33,27,27,27,26],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon East Cluster":{"stableMedianWeeks":[54,39,35,32,30,30,30,32,32,26,25,19,18],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon Central Cluster":{"stableMedianWeeks":[32,32,35,36,37,32,31,32,27,26,26,25,26],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories East Cluster":{"stableMedianWeeks":[58,60,59,61,61,61,60,59,59,56,57,58,54],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories West Cluster":{"stableMedianWeeks":[60,60,60,60,60,59,58,56,57,42,44,44,43],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon West Cluster":{"stableMedianWeeks":[50,55,57,62,67,69,71,73,74,71,52,49,47],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]}},"Medicine":{"Hong Kong East Cluster":{"stableMedianWeeks":[43,41,37,34,31,30,31,32,31,32,32,29,31],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Hong Kong West Cluster":{"stableMedianWeeks":[27,28,30,30,31,31,29,29,29,27,27,27,28],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon East Cluster":{"stableMedianWeeks":[58,58,57,55,51,49,49,49,49,48,37,33,29],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon Central Cluster":{"stableMedianWeeks":[62,60,56,58,61,61,62,64,70,70,68,65,61],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories East Cluster":{"stableMedianWeeks":[41,37,41,42,45,48,50,52,52,48,44,36,37],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories West Cluster":{"stableMedianWeeks":[30,26,27,32,35,36,38,38,41,44,46,47,48],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon West Cluster":{"stableMedianWeeks":[69,64,62,62,62,63,67,68,65,60,53,47,42],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]}},"Orthopaedics & Traumatology":{"Hong Kong East Cluster":{"stableMedianWeeks":[51,50,51,39,37,32,27,26,24,25,26,25,26],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Hong Kong West Cluster":{"stableMedianWeeks":[21,21,20,20,20,22,23,24,24,24,23,23,22],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon East Cluster":{"stableMedianWeeks":[60,57,57,67,62,52,51,49,48,47,46,42,43],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon Central Cluster":{"stableMedianWeeks":[44,45,36,36,29,25,23,22,24,25,28,27,29],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories East Cluster":{"stableMedianWeeks":[51,58,59,47,47,37,32,36,31,38,44,33,32],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories West Cluster":{"stableMedianWeeks":[37,36,36,34,33,33,33,33,34,34,35,34,33],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon West Cluster":{"stableMedianWeeks":[52,50,50,51,54,53,53,54,59,64,65,45,41],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]}},"Paediatrics":{"Hong Kong East Cluster":{"stableMedianWeeks":[10,11,12,14,15,15,15,14,14,14,14,13,13],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Hong Kong West Cluster":{"stableMedianWeeks":[15,16,16,16,16,18,20,22,27,27,25,21,18],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon East Cluster":{"stableMedianWeeks":[13,15,12,11,11,11,11,11,10,10,10,10,11],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon Central Cluster":{"stableMedianWeeks":[10,12,12,13,14,11,10,9,9,10,11,11,11],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories East Cluster":{"stableMedianWeeks":[18,22,23,26,29,32,37,35,30,25,24,25,24],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories West Cluster":{"stableMedianWeeks":[17,20,21,22,23,26,29,28,28,23,23,24,25],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon West Cluster":{"stableMedianWeeks":[10,10,11,12,14,16,19,21,21,22,22,21,21],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]}},"Psychiatry":{"Hong Kong East Cluster":{"stableMedianWeeks":[22,23,26,27,32,36,35,34,31,30,34,27,28],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Hong Kong West Cluster":{"stableMedianWeeks":[41,40,40,40,41,42,42,42,42,43,45,46,45],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon East Cluster":{"stableMedianWeeks":[57,54,48,41,33,40,43,43,41,41,45,41,50],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon Central Cluster":{"stableMedianWeeks":[22,20,20,20,21,21,22,23,24,25,25,25,26],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories East Cluster":{"stableMedianWeeks":[69,72,76,75,77,77,77,75,73,76,74,69,58],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories West Cluster":{"stableMedianWeeks":[41,39,35,34,34,36,41,45,51,46,47,46,45],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon West Cluster":{"stableMedianWeeks":[29,29,26,25,24,24,23,20,19,17,19,19,23],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]}},"Surgery":{"Hong Kong East Cluster":{"stableMedianWeeks":[44,44,44,43,43,41,39,39,41,43,43,38,37],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Hong Kong West Cluster":{"stableMedianWeeks":[16,16,17,17,19,19,19,22,24,25,27,27,28],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon East Cluster":{"stableMedianWeeks":[65,58,59,62,59,59,60,57,58,54,52,48,43],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon Central Cluster":{"stableMedianWeeks":[34,34,33,33,35,37,38,40,41,42,42,42,43],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories East Cluster":{"stableMedianWeeks":[29,30,30,30,31,32,34,34,35,37,38,38,39],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"New Territories West Cluster":{"stableMedianWeeks":[43,39,35,36,35,36,38,34,35,35,38,36,34],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]},"Kowloon West Cluster":{"stableMedianWeeks":[52,53,53,55,59,57,53,52,51,51,51,37,32],"stableP90Weeks":[null,null,null,null,null,null,null,null,null,null,null,null,null]}}},"source":"HA SOP waiting-time-en.json via data.gov.hk historical-archive","unit":"weeks"};
+
+const SURGERY_HISTORY={"source":"HA elective surgery JSON via data.gov.hk historical-archive","unitWait":"months","cat":{"periods":[{"archiveTs":"20220201","asAt":"2021-12-31","periodFrom":"2021-01-01","periodTo":"2021-12-31","endLabel":"2021-12"},{"archiveTs":"20220301","asAt":"2021-12-31","periodFrom":"2021-01-01","periodTo":"2021-12-31","endLabel":"2021-12"},{"archiveTs":"20220501","asAt":"2022-03-31","periodFrom":"2021-04-01","periodTo":"2022-03-31","endLabel":"2022-03"},{"archiveTs":"20220701","asAt":"2022-06-30","periodFrom":"2021-07-01","periodTo":"2022-06-30","endLabel":"2022-06"},{"archiveTs":"20221001","asAt":"2022-09-30","periodFrom":"2021-10-01","periodTo":"2022-09-30","endLabel":"2022-09"},{"archiveTs":"20230101","asAt":"2022-12-31","periodFrom":"2022-01-01","periodTo":"2022-12-31","endLabel":"2022-12"},{"archiveTs":"20230401","asAt":"2023-03-31","periodFrom":"2022-04-01","periodTo":"2023-03-31","endLabel":"2023-03"},{"archiveTs":"20230701","asAt":"2023-06-30","periodFrom":"2022-07-01","periodTo":"2023-06-30","endLabel":"2023-06"},{"archiveTs":"20231001","asAt":"2023-09-30","periodFrom":"2022-10-01","periodTo":"2023-09-30","endLabel":"2023-09"},{"archiveTs":"20240101","asAt":"2023-12-31","periodFrom":"2023-01-01","periodTo":"2023-12-31","endLabel":"2023-12"},{"archiveTs":"20240401","asAt":"2024-03-31","periodFrom":"2023-04-01","periodTo":"2024-03-31","endLabel":"2024-03"},{"archiveTs":"20240701","asAt":"2024-06-30","periodFrom":"2023-07-01","periodTo":"2024-06-30","endLabel":"2024-06"},{"archiveTs":"20241001","asAt":"2024-09-30","periodFrom":"2023-10-01","periodTo":"2024-09-30","endLabel":"2024-09"},{"archiveTs":"20250101","asAt":"2024-12-31","periodFrom":"2024-01-01","periodTo":"2024-12-31","endLabel":"2024-12"},{"archiveTs":"20250401","asAt":"2025-03-31","periodFrom":"2024-04-01","periodTo":"2025-03-31","endLabel":"2025-03"},{"archiveTs":"20250701","asAt":"2025-06-30","periodFrom":"2024-07-01","periodTo":"2025-06-30","endLabel":"2025-06"},{"archiveTs":"20251001","asAt":"2025-09-30","periodFrom":"2024-10-01","periodTo":"2025-09-30","endLabel":"2025-09"},{"archiveTs":"20260101","asAt":"2025-12-31","periodFrom":"2025-01-01","periodTo":"2025-12-31","endLabel":"2025-12"},{"archiveTs":"20260401","asAt":"2026-03-31","periodFrom":"2025-04-01","periodTo":"2026-03-31","endLabel":"2026-03"},{"archiveTs":"20260701","asAt":"2026-06-30","periodFrom":"2025-07-01","periodTo":"2026-06-30","endLabel":"2026-06"},{"archiveTs":"20261030","asAt":"2026-09-30","periodFrom":"2025-10-01","periodTo":"2026-09-30","endLabel":"2026-09"}],"clusters":{"Hong Kong East Cluster":{"waitlist":[7388,7388,7664,7883,7825,8230,8524,8735,8701,8275,8533,8570,8874,8746,8809,8727,8580,8619,8822,8725,8907],"median":[20,20,19,18,15,15,15,21,20,20,20,19,18,11,8,19,22,21,19,17,16],"p90":[29,29,29,30,34,37,38,40,40,40,39,40,39,35,31,28,27,26,26,26,27]},"Hong Kong West Cluster":{"waitlist":[4188,4188,4149,4241,4186,4075,3964,3670,3276,3222,3216,3369,3248,3324,3419,3405,3046,3201,3107,3070,3133],"median":[10,10,10,11,12,12,13,13,13,12,11,10,10,10,10,9,8,7,7,7,7],"p90":[14,14,15,17,17,18,19,19,18,19,18,17,16,13,12,12,12,12,12,11,11]},"Kowloon Central Cluster":{"waitlist":[14887,14887,15306,15744,15683,15780,15214,14985,14249,13526,12702,12388,11886,11900,11731,11253,10964,11085,11048,11252,11206],"median":[23,23,19,13,11,11,12,13,19,30,31,31,28,27,27,26,23,21,20,20,20],"p90":[33,33,34,36,36,37,38,38,38,38,36,36,34,33,32,31,29,29,27,25,24]},"Kowloon East Cluster":{"waitlist":[5368,5368,5808,6446,7059,7922,8267,9178,9604,9704,9660,10075,10182,10236,10247,10250,10329,10255,10261,10065,9747],"median":[17,17,17,16,16,16,17,15,11,10,14,24,24,25,25,25,25,25,25,25,26],"p90":[21,21,21,21,22,22,23,23,25,27,28,29,29,30,30,31,31,31,31,31,30]},"Kowloon West Cluster":{"waitlist":[10791,10791,11017,11483,12230,12507,12768,13075,13341,12855,12690,12648,12928,12497,11918,11248,10958,10933,11075,11294,11785],"median":[12,12,12,12,12,13,13,13,13,13,14,14,14,14,14,14,14,14,14,13,12],"p90":[39,39,40,40,41,47,47,48,51,52,52,53,52,52,52,52,52,51,51,48,47]},"New Territories East Cluster":{"waitlist":[7777,7777,8031,8187,8117,8464,8685,9242,9613,9522,9499,10089,10384,10471,10217,10147,10103,10245,10048,10243,10314],"median":[22,22,22,22,21,20,20,20,11,11,11,12,14,11,12,16,17,17,17,16,12],"p90":[26,26,26,26,25,25,25,24,25,25,26,26,27,28,29,30,30,30,30,29,28]},"New Territories West Cluster":{"waitlist":[12369,12369,12449,12656,12778,12437,12621,12863,12899,12655,12519,12299,12324,11817,11513,10914,10669,10721,11175,11628,11969],"median":[13,13,12,12,11,11,12,13,13,13,13,13,13,14,15,28,28,27,25,21,19],"p90":[44,44,45,46,47,55,56,57,57,57,57,56,55,54,51,49,48,45,41,33,32]},"Overall":{"waitlist":[62768,62768,64424,66640,67878,69415,70043,71748,71683,69759,68819,69438,69826,68991,67854,65944,64649,65059,65536,66277,67061],"median":[23,23,22,22,21,20,20,21,20,30,31,31,28,27,27,28,28,27,25,25,26],"p90":[44,44,45,46,47,55,56,57,57,57,57,56,55,54,52,52,52,51,51,48,47]}}},"tjr":{"periods":[{"archiveTs":"20220201","asAt":"2021-12-31","periodFrom":"2021-01-01","periodTo":"2021-12-31","endLabel":"2021-12"},{"archiveTs":"20220301","asAt":"2021-12-31","periodFrom":"2021-01-01","periodTo":"2021-12-31","endLabel":"2021-12"},{"archiveTs":"20220501","asAt":"2022-03-31","periodFrom":"2021-04-01","periodTo":"2022-03-31","endLabel":"2022-03"},{"archiveTs":"20220701","asAt":"2022-06-30","periodFrom":"2021-07-01","periodTo":"2022-06-30","endLabel":"2022-06"},{"archiveTs":"20221001","asAt":"2022-09-30","periodFrom":"2021-10-01","periodTo":"2022-09-30","endLabel":"2022-09"},{"archiveTs":"20230101","asAt":"2022-12-31","periodFrom":"2022-01-01","periodTo":"2022-12-31","endLabel":"2022-12"},{"archiveTs":"20230401","asAt":"2023-03-31","periodFrom":"2022-04-01","periodTo":"2023-03-31","endLabel":"2023-03"},{"archiveTs":"20230701","asAt":"2023-06-30","periodFrom":"2022-07-01","periodTo":"2023-06-30","endLabel":"2023-06"},{"archiveTs":"20231001","asAt":"2023-09-30","periodFrom":"2022-10-01","periodTo":"2023-09-30","endLabel":"2023-09"},{"archiveTs":"20240101","asAt":"2023-12-31","periodFrom":"2023-01-01","periodTo":"2023-12-31","endLabel":"2023-12"},{"archiveTs":"20240401","asAt":"2024-03-31","periodFrom":"2023-04-01","periodTo":"2024-03-31","endLabel":"2024-03"},{"archiveTs":"20240701","asAt":"2024-06-30","periodFrom":"2023-07-01","periodTo":"2024-06-30","endLabel":"2024-06"},{"archiveTs":"20241001","asAt":"2024-09-30","periodFrom":"2023-10-01","periodTo":"2024-09-30","endLabel":"2024-09"},{"archiveTs":"20250101","asAt":"2024-12-31","periodFrom":"2024-01-01","periodTo":"2024-12-31","endLabel":"2024-12"},{"archiveTs":"20250401","asAt":"2025-03-31","periodFrom":"2024-04-01","periodTo":"2025-03-31","endLabel":"2025-03"},{"archiveTs":"20250701","asAt":"2025-06-30","periodFrom":"2024-07-01","periodTo":"2025-06-30","endLabel":"2025-06"},{"archiveTs":"20251001","asAt":"2025-09-30","periodFrom":"2024-10-01","periodTo":"2025-09-30","endLabel":"2025-09"},{"archiveTs":"20260101","asAt":"2025-12-31","periodFrom":"2025-01-01","periodTo":"2025-12-31","endLabel":"2025-12"},{"archiveTs":"20260401","asAt":"2026-03-31","periodFrom":"2025-04-01","periodTo":"2026-03-31","endLabel":"2026-03"},{"archiveTs":"20260701","asAt":"2026-06-30","periodFrom":"2025-07-01","periodTo":"2026-06-30","endLabel":"2026-06"},{"archiveTs":"20261030","asAt":"2026-09-30","periodFrom":"2025-10-01","periodTo":"2026-09-30","endLabel":"2026-09"}],"clusters":{"Hong Kong East Cluster":{"waitlist":[2388,2388,2487,2595,2653,2673,2705,2771,2800,2758,2615,2532,2452,2418,2329,2262,2166,1989,1830,1675,1559],"median":[34,34,28,31,29,33,37,24,22,18,11,11,14,16,19,22,17,15,17,10,12],"p90":[72,72,73,74,77,79,80,81,82,83,83,83,83,78,75,77,81,84,87,86,84]},"Hong Kong West Cluster":{"waitlist":[4217,4217,4313,4452,4552,4636,4714,4781,4809,4603,4029,3757,3522,3240,3044,2882,2837,2857,2816,2730,2731],"median":[20,20,18,18,23,27,31,31,35,37,41,44,45,43,36,33,29,30,30,30,31],"p90":[55,55,58,61,65,67,68,71,75,73,77,77,77,73,66,59,54,54,55,53,53]},"Kowloon Central Cluster":{"waitlist":[4905,4905,4929,5110,5270,5350,5382,5494,5653,5660,5698,5604,5632,5584,5612,5616,5634,6180,6174,6036,5719],"median":[29,29,31,34,35,37,38,39,40,41,42,42,42,43,44,43,37,38,38,42,44],"p90":[45,45,45,46,45,47,48,50,53,52,53,54,56,59,60,61,60,60,61,61,63]},"Kowloon East Cluster":{"waitlist":[2475,2475,2543,2558,2519,2502,2468,2433,2498,2588,2627,2667,2723,2811,2948,3281,3226,3339,3437,3487,3363],"median":[22,22,22,21,23,22,23,23,24,26,27,28,28,30,31,33,34,35,35,35,36],"p90":[60,60,62,63,64,64,64,68,72,73,74,73,71,73,78,74,57,53,46,43,43]},"Kowloon West Cluster":{"waitlist":[5257,5257,5708,5933,6158,6338,6720,6851,7106,7319,6527,6408,6146,5942,5745,5396,5477,5865,5954,5824,5562],"median":[41,41,40,42,41,42,43,46,47,49,51,51,52,52,52,53,52,52,50,46,49],"p90":[61,61,58,63,56,56,57,62,66,68,75,78,80,78,74,72,72,73,76,75,75]},"New Territories East Cluster":{"waitlist":[5999,5999,6090,6240,6456,6711,6911,7105,7257,7468,7652,7699,7897,8125,8240,8240,8290,8260,8334,8350,8185],"median":[27,27,28,28,29,29,28,27,26,24,23,21,25,27,30,31,32,32,31,30,28],"p90":[51,51,54,56,55,60,63,64,65,66,65,67,70,69,69,69,71,69,64,64,64]},"New Territories West Cluster":{"waitlist":[7077,7077,6855,6621,6398,6142,5959,5817,5589,5388,5297,5284,5243,5250,5255,5000,4904,4831,4732,4608,4562],"median":[50,50,56,73,70,56,54,58,51,33,9,7,9,18,21,15,7,5,5,6,7],"p90":[91,91,101,103,103,95,90,90,89,87,83,79,80,80,79,75,72,71,68,67,70]},"Overall":{"waitlist":[32318,32318,32925,33509,34006,34352,34859,35252,35712,35784,34445,33951,33615,33370,33173,32677,32534,33321,33277,32710,31681],"median":[50,50,56,73,70,56,54,58,51,49,51,51,52,52,52,53,52,52,50,46,49],"p90":[91,91,101,103,103,95,90,90,89,87,83,83,83,80,79,77,81,84,87,86,84]}}}};
 
 const COPY = {
   en: {
@@ -43,17 +45,21 @@ const COPY = {
     legendCool: "≤ target / shorter",
     legendMid: "elevated",
     legendHot: "long tail (≥ 80 weeks P90 or ≥ 40 weeks median stable)",
-    trendTitle: "Stable new-case median — quarterly trend",
+    trendTitle: "Stable new-case median — all specialties",
     trendNote:
-      "Thirteen overlapping HA reporting periods (Oct 2022 → Sep 2026), from data.gov.hk historical snapshots of sop-waiting-time-en.json. Lines follow your specialty and cluster selection.",
+      "Thirteen overlapping HA reporting periods (Oct 2022 → Sep 2026), from data.gov.hk historical snapshots of sop-waiting-time-en.json. Each panel is one specialty; the sidebar cluster filter applies (territory-worst line when All clusters). The specialty dropdown still drives the KPIs and table below.",
     trendWorstLine: "Territory worst (max across clusters)",
     trendMedian: "Stable median",
     trendP90: "Stable P90",
     trendShowP90: "Overlay stable P90",
     trendP90Missing:
       "Historical archive JSON did not include stable P90 weeks; only median trends are shown. Latest P90 remains in the table below.",
-    trendSurgeryNote:
-      "Elective surgery (cataract / TJR) trend charts are not embedded yet; only the latest quarter is in the surgery tab. They will accumulate as quarterly CAT/TJR archives are added.",
+    trendSurgeryIntro:
+      "Twenty-one data.gov.hk historical snapshots (Feb 2022 → Oct 2026) of the elective-surgery JSON files. Cluster filter applies: All clusters shows HA Overall waitlist and territory-worst completed-case median; one cluster shows that cluster.",
+    trendWaitlist: "Waitlist",
+    trendSurgeryMed: "Completed-case median wait",
+    trendSurgeryGap:
+      "Archive cadence is monthly (not identical to SOP’s thirteen rolling periods). The first two snapshots repeat the same 2021-12 reporting period.",
     colCluster: "Cluster",
     colUrgent: "Urgent median",
     colSemi: "Semi-urgent median",
@@ -135,17 +141,21 @@ const COPY = {
     legendCool: "達標／較短",
     legendMid: "偏高",
     legendHot: "長尾（第90百分位 ≥ 80 星期，或穩定中位數 ≥ 40 星期）",
-    trendTitle: "穩定新症中位數 — 每季走勢",
+    trendTitle: "穩定新症中位數 — 全部專科",
     trendNote:
-      "十三個重疊的醫管局報告期（2022年10月至2026年9月），來自 data.gov.hk 歷史檔案中的 sop-waiting-time-en.json。走勢跟隨左側所選專科及聯網。",
+      "十三個重疊的醫管局報告期（2022年10月至2026年9月），來自 data.gov.hk 歷史檔案中的 sop-waiting-time-en.json。每格為一個專科；左側聯網篩選適用（全部聯網時為全港最長線）。下方 KPI 及表格仍跟隨所選專科。",
     trendWorstLine: "全港最長（各聯網最高值）",
     trendMedian: "穩定中位數",
     trendP90: "穩定第90百分位",
     trendShowP90: "疊加穩定第90百分位",
     trendP90Missing:
       "歷史檔案 JSON 未包含穩定第90百分位星期數；僅顯示中位數走勢。最新第90百分位仍見下表。",
-    trendSurgeryNote:
-      "預約手術（白內障／全關節置換）走勢圖尚未嵌入；手術分頁僅有最近一季。日後每季加入 CAT/TJR 歷史檔案後可擴展。",
+    trendSurgeryIntro:
+      "二十一個 data.gov.hk 歷史快照（2022年2月至2026年10月）的預約手術 JSON。聯網篩選適用：全部聯網顯示醫管局「Overall」輪候宗數及已完成手術的最長中位數；單一聯網顯示該聯網。",
+    trendWaitlist: "輪候宗數",
+    trendSurgeryMed: "已完成手術中位數輪候",
+    trendSurgeryGap:
+      "檔案為每月快照（與專科門診十三期滾動報告期不完全相同）。首兩個快照重複同一 2021-12 報告期。",
     colCluster: "聯網",
     colUrgent: "緊急中位數",
     colSemi: "半緊急中位數",
@@ -330,7 +340,6 @@ const HISTORY_CLUSTER = {
 
 let lang = localStorage.getItem("ha-lang") === "zh" ? "zh" : "en";
 let tab = "sop";
-let chartShowP90 = localStorage.getItem("ha-chart-p90") === "1";
 
 function t() { return COPY[lang]; }
 function fd(iso) {
@@ -351,12 +360,6 @@ function historyWeeks(specKey, clusterId, field) {
   if (!spec) return [];
   const row = spec[HISTORY_CLUSTER[clusterId]];
   return row ? row[field] : [];
-}
-
-function historyHasP90(specKey, clusterIds) {
-  return clusterIds.some((cid) =>
-    historyWeeks(specKey, cid, "stableP90Weeks").some((v) => v != null),
-  );
 }
 
 function clusterShort(clusterId) {
@@ -406,47 +409,53 @@ function svgEsc(s) {
     .replace(/"/g, "&quot;");
 }
 
-function mountTrendChart(specKey, clusterFilter) {
-  const host = document.getElementById("sop-trend-chart");
-  if (!host) return;
-  const tt = t();
-  const labels = HISTORY.periods.map((p) => p.endLabel);
-  const medianSeries = trendSeriesForSelection(specKey, clusterFilter, "stableMedianWeeks");
-  let series = medianSeries;
-  const p90Ok = historyHasP90(specKey, COLS);
-  if (chartShowP90 && p90Ok) {
-    series = series.concat(trendSeriesForSelection(specKey, clusterFilter, "stableP90Weeks"));
-  }
+function surgeryHistCluster(clusterFilter) {
+  if (clusterFilter === "ALL") return "Overall";
+  return HISTORY_CLUSTER[clusterFilter];
+}
 
+function renderTrendSvg(opts) {
+  const {
+    labels,
+    series,
+    unitLabel,
+    compact = false,
+    ariaLabel = "",
+    yMaxPad = 1,
+  } = opts;
   const nums = series.flatMap((s) => s.values.filter((v) => v != null));
-  if (!nums.length) {
-    host.innerHTML = `<p class="note">${tt.trendP90Missing}</p>`;
-    return;
-  }
-  const yMax = Math.max(10, Math.ceil(Math.max(...nums) / 10) * 10);
-  const W = 720;
-  const H = 300;
-  const pad = { t: 12, r: 12, b: 56, l: 48 };
+  if (!nums.length) return `<p class="note">${svgEsc(t().trendP90Missing)}</p>`;
+  const rawMax = Math.max(...nums);
+  const yMax =
+    rawMax <= 10
+      ? Math.ceil(rawMax * yMaxPad)
+      : Math.max(10, Math.ceil((rawMax * yMaxPad) / 10) * 10);
+  const W = compact ? 320 : 720;
+  const H = compact ? 176 : 300;
+  const pad = compact
+    ? { t: 8, r: 8, b: 40, l: 36 }
+    : { t: 12, r: 12, b: 56, l: 48 };
   const innerW = W - pad.l - pad.r;
   const innerH = H - pad.t - pad.b;
   const n = labels.length;
   const xAt = (i) => pad.l + (n <= 1 ? 0 : (i / (n - 1)) * innerW);
   const yAt = (v) => pad.t + (1 - v / yMax) * innerH;
+  const labelStep = compact ? (n > 10 ? 4 : 2) : n > 8 ? 2 : 1;
 
-  const grid = [0, 0.25, 0.5, 0.75, 1]
+  const grid = [0, 0.5, 1]
     .map((f) => {
       const val = Math.round(yMax * f);
       const y = yAt(val);
       return `<line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="var(--line)" stroke-width="1"/>
-        <text x="${pad.l - 8}" y="${y + 4}" text-anchor="end" fill="var(--muted)" font-size="11" font-family="IBM Plex Mono, monospace">${val}</text>`;
+        <text x="${pad.l - 6}" y="${y + 3}" text-anchor="end" fill="var(--muted)" font-size="${compact ? 9 : 11}" font-family="IBM Plex Mono, monospace">${val}</text>`;
     })
     .join("");
 
   const xLabels = labels
     .map((lab, i) => {
-      if (n > 8 && i % 2 === 1) return "";
+      if (i % labelStep !== 0 && i !== n - 1) return "";
       const x = xAt(i);
-      return `<text x="${x}" y="${H - 8}" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="IBM Plex Mono, monospace" transform="rotate(-35 ${x} ${H - 8})">${svgEsc(lab)}</text>`;
+      return `<text x="${x}" y="${H - 6}" text-anchor="middle" fill="var(--muted)" font-size="${compact ? 8 : 10}" font-family="IBM Plex Mono, monospace" transform="rotate(-35 ${x} ${H - 6})">${svgEsc(lab)}</text>`;
     })
     .join("");
 
@@ -459,7 +468,7 @@ function mountTrendChart(specKey, clusterFilter) {
         d += `${cmd}${xAt(i).toFixed(2)},${yAt(v).toFixed(2)} `;
       });
       if (!d) return "";
-      return `<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="${s.id === "WORST" ? 2.5 : 2}" stroke-dasharray="${s.dash || "none"}" opacity="${s.id === "WORST" ? 1 : 0.92}"/>`;
+      return `<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="${s.id === "WORST" ? 2.2 : 2}" stroke-dasharray="${s.dash || "none"}"/>`;
     })
     .join("");
 
@@ -467,30 +476,72 @@ function mountTrendChart(specKey, clusterFilter) {
     .filter((s) => s.values.some((v) => v != null))
     .map(
       (s) =>
-        `<span class="chart-leg"><span class="swatch" style="background:${s.color}${s.dash ? ";opacity:.85" : ""}"></span>${svgEsc(s.label)}</span>`,
+        `<span class="chart-leg"><span class="swatch" style="background:${s.color}"></span>${svgEsc(s.label)}</span>`,
     )
     .join("");
 
-  host.innerHTML = `<svg class="trend-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${svgEsc(tt.trendTitle)}">
+  return `<svg class="trend-svg${compact ? " trend-svg-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${svgEsc(ariaLabel)}">
     ${grid}
     ${paths}
     ${xLabels}
-    <text x="${pad.l}" y="${pad.t - 2}" fill="var(--muted)" font-size="11">${svgEsc(tt.weeks)}</text>
+    <text x="${pad.l}" y="${pad.t + 2}" fill="var(--muted)" font-size="${compact ? 9 : 11}">${svgEsc(unitLabel)}</text>
   </svg>
   <div class="chart-legend">${legend}</div>`;
+}
 
-  const p90Box = document.getElementById("chart-p90");
-  const p90Note = document.getElementById("chart-p90-note");
-  if (p90Box) {
-    p90Box.checked = chartShowP90;
-    p90Box.disabled = !p90Ok;
-    p90Box.onchange = () => {
-      chartShowP90 = p90Box.checked;
-      localStorage.setItem("ha-chart-p90", chartShowP90 ? "1" : "0");
-      mountTrendChart(specKey, clusterFilter);
-    };
-  }
-  if (p90Note) p90Note.textContent = p90Ok ? "" : tt.trendP90Missing;
+function mountSopTrendGrid(clusterFilter, selectedSpecKey) {
+  const host = document.getElementById("sop-trend-grid");
+  if (!host) return;
+  const tt = t();
+  const labels = HISTORY.periods.map((p) => p.endLabel);
+  host.innerHTML = Object.keys(SOP)
+    .map((specKey) => {
+      const spec = SOP[specKey];
+      const title = lang === "zh" ? spec.zh : spec.en;
+      const on = specKey === selectedSpecKey ? " chart-mini-on" : "";
+      const series = trendSeriesForSelection(specKey, clusterFilter, "stableMedianWeeks");
+      const svg = renderTrendSvg({
+        labels,
+        series,
+        unitLabel: tt.weeks,
+        compact: true,
+        ariaLabel: `${title} — ${tt.trendTitle}`,
+      });
+      return `<div class="chart-mini${on}"><h3 class="chart-mini-title">${svgEsc(title)}</h3>${svg}</div>`;
+    })
+    .join("");
+}
+
+function surgeryTrendPair(kind, clusterFilter, heading) {
+  const tt = t();
+  const block = SURGERY_HISTORY[kind];
+  const labels = block.periods.map((p) => p.endLabel);
+  const cid = surgeryHistCluster(clusterFilter);
+  const clusterLabel =
+    clusterFilter === "ALL" ? (lang === "zh" ? "全部／最長" : "All / worst") : clusterShort(clusterFilter);
+  const wait = [
+    {
+      id: "WL",
+      label: `${tt.trendWaitlist} (${clusterLabel})`,
+      color: "var(--accent2)",
+      values: block.clusters[cid].waitlist,
+    },
+  ];
+  const med = [
+    {
+      id: "MED",
+      label: `${tt.trendSurgeryMed} (${clusterLabel})`,
+      color: "var(--accent)",
+      values: block.clusters[cid].median,
+    },
+  ];
+  return `<div class="surgery-trend-block">
+    <h3>${svgEsc(heading)}</h3>
+    <div class="chart-grid chart-grid-2">
+      <div class="chart-mini"><h4 class="chart-mini-title">${svgEsc(tt.trendWaitlist)}</h4>${renderTrendSvg({ labels, series: wait, unitLabel: tt.waitlist, compact: true, ariaLabel: heading })}</div>
+      <div class="chart-mini"><h4 class="chart-mini-title">${svgEsc(tt.trendSurgeryMed)}</h4>${renderTrendSvg({ labels, series: med, unitLabel: tt.months, compact: true, ariaLabel: heading })}</div>
+    </div>
+  </div>`;
 }
 
 function setLang(next) {
@@ -585,11 +636,8 @@ function render() {
     <div class="card chart-card">
       <h2>${tt.trendTitle}</h2>
       <p class="note">${tt.trendNote}</p>
-      <div class="chart-toolbar">
-        <label class="chart-toggle"><input type="checkbox" id="chart-p90" /> ${tt.trendShowP90}</label>
-      </div>
-      <p class="note" id="chart-p90-note"></p>
-      <div id="sop-trend-chart" class="chart-wrap"></div>
+      <p class="note">${tt.trendP90Missing}</p>
+      <div id="sop-trend-grid" class="chart-grid"></div>
     </div>
     <div class="card">
       <h2>${lang === "zh" ? spec.zh : spec.en} — ${tt.sopTitle}</h2>
@@ -609,13 +657,16 @@ function render() {
       }).join("")}</tbody></table></div>
     </div>`;
 
-  if (tab === "sop") mountTrendChart(specKey, clusterFilter);
+  if (tab === "sop") mountSopTrendGrid(clusterFilter, specKey);
 
   document.getElementById("tab-surgery").innerHTML = `<div class="card">
     <h2>${tt.surgeryTitle}</h2><p class="note">${tt.surgeryNote}</p>
-    <p class="note">${tt.trendSurgeryNote}</p>
+    <p class="note">${tt.trendSurgeryIntro}</p>
+    <p class="note">${tt.trendSurgeryGap}</p>
+    ${surgeryTrendPair("cat", clusterFilter, tt.cataract)}
     <h3>${tt.cataract} — ${tt.waitlistAsAt} ${fd(SITE.waitlistAsAt)}: 67,061</h3>
     ${surgeryTable(CAT)}
+    ${surgeryTrendPair("tjr", clusterFilter, tt.tjr)}
     <h3>${tt.tjr} — ${tt.waitlistAsAt} ${fd(SITE.waitlistAsAt)}: 31,681</h3>
     ${surgeryTable(TJR)}
   </div>`;
