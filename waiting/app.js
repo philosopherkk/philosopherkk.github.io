@@ -1,5 +1,5 @@
 const SITE = {
-  version: "1.2.0",
+  version: "1.3.0",
   lastUpdated: "2026-11-03",
   dataFrom: "2025-10-01",
   dataTo: "2026-09-30",
@@ -45,17 +45,17 @@ const COPY = {
     legendCool: "≤ target / shorter",
     legendMid: "elevated",
     legendHot: "long tail (≥ 80 weeks P90 or ≥ 40 weeks median stable)",
-    trendTitle: "Stable new-case median — all specialties",
+    trendTitle: "Stable new-case waits — all specialties",
     trendNote:
-      "Thirteen overlapping HA reporting periods (Oct 2022 → Sep 2026), from data.gov.hk historical snapshots of sop-waiting-time-en.json. Each panel is one specialty; the sidebar cluster filter applies (territory-worst line when All clusters). The specialty dropdown still drives the KPIs and table below.",
+      "Thirteen overlapping HA reporting periods (Oct 2022 → Sep 2026), from data.gov.hk historical snapshots of sop-waiting-time-en.json. Each panel plots all seven clusters; use Median or 90th percentile below. Sidebar cluster selection highlights one line (table and KPIs still follow the filter). The specialty dropdown drives KPIs and the table.",
     trendWorstLine: "Territory worst (max across clusters)",
-    trendMedian: "Stable median",
-    trendP90: "Stable P90",
-    trendShowP90: "Overlay stable P90",
+    trendMedian: "Median",
+    trendP90: "90th percentile",
+    trendMetricLabel: "Trend metric",
     trendP90Missing:
       "Historical archive JSON did not include stable P90 weeks; only median trends are shown. Latest P90 remains in the table below.",
     trendSurgeryIntro:
-      "Twenty-one data.gov.hk historical snapshots (Feb 2022 → Oct 2026) of the elective-surgery JSON files. Cluster filter applies: All clusters shows HA Overall waitlist and territory-worst completed-case median; one cluster shows that cluster.",
+      "Twenty-one data.gov.hk historical snapshots (Feb 2022 → Oct 2026) of the elective-surgery JSON files. Each chart plots all clusters (plus HA Overall on waitlist); Median / 90th applies to completed-case wait. Sidebar cluster highlights one series.",
     trendWaitlist: "Waitlist",
     trendSurgeryMed: "Completed-case median wait",
     trendSurgeryGap:
@@ -141,17 +141,17 @@ const COPY = {
     legendCool: "達標／較短",
     legendMid: "偏高",
     legendHot: "長尾（第90百分位 ≥ 80 星期，或穩定中位數 ≥ 40 星期）",
-    trendTitle: "穩定新症中位數 — 全部專科",
+    trendTitle: "穩定新症輪候 — 全部專科",
     trendNote:
-      "十三個重疊的醫管局報告期（2022年10月至2026年9月），來自 data.gov.hk 歷史檔案中的 sop-waiting-time-en.json。每格為一個專科；左側聯網篩選適用（全部聯網時為全港最長線）。下方 KPI 及表格仍跟隨所選專科。",
+      "十三個重疊的醫管局報告期（2022年10月至2026年9月），來自 data.gov.hk 歷史檔案中的 sop-waiting-time-en.json。每格顯示七個聯網；可用下方中位數／第90百分位切換。左側聯網選項會高亮對應曲線（表格及 KPI 仍跟隨篩選）。專科下拉選單控制 KPI 及表格。",
     trendWorstLine: "全港最長（各聯網最高值）",
-    trendMedian: "穩定中位數",
-    trendP90: "穩定第90百分位",
-    trendShowP90: "疊加穩定第90百分位",
+    trendMedian: "中位數",
+    trendP90: "第90百分位",
+    trendMetricLabel: "走勢指標",
     trendP90Missing:
       "歷史檔案 JSON 未包含穩定第90百分位星期數；僅顯示中位數走勢。最新第90百分位仍見下表。",
     trendSurgeryIntro:
-      "二十一個 data.gov.hk 歷史快照（2022年2月至2026年10月）的預約手術 JSON。聯網篩選適用：全部聯網顯示醫管局「Overall」輪候宗數及已完成手術的最長中位數；單一聯網顯示該聯網。",
+      "二十一個 data.gov.hk 歷史快照（2022年2月至2026年10月）的預約手術 JSON。每張圖顯示各聯網（輪候名冊另含 Overall）；已完成手術輪候可選中位數／第90百分位。左側聯網會高亮對應曲線。",
     trendWaitlist: "輪候宗數",
     trendSurgeryMed: "已完成手術中位數輪候",
     trendSurgeryGap:
@@ -338,8 +338,21 @@ const HISTORY_CLUSTER = {
   NTW: "New Territories West Cluster",
 };
 
+const CLUSTER_CHART_COLORS = {
+  HKE: "#3dd6c6",
+  HKW: "#7aa2ff",
+  KC: "#f0b429",
+  KE: "#ff6b6b",
+  KW: "#3ddc97",
+  NTE: "#c678dd",
+  NTW: "#e06c75",
+  Overall: "#93a0b8",
+  WORST: "var(--accent)",
+};
+
 let lang = localStorage.getItem("ha-lang") === "zh" ? "zh" : "en";
 let tab = "sop";
+let trendMetric = localStorage.getItem("ha-trend-metric") === "p90" ? "p90" : "median";
 
 function t() { return COPY[lang]; }
 function fd(iso) {
@@ -367,9 +380,44 @@ function clusterShort(clusterId) {
   return lang === "zh" ? c.shortZh : c.shortEn;
 }
 
-function trendSeriesForSelection(specKey, clusterFilter, field) {
-  const periods = HISTORY.periods.length;
-  if (clusterFilter === "ALL") {
+function sopHistoricalHasP90() {
+  for (const specKey of Object.keys(HISTORY_SPEC)) {
+    for (const cid of COLS) {
+      const vals = historyWeeks(specKey, cid, "stableP90Weeks");
+      if (vals.some((v) => v != null)) return true;
+    }
+  }
+  return false;
+}
+
+function sopTrendField() {
+  if (trendMetric === "p90" && sopHistoricalHasP90()) return "stableP90Weeks";
+  return "stableMedianWeeks";
+}
+
+function surgeryWaitField() {
+  return "waitlist";
+}
+
+function surgeryWaitMetricField() {
+  return trendMetric === "p90" ? "p90" : "median";
+}
+
+function trendSeriesAllClusters(specKey, field, highlightClusterId) {
+  const series = COLS.map((cid) => {
+    const values = historyWeeks(specKey, cid, field);
+    const highlighted = highlightClusterId === "ALL" || highlightClusterId === cid;
+    return {
+      id: cid,
+      label: clusterShort(cid),
+      color: CLUSTER_CHART_COLORS[cid],
+      dash: field === "stableP90Weeks" ? "6 4" : "",
+      values,
+      dimmed: !highlighted,
+    };
+  });
+  if (highlightClusterId === "ALL") {
+    const periods = HISTORY.periods.length;
     const worst = [];
     for (let i = 0; i < periods; i += 1) {
       let max = null;
@@ -380,25 +428,74 @@ function trendSeriesForSelection(specKey, clusterFilter, field) {
       }
       worst.push(max);
     }
-    return [
-      {
+    if (worst.some((v) => v != null)) {
+      series.push({
         id: "WORST",
         label: t().trendWorstLine,
-        color: "var(--accent)",
-        dash: field === "stableP90Weeks" ? "6 4" : "",
+        color: CLUSTER_CHART_COLORS.WORST,
+        dash: "3 3",
         values: worst,
-      },
-    ];
+        dimmed: false,
+      });
+    }
   }
-  return [
-    {
-      id: clusterFilter,
-      label: clusterShort(clusterFilter),
-      color: "var(--accent)",
-      dash: field === "stableP90Weeks" ? "6 4" : "",
-      values: historyWeeks(specKey, clusterFilter, field),
-    },
-  ];
+  return series;
+}
+
+function surgeryClusterSeries(block, field, highlightClusterId, includeOverall) {
+  const tt = t();
+  const series = COLS.map((cid) => {
+    const row = block.clusters[HISTORY_CLUSTER[cid]];
+    const highlighted = highlightClusterId === "ALL" || highlightClusterId === cid;
+    return {
+      id: cid,
+      label: clusterShort(cid),
+      color: CLUSTER_CHART_COLORS[cid],
+      dash: field === "p90" ? "6 4" : "",
+      values: row ? row[field] : [],
+      dimmed: !highlighted,
+    };
+  });
+  if (includeOverall && block.clusters.Overall) {
+    series.push({
+      id: "Overall",
+      label: lang === "zh" ? "整體 Overall" : "Overall",
+      color: CLUSTER_CHART_COLORS.Overall,
+      dash: "4 3",
+      values: block.clusters.Overall[field],
+      dimmed: highlightClusterId !== "ALL",
+    });
+  }
+  return series;
+}
+
+function setTrendMetric(next) {
+  trendMetric = next;
+  localStorage.setItem("ha-trend-metric", next);
+  render();
+}
+
+function trendMetricToggleHtml(hostId) {
+  const tt = t();
+  const sopP90 = sopHistoricalHasP90();
+  const onSop = tab === "sop";
+  const p90Disabled = onSop && !sopP90;
+  const p90Title = p90Disabled ? tt.trendP90Missing : "";
+  const medianOn = trendMetric === "median" || (onSop && trendMetric === "p90" && !sopP90);
+  const p90On = trendMetric === "p90" && !p90Disabled;
+  return `<div class="metric-toggle" role="group" aria-label="${svgEsc(tt.trendMetricLabel)}" data-metric-host="${hostId}">
+    <button type="button" class="${medianOn ? "on" : ""}" data-metric="median">${svgEsc(tt.trendMedian)}</button>
+    <button type="button" class="${p90On ? "on" : ""}" data-metric="p90"${p90Disabled ? " disabled" : ""} title="${svgEsc(p90Title)}">${svgEsc(tt.trendP90)}</button>
+  </div>`;
+}
+
+function wireTrendMetricToggles() {
+  document.querySelectorAll(".metric-toggle button[data-metric]").forEach((btn) => {
+    btn.onclick = () => {
+      if (btn.disabled) return;
+      setTrendMetric(btn.dataset.metric);
+    };
+  });
 }
 
 function svgEsc(s) {
@@ -409,10 +506,6 @@ function svgEsc(s) {
     .replace(/"/g, "&quot;");
 }
 
-function surgeryHistCluster(clusterFilter) {
-  if (clusterFilter === "ALL") return "Overall";
-  return HISTORY_CLUSTER[clusterFilter];
-}
 
 function renderTrendSvg(opts) {
   const {
@@ -468,16 +561,18 @@ function renderTrendSvg(opts) {
         d += `${cmd}${xAt(i).toFixed(2)},${yAt(v).toFixed(2)} `;
       });
       if (!d) return "";
-      return `<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="${s.id === "WORST" ? 2.2 : 2}" stroke-dasharray="${s.dash || "none"}"/>`;
+      const opacity = s.dimmed ? 0.28 : 1;
+      const width = s.dimmed ? 1.4 : s.id === "WORST" || s.id === "Overall" ? 2.2 : 2;
+      return `<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="${width}" stroke-opacity="${opacity}" stroke-dasharray="${s.dash || "none"}"/>`;
     })
     .join("");
 
   const legend = series
     .filter((s) => s.values.some((v) => v != null))
-    .map(
-      (s) =>
-        `<span class="chart-leg"><span class="swatch" style="background:${s.color}"></span>${svgEsc(s.label)}</span>`,
-    )
+    .map((s) => {
+      const op = s.dimmed ? "opacity:0.45" : "";
+      return `<span class="chart-leg" style="${op}"><span class="swatch" style="background:${s.color}"></span>${svgEsc(s.label)}</span>`;
+    })
     .join("");
 
   return `<svg class="trend-svg${compact ? " trend-svg-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${svgEsc(ariaLabel)}">
@@ -494,12 +589,13 @@ function mountSopTrendGrid(clusterFilter, selectedSpecKey) {
   if (!host) return;
   const tt = t();
   const labels = HISTORY.periods.map((p) => p.endLabel);
+  const field = sopTrendField();
   host.innerHTML = Object.keys(SOP)
     .map((specKey) => {
       const spec = SOP[specKey];
       const title = lang === "zh" ? spec.zh : spec.en;
       const on = specKey === selectedSpecKey ? " chart-mini-on" : "";
-      const series = trendSeriesForSelection(specKey, clusterFilter, "stableMedianWeeks");
+      const series = trendSeriesAllClusters(specKey, field, clusterFilter);
       const svg = renderTrendSvg({
         labels,
         series,
@@ -516,30 +612,19 @@ function surgeryTrendPair(kind, clusterFilter, heading) {
   const tt = t();
   const block = SURGERY_HISTORY[kind];
   const labels = block.periods.map((p) => p.endLabel);
-  const cid = surgeryHistCluster(clusterFilter);
-  const clusterLabel =
-    clusterFilter === "ALL" ? (lang === "zh" ? "全部／最長" : "All / worst") : clusterShort(clusterFilter);
-  const wait = [
-    {
-      id: "WL",
-      label: `${tt.trendWaitlist} (${clusterLabel})`,
-      color: "var(--accent2)",
-      values: block.clusters[cid].waitlist,
-    },
-  ];
-  const med = [
-    {
-      id: "MED",
-      label: `${tt.trendSurgeryMed} (${clusterLabel})`,
-      color: "var(--accent)",
-      values: block.clusters[cid].median,
-    },
-  ];
+  const waitField = surgeryWaitField();
+  const wait = surgeryClusterSeries(block, waitField, clusterFilter, true);
+  const medField = surgeryWaitMetricField();
+  const med = surgeryClusterSeries(block, medField, clusterFilter, false);
+  const medTitle =
+    medField === "p90"
+      ? `${tt.trendSurgeryMed} (${tt.trendP90})`
+      : `${tt.trendSurgeryMed} (${tt.trendMedian})`;
   return `<div class="surgery-trend-block">
     <h3>${svgEsc(heading)}</h3>
     <div class="chart-grid chart-grid-2">
-      <div class="chart-mini"><h4 class="chart-mini-title">${svgEsc(tt.trendWaitlist)}</h4>${renderTrendSvg({ labels, series: wait, unitLabel: tt.waitlist, compact: true, ariaLabel: heading })}</div>
-      <div class="chart-mini"><h4 class="chart-mini-title">${svgEsc(tt.trendSurgeryMed)}</h4>${renderTrendSvg({ labels, series: med, unitLabel: tt.months, compact: true, ariaLabel: heading })}</div>
+      <div class="chart-mini"><h4 class="chart-mini-title">${svgEsc(tt.trendWaitlist)}</h4>${renderTrendSvg({ labels, series: wait, unitLabel: tt.waitlist, compact: true, ariaLabel: `${heading} — ${tt.trendWaitlist}` })}</div>
+      <div class="chart-mini"><h4 class="chart-mini-title">${svgEsc(medTitle)}</h4>${renderTrendSvg({ labels, series: med, unitLabel: tt.months, compact: true, ariaLabel: `${heading} — ${medTitle}` })}</div>
     </div>
   </div>`;
 }
@@ -636,7 +721,8 @@ function render() {
     <div class="card chart-card">
       <h2>${tt.trendTitle}</h2>
       <p class="note">${tt.trendNote}</p>
-      <p class="note">${tt.trendP90Missing}</p>
+      <div class="chart-toolbar">${trendMetricToggleHtml("sop")}</div>
+      <p class="note${trendMetric === "p90" && !sopHistoricalHasP90() ? "" : " hidden"}" id="sop-trend-p90-note">${tt.trendP90Missing}</p>
       <div id="sop-trend-grid" class="chart-grid"></div>
     </div>
     <div class="card">
@@ -662,6 +748,7 @@ function render() {
   document.getElementById("tab-surgery").innerHTML = `<div class="card">
     <h2>${tt.surgeryTitle}</h2><p class="note">${tt.surgeryNote}</p>
     <p class="note">${tt.trendSurgeryIntro}</p>
+    <div class="chart-toolbar">${trendMetricToggleHtml("surgery")}</div>
     <p class="note">${tt.trendSurgeryGap}</p>
     ${surgeryTrendPair("cat", clusterFilter, tt.cataract)}
     <h3>${tt.cataract} — ${tt.waitlistAsAt} ${fd(SITE.waitlistAsAt)}: 67,061</h3>
@@ -715,6 +802,8 @@ function render() {
     <a href="https://www.ha.org.hk/opendata/sop/sop-waiting-time-en.xlsx">SOP</a> ·
     <a href="https://www.ha.org.hk/opendata/electivesurgery/elective-cataract-surgery-en.xlsx">${tt.cataract}</a> ·
     <a href="https://www.ha.org.hk/opendata/electivesurgery/elective-total-joint-replacement-surgery-en.xlsx">${tt.tjr}</a>`;
+
+  wireTrendMetricToggles();
 }
 
 document.getElementById("btn-en").onclick = () => setLang("en");

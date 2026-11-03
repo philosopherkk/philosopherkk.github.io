@@ -9,7 +9,7 @@ Public dashboard of Hospital Authority specialist outpatient new-case waiting ti
 
 ## Version
 
-- **Version:** 1.2.0
+- **Version:** 1.3.0
 - **Site last updated:** 2026-11-03
 - **HA data period:** 1 Oct 2025 – 30 Sep 2026
 - **Waitlist snapshot:** 30 Sep 2026
@@ -20,14 +20,16 @@ Public dashboard of Hospital Authority specialist outpatient new-case waiting ti
 
 ### New-case SOP waits tab
 
-Responsive **small-multiples grid** (eight specialties): stable new-case **median weeks** across **13** overlapping HA reporting periods (Oct 2022 → Sep 2026), embedded from [data.gov.hk](https://data.gov.hk) historical snapshots of `sop-waiting-time-en.json`. The sidebar **cluster** filter applies to every panel (territory-worst line when **All clusters**; one cluster when selected). The **specialty** dropdown still drives KPIs and the cluster table. Historical JSON did not include stable P90 weeks — latest P90 stays in the table only.
+Responsive **small-multiples grid** (eight specialties): stable new-case **median weeks** (or **90th percentile** when historical data exists) across **13** overlapping HA reporting periods (Oct 2022 → Sep 2026), embedded from [data.gov.hk](https://data.gov.hk) historical snapshots of `sop-waiting-time-en.json`. **Each panel plots all seven clusters** as separate series (territory-worst dashed line when **All clusters** is selected). A **Median | 90th percentile** control sits above the grid; on the SOP tab the 90th option is disabled because archive JSON did not include stable P90 weeks — latest P90 stays in the table only. Sidebar **cluster** selection **highlights** one series; **specialty** still drives KPIs and the cluster table.
 
 ### Elective surgery tab
 
-**Cataract** and **total joint replacement** each show two SVG trends from **21** monthly data.gov.hk archive snapshots (Feb 2022 → Oct 2026) of the HA elective-surgery JSON files:
+**Cataract** and **total joint replacement** each show two SVG trends from **21** monthly data.gov.hk archive snapshots (Feb 2022 → Oct 2026):
 
-- **Waitlist** (HA Overall row when All clusters; cluster row when filtered)
-- **Completed-case median wait** (months; territory-worst across clusters when All clusters)
+- **Waitlist** — all clusters plus HA **Overall** (dashed)
+- **Completed-case wait** (months) — all clusters; **Median | 90th percentile** uses real per-cluster `median` / `p90` arrays in the embedded history
+
+The same **Median | 90th** control is mirrored above the surgery trends (shared preference in `localStorage`). Sidebar cluster highlights one series on each chart.
 
 Latest-quarter tables remain below each chart pair.
 
@@ -47,4 +49,4 @@ HA publishes SOP waits by **cluster**, not by hospital. Only cataract and TJR ha
 
 ## Update rule
 
-Do not invent weekly or hospital-level SOP waits. Re-download the three HA workbooks each quarter. If the files are unchanged, keep the numbers and stamp the “site updated” date. Refresh embedded SOP/CAT/TJR history from data.gov.hk historical-archive when quarterly data lands.
+Do not invent weekly or hospital-level SOP waits. Re-download the three HA workbooks each quarter. If the files are unchanged, keep the numbers and stamp the “site updated” date. Refresh embedded SOP/CAT/TJR history from data.gov.hk historical-archive when quarterly data lands. When stable P90 weeks appear in historical SOP JSON, embed them in `HISTORY.sop.*.stableP90Weeks` — the 90th control on the SOP tab will enable automatically.
