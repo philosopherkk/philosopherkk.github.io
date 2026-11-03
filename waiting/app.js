@@ -1,10 +1,10 @@
 const SITE = {
-  version: "1.1.0",
-  lastUpdated: "2026-09-10",
-  dataFrom: "2025-07-01",
-  dataTo: "2026-06-30",
-  waitlistAsAt: "2026-06-30",
-  nextHa: "2026-10-30",
+  version: "1.0.1",
+  lastUpdated: "2026-11-03",
+  dataFrom: "2025-10-01",
+  dataTo: "2026-09-30",
+  waitlistAsAt: "2026-09-30",
+  nextHa: "2027-01-29",
 };
 const COPY = {
   en: {
@@ -23,10 +23,8 @@ const COPY = {
     hospitals: "Hospitals in this cluster",
     pickCluster:
       "Select a cluster to list its major HA hospitals. SOP waits are published at cluster level only.",
-    mergeBanner:
-      "Island hospitals: choose Hong Kong East or Hong Kong West until HA’s next open-data file (30 Oct 2026). From 1 Apr 2026 those clusters merged into Hong Kong Island Cluster, but this dataset still uses the old seven-cluster split.",
     mergeNote:
-      "Picker still lists East / West — not the post-merger Island cluster name.",
+      "From 1 Apr 2026, Hong Kong East and Hong Kong West merged into Hong Kong Island Cluster. HA still reports the old seven-cluster split in this dataset.",
     tabSop: "New-case SOP waits",
     tabSurgery: "Elective surgery",
     tabInvest: "Investigations",
@@ -106,10 +104,8 @@ const COPY = {
     specialty: "專科",
     hospitals: "此聯網主要醫院",
     pickCluster: "請先選擇聯網以顯示其主要公立醫院。專科門診輪候只按聯網公布。",
-    mergeBanner:
-      "港島醫院：在醫管局下次開放數據檔案（2026 年 10 月 30 日）前，請選港島東或港島西。由 2026 年 4 月 1 日起該兩聯網已合併為香港島醫院聯網，但本數據集仍沿用舊有七聯網劃分。",
     mergeNote:
-      "選單仍列出港島東／港島西，而非合併後的「香港島」聯網名稱。",
+      "由 2026 年 4 月 1 日起，港島東與港島西已合併為香港島醫院聯網。本數據集仍沿用舊有七聯網劃分。",
     tabSop: "專科門診新症",
     tabSurgery: "預約手術",
     tabInvest: "檢查",
@@ -276,17 +272,17 @@ const CLUSTERS = [
 ];
 
 const SOP = {
-  ENT: { en: "Ear, Nose & Throat", zh: "耳鼻喉科", bookings: 102323, mixSt: "74,110 (72%)", urgent: ["<1w","<1w","<1w","<1w","1w","<1w","<1w"], semi: [6,7,4,5,4,5,5], stable: [24,24,40,54,36,34,39], p90: [54,53,62,84,84,79,54] },
-  EYE: { en: "Ophthalmology (Eye)", zh: "眼科", bookings: 150517, mixSt: "75,657 (50%)", urgent: ["<1w","<1w","<1w","<1w","<1w","<1w","<1w"], semi: [6,5,4,6,6,6,4], stable: [24,36,32,38,43,70,31], p90: [58,55,67,100,98,114,78] },
-  GYN: { en: "Gynaecology", zh: "婦科", bookings: 60011, mixSt: "42,132 (70%)", urgent: ["<1w","1w","<1w","1w","<1w","<1w","<1w"], semi: [6,6,5,5,6,5,4], stable: [26,27,25,19,49,58,44], p90: [27,48,83,62,94,86,58] },
-  MED: { en: "Medicine", zh: "內科", bookings: 164462, mixSt: "124,072 (75%)", urgent: ["1w","<1w","1w","1w","1w","1w","1w"], semi: [6,4,6,5,6,6,6], stable: [29,27,65,33,47,36,47], p90: [82,50,98,91,88,86,64] },
-  ORT: { en: "Orthopaedics & Traumatology", zh: "骨科", bookings: 108274, mixSt: "74,613 (69%)", urgent: ["1w","1w","1w","<1w","1w","<1w","1w"], semi: [5,5,4,5,3,5,6], stable: [25,23,27,42,45,33,34], p90: [53,59,72,70,81,81,66] },
-  PAE: { en: "Paediatrics", zh: "兒科", bookings: 28313, mixSt: "19,238 (68%)", urgent: ["<1w","1w","<1w","<1w","<1w","1w","<1w"], semi: [6,4,5,4,5,4,7], stable: [13,21,11,10,21,25,24], p90: [16,35,28,36,30,38,31] },
-  PSY: { en: "Psychiatry", zh: "精神科", bookings: 53664, mixSt: "42,169 (79%)", urgent: ["<1w","1w","<1w","1w","<1w","1w","1w"], semi: [3,3,3,3,2,3,2], stable: [27,46,25,41,19,69,46], p90: [69,84,74,85,84,104,84] },
-  SUR: { en: "Surgery", zh: "外科", bookings: 186075, mixSt: "138,686 (75%)", urgent: ["1w","1w","1w","1w","1w","<1w","1w"], semi: [7,4,5,6,5,5,5], stable: [38,27,42,48,37,38,36], p90: [86,83,99,99,99,90,62] },
+  ENT: { en: "Ear, Nose & Throat", zh: "耳鼻喉科", bookings: 103633, mixSt: "74,718 (72%)", urgent: ["<1w","<1w","<1w","<1w","1w","<1w","<1w"], semi: [6,7,4,5,4,5,5], stable: [25,25,38,53,40,32,33], p90: [52,52,54,83,84,79,53] },
+  EYE: { en: "Ophthalmology (Eye)", zh: "眼科", bookings: 149905, mixSt: "75,527 (50%)", urgent: ["<1w","<1w","<1w","<1w","<1w","<1w","<1w"], semi: [7,6,4,6,6,6,4], stable: [25,34,62,36,42,65,31], p90: [56,40,67,99,97,106,71] },
+  GYN: { en: "Gynaecology", zh: "婦科", bookings: 60210, mixSt: "42,319 (70%)", urgent: ["<1w","1w","<1w","1w","<1w","<1w","<1w"], semi: [6,6,6,5,6,5,4], stable: [26,26,26,18,47,54,43], p90: [29,31,79,51,78,77,49] },
+  MED: { en: "Medicine", zh: "內科", bookings: 167440, mixSt: "126,155 (75%)", urgent: ["1w","<1w","1w","1w","1w","1w","<1w"], semi: [6,4,6,5,6,6,6], stable: [31,28,61,29,42,37,48], p90: [72,48,99,76,87,85,66] },
+  ORT: { en: "Orthopaedics & Traumatology", zh: "骨科", bookings: 108894, mixSt: "74,572 (68%)", urgent: ["1w","1w","1w","<1w","1w","<1w","1w"], semi: [5,5,4,5,3,5,6], stable: [26,22,29,43,41,32,33], p90: [52,52,64,68,79,80,61] },
+  PAE: { en: "Paediatrics", zh: "兒科", bookings: 28621, mixSt: "19,208 (67%)", urgent: ["1w","<1w","<1w","<1w","<1w","1w","<1w"], semi: [6,4,4,4,4,4,7], stable: [13,18,11,11,21,24,25], p90: [15,26,26,33,30,30,30] },
+  PSY: { en: "Psychiatry", zh: "精神科", bookings: 53779, mixSt: "41,762 (78%)", urgent: ["<1w","1w","<1w","1w","<1w","1w","1w"], semi: [3,3,3,3,2,3,2], stable: [28,45,26,50,23,58,45], p90: [68,84,73,86,82,103,82] },
+  SUR: { en: "Surgery", zh: "外科", bookings: 187761, mixSt: "138,055 (74%)", urgent: ["1w","1w","1w","1w","1w","1w","1w"], semi: [7,5,5,6,5,5,5], stable: [37,28,43,43,32,39,34], p90: [85,78,94,88,98,82,56] },
 };
-const CAT = { waitlist: [8725,3070,11252,10065,11294,10243,11628], done: [3767,4253,6542,3481,3132,5418,3870], median: [17,7,20,25,13,16,21], p90: [26,11,25,31,48,29,33] };
-const TJR = { waitlist: [1675,2730,6036,3487,5824,8350,4608], done: [515,680,916,686,841,892,578], median: [10,30,42,35,46,30,6], p90: [86,53,61,43,75,64,67] };
+const CAT = { waitlist: [8907,3133,11206,9747,11785,10314,11969], done: [3502,4227,6392,3399,2941,5081,3716], median: [16,7,20,26,12,12,19], p90: [27,11,24,30,47,28,32] };
+const TJR = { waitlist: [1559,2731,5719,3363,5562,8185,4562], done: [520,682,886,680,878,881,583], median: [12,31,44,36,49,28,7], p90: [84,53,63,43,75,64,70] };
 
 let lang = localStorage.getItem("ha-lang") === "zh" ? "zh" : "en";
 let tab = "sop";
@@ -345,7 +341,6 @@ function render() {
   const tt = t();
   document.querySelector("[data-i=title]").textContent = tt.title;
   document.querySelector("[data-i=subtitle]").textContent = tt.subtitle;
-  document.querySelector("[data-i=mergeBanner]").textContent = tt.mergeBanner;
   document.querySelector("[data-i=cluster]").textContent = tt.cluster;
   document.querySelector("[data-i=specialty]").textContent = tt.specialty;
   document.querySelector("[data-i=mergeNote]").textContent = tt.mergeNote;
@@ -413,9 +408,9 @@ function render() {
 
   document.getElementById("tab-surgery").innerHTML = `<div class="card">
     <h2>${tt.surgeryTitle}</h2><p class="note">${tt.surgeryNote}</p>
-    <h3>${tt.cataract} — ${tt.waitlistAsAt} ${fd(SITE.waitlistAsAt)}: 66,277</h3>
+    <h3>${tt.cataract} — ${tt.waitlistAsAt} ${fd(SITE.waitlistAsAt)}: 67,061</h3>
     ${surgeryTable(CAT)}
-    <h3>${tt.tjr} — ${tt.waitlistAsAt} ${fd(SITE.waitlistAsAt)}: 32,710</h3>
+    <h3>${tt.tjr} — ${tt.waitlistAsAt} ${fd(SITE.waitlistAsAt)}: 31,681</h3>
     ${surgeryTable(TJR)}
   </div>`;
 

@@ -2,15 +2,18 @@
 
 Public dashboard of Hospital Authority specialist outpatient new-case waiting times by cluster, the two published elective surgeries (cataract, total joint replacement), investigation caveats, and private hospital fee ranges.
 
-**Live site (GitHub Pages):** https://philosopherkk.github.io/hk-hospital-waiting-times/
+**Live site:** https://philosopherkk.github.io/waiting/
+
+**Work repo:** https://github.com/philosopherkk/hk-hospital-waiting-times
+
 
 ## Version
 
-- **Version:** 1.0.0
-- **Site last updated:** 2026-09-03
-- **HA data period:** 1 Jul 2025 – 30 Jun 2026
-- **Waitlist snapshot:** 30 Jun 2026
-- **Next HA SOP / elective-surgery file:** 30 Oct 2026
+- **Version:** 1.0.1
+- **Site last updated:** 2026-11-03
+- **HA data period:** 1 Oct 2025 – 30 Sep 2026
+- **Waitlist snapshot:** 30 Sep 2026
+- **Next HA SOP / elective-surgery file:** 29 Jan 2027
 - **Site refresh cadence:** quarterly (30 Jan / 30 Apr / 31 Jul / 30 Oct), matching HA’s open-data calendar
 
 ## Language
