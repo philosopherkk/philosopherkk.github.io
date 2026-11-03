@@ -9,12 +9,16 @@ Public dashboard of Hospital Authority specialist outpatient new-case waiting ti
 
 ## Version
 
-- **Version:** 1.0.1
+- **Version:** 1.1.0
 - **Site last updated:** 2026-11-03
 - **HA data period:** 1 Oct 2025 – 30 Sep 2026
 - **Waitlist snapshot:** 30 Sep 2026
 - **Next HA SOP / elective-surgery file:** 29 Jan 2027
 - **Site refresh cadence:** quarterly (30 Jan / 30 Apr / 31 Jul / 30 Oct), matching HA’s open-data calendar
+
+## Trend charts (SOP)
+
+The **New-case SOP waits** tab includes an SVG line chart of **stable new-case median weeks** across **13 quarterly HA releases** (Oct 2022 → Sep 2026). Data is embedded from [data.gov.hk](https://data.gov.hk) historical snapshots of `sop-waiting-time-en.json` (same series as the live HA open-data JSON). Pick a **specialty** and **cluster** in the sidebar: with **All clusters**, the chart shows the territory-worst (max) stable median per period; with one cluster selected, that cluster’s median trend. Historical JSON in this embed did not include stable P90 weeks, so P90 overlay stays disabled until a future quarterly embed adds it. Elective surgery (cataract / TJR) charts are not embedded yet—only the latest quarter on the surgery tab.
 
 ## Language
 

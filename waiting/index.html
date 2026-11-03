@@ -41,12 +41,6 @@
     .mid { color:var(--warn); }
     .cool { color:var(--ok); }
     .note { color:var(--muted); font-size:12.5px; margin-top:10px; }
-    .merge-banner {
-      margin:0 0 14px; padding:10px 12px; border-radius:10px;
-      border:1px solid color-mix(in srgb, var(--warn) 45%, var(--line));
-      background:color-mix(in srgb, var(--warn) 12%, var(--panel));
-      color:var(--text); font-size:13px; line-height:1.4;
-    }
     h2 { font-size:18px; margin:0 0 8px; }
     h3 { font-size:15px; margin:18px 0 8px; }
     .kpi { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
@@ -57,6 +51,15 @@
     a { color:var(--accent2); }
     .hidden { display:none; }
     .ov { overflow-x:auto; }
+    .chart-card { margin-bottom:14px; }
+    .chart-wrap { width:100%; margin-top:8px; }
+    .trend-svg { width:100%; height:auto; display:block; }
+    .chart-toolbar { margin:8px 0 4px; }
+    .chart-toggle { display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); cursor:pointer; min-height:44px; }
+    .chart-toggle input { width:18px; height:18px; accent-color:var(--accent); }
+    .chart-legend { display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:10px; font-size:12px; color:var(--muted); }
+    .chart-leg { display:inline-flex; align-items:center; gap:6px; }
+    .chart-leg .swatch { width:14px; height:3px; border-radius:2px; display:inline-block; }
   </style>
 </head>
 <body>
@@ -76,7 +79,6 @@
   <div class="wrap">
     <div class="grid">
       <aside class="card">
-        <p class="merge-banner" data-i="mergeBanner" role="status"></p>
         <label for="cluster" data-i="cluster"></label>
         <select id="cluster"></select>
         <label for="specialty" data-i="specialty"></label>
