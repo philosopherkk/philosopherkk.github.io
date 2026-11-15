@@ -4,215 +4,203 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>philosopherkk — hub</title>
-  <meta name="description" content="Hub of links only: EyesInfo, Purple Sectors, Outflow, Waiting, Market Desk, HistoryFirst, and WW2 European. Each app stays in its own folder or external site." />
-  <meta name="theme-color" content="#0e1116" />
+  <meta name="description" content="Hub of links only: seven projects — EyesInfo, Purple Sectors, Outflow, Waiting, Market Desk, HistoryFirst, and WW2 European. Each app stays in its own folder or external site." />
+  <meta name="theme-color" content="#0a0d12" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <style>
-    :root {
-      --bg: #0e1116;
-      --card: #161b22;
-      --line: #2b3444;
-      --text: #e8edf5;
-      --muted: #8b97a8;
-      --accent: #6ee7b7;
-      --pending: #9aa3b2;
-      --pending-bg: #12161c;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background:
-        radial-gradient(900px 420px at 12% -10%, #1a2433 0%, transparent 55%),
-        radial-gradient(700px 380px at 95% 8%, #182018 0%, transparent 50%),
-        var(--bg);
-      color: var(--text);
-      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-      padding: 28px 18px 64px;
-    }
-    h1 { font-size: 1.7rem; margin: 0 0 6px; letter-spacing: -0.02em; }
-    .sub { color: var(--muted); margin: 0 0 26px; max-width: 44rem; line-height: 1.5; }
-    .sub code {
-      font-size: 0.86em;
-      background: #1b2230;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 0.08em 0.35em;
-    }
-    .grid {
-      display: grid;
-      gap: 16px;
-      max-width: 720px;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px 18px 16px;
-    }
-    .card.pending {
-      background: var(--pending-bg);
-      border-style: dashed;
-      opacity: 0.92;
-    }
-    .k {
-      font-size: 0.72rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .t {
-      font-size: 1.28rem;
-      font-weight: 700;
-      margin: 5px 0 7px;
-      letter-spacing: -0.01em;
-    }
-    .d {
-      color: var(--muted);
-      font-size: 0.94rem;
-      line-height: 1.45;
-      margin: 0 0 14px;
-    }
-    .meta {
-      display: grid;
-      gap: 8px;
-      font-size: 0.82rem;
-      line-height: 1.4;
-    }
-    .meta dt {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.7rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-    .meta dd { margin: 2px 0 0; }
-    .meta a {
-      color: var(--accent);
-      text-decoration: none;
-      word-break: break-all;
-    }
-    .meta a:hover { text-decoration: underline; }
-    .pending-live {
-      color: var(--pending);
-      font-style: italic;
-    }
-  </style>
+  <link rel="stylesheet" href="hub/styles.css" />
 </head>
 <body>
-  <h1>philosopherkk</h1>
-  <p class="sub">
-    Seven projects — links only. Root <code>index.html</code> is this hub;
-    never publish an app into root. Each GitHub Pages app stays in its own folder
-    (<code>purple/</code>, <code>outflow/</code>, <code>waiting/</code>, <code>marketdesk/</code>).
-  </p>
-  <div class="grid">
-    <article class="card">
-      <div class="k">1 · Patient education</div>
-      <div class="t">EyesInfo</div>
-      <p class="d">護眼學堂 — patient education site. Hub links out only; not hosted on github.io.</p>
-      <dl class="meta">
-        <div>
-          <dt>Work repo</dt>
-          <dd><a href="https://github.com/philosopherkk/eyesinfo">github.com/philosopherkk/eyesinfo</a></dd>
-        </div>
-        <div>
-          <dt>Live</dt>
-          <dd><a href="https://eyesinfo.org">eyesinfo.org</a></dd>
-        </div>
-      </dl>
-    </article>
+  <a class="skip-link" href="#projects">Skip to projects</a>
 
-    <article class="card">
-      <div class="k">2 · Sim racing · board</div>
-      <div class="t">Purple Sectors</div>
-      <p class="d">Weekly sim-racing board for Gran Turismo 7 &amp; iRacing.</p>
-      <dl class="meta">
-        <div>
-          <dt>Work repo</dt>
-          <dd><a href="https://github.com/philosopherkk/purple-sectors">github.com/philosopherkk/purple-sectors</a></dd>
-        </div>
-        <div>
-          <dt>Live</dt>
-          <dd><a href="https://philosopherkk.github.io/purple/">philosopherkk.github.io/purple/</a></dd>
-        </div>
-      </dl>
-    </article>
+  <header class="site-header">
+    <div class="brand">
+      <img class="brand-mark" src="favicon.svg" width="48" height="48" alt="" aria-hidden="true" />
+      <h1>philosopherkk</h1>
+    </div>
+    <p class="intro">
+      Seven projects — links only. Root <code>index.html</code> is this hub;
+      never publish an app into root. Each GitHub Pages app stays in its own folder
+      (<code>purple/</code>, <code>outflow/</code>, <code>waiting/</code>, <code>marketdesk/</code>).
+    </p>
+  </header>
 
-    <article class="card">
-      <div class="k">3 · Budget</div>
-      <div class="t">Outflow</div>
-      <p class="d">On-device income and outflow ledger (empty public shell; vault stays on device).</p>
-      <dl class="meta">
-        <div>
-          <dt>Work repo</dt>
-          <dd><a href="https://github.com/philosopherkk/outflow-app">github.com/philosopherkk/outflow-app</a> <span class="pending-live">(private; may 404)</span></dd>
-        </div>
-        <div>
-          <dt>Live</dt>
-          <dd><a href="https://philosopherkk.github.io/outflow/">philosopherkk.github.io/outflow/</a></dd>
-        </div>
-      </dl>
-    </article>
+  <main id="projects">
+    <ul class="project-grid">
+      <li>
+        <article class="project-card" aria-labelledby="title-eyesinfo">
+          <div class="card-top">
+            <a class="mascot-link" href="https://eyesinfo.org">
+              <img class="mascot" src="hub/icons/eyesinfo.svg" width="96" height="96" alt="Cartoon eye with open book lines, for patient education" />
+            </a>
+            <div class="card-heading">
+              <p class="eyebrow">1 · Patient education</p>
+              <h2 class="project-title" id="title-eyesinfo">EyesInfo</h2>
+            </div>
+          </div>
+          <p class="blurb">護眼學堂 — patient education site. Hub links out only; not hosted on github.io.</p>
+          <dl class="meta">
+            <div class="meta-row">
+              <dt>Work repo</dt>
+              <dd><a href="https://github.com/philosopherkk/eyesinfo">github.com/philosopherkk/eyesinfo</a></dd>
+            </div>
+            <div class="meta-row">
+              <dt>Live</dt>
+              <dd><a href="https://eyesinfo.org">eyesinfo.org</a></dd>
+            </div>
+          </dl>
+        </article>
+      </li>
 
-    <article class="card">
-      <div class="k">4 · Hong Kong · waiting</div>
-      <div class="t">Waiting</div>
-      <p class="d">Hospital Authority specialist outpatient waiting times (and related waits) — EN / 繁</p>
-      <dl class="meta">
-        <div>
-          <dt>Work repo</dt>
-          <dd><a href="https://github.com/philosopherkk/hk-hospital-waiting-times">github.com/philosopherkk/hk-hospital-waiting-times</a></dd>
-        </div>
-        <div>
-          <dt>Live</dt>
-          <dd><a href="https://philosopherkk.github.io/waiting/">philosopherkk.github.io/waiting/</a></dd>
-        </div>
-      </dl>
-    </article>
+      <li>
+        <article class="project-card" aria-labelledby="title-purple">
+          <div class="card-top">
+            <a class="mascot-link" href="https://philosopherkk.github.io/purple/">
+              <img class="mascot" src="hub/icons/purple.svg" width="96" height="96" alt="Cartoon purple race line with checkered flag and finish badge" />
+            </a>
+            <div class="card-heading">
+              <p class="eyebrow">2 · Sim racing · board</p>
+              <h2 class="project-title" id="title-purple">Purple Sectors</h2>
+            </div>
+          </div>
+          <p class="blurb">Weekly sim-racing board for Gran Turismo 7 &amp; iRacing.</p>
+          <dl class="meta">
+            <div class="meta-row">
+              <dt>Work repo</dt>
+              <dd><a href="https://github.com/philosopherkk/purple-sectors">github.com/philosopherkk/purple-sectors</a></dd>
+            </div>
+            <div class="meta-row">
+              <dt>Live</dt>
+              <dd><a href="https://philosopherkk.github.io/purple/">philosopherkk.github.io/purple/</a></dd>
+            </div>
+          </dl>
+        </article>
+      </li>
 
-    <article class="card">
-      <div class="k">5 · Trading</div>
-      <div class="t">Market Desk</div>
-      <p class="d">US trading desk / charts &amp; journal (native Lightweight Charts; no TradingView).</p>
-      <dl class="meta">
-        <div>
-          <dt>Work repo</dt>
-          <dd><a href="https://github.com/philosopherkk/marketdesk">github.com/philosopherkk/marketdesk</a></dd>
-        </div>
-        <div>
-          <dt>Live</dt>
-          <dd><a href="https://philosopherkk.github.io/marketdesk/">philosopherkk.github.io/marketdesk/</a></dd>
-        </div>
-      </dl>
-    </article>
+      <li>
+        <article class="project-card" aria-labelledby="title-outflow">
+          <div class="card-top">
+            <a class="mascot-link" href="https://philosopherkk.github.io/outflow/">
+              <img class="mascot" src="hub/icons/outflow.svg" width="96" height="96" alt="Cartoon wallet with coins and flowing water stream" />
+            </a>
+            <div class="card-heading">
+              <p class="eyebrow">3 · Budget</p>
+              <h2 class="project-title" id="title-outflow">Outflow</h2>
+            </div>
+          </div>
+          <p class="blurb">On-device income and outflow ledger (empty public shell; vault stays on device).</p>
+          <dl class="meta">
+            <div class="meta-row">
+              <dt>Work repo</dt>
+              <dd><a href="https://github.com/philosopherkk/outflow-app">github.com/philosopherkk/outflow-app</a> <span class="note-private">(private; may 404)</span></dd>
+            </div>
+            <div class="meta-row">
+              <dt>Live</dt>
+              <dd><a href="https://philosopherkk.github.io/outflow/">philosopherkk.github.io/outflow/</a></dd>
+            </div>
+          </dl>
+        </article>
+      </li>
 
-    <article class="card">
-      <div class="k">6 · History · maps</div>
-      <div class="t">HistoryFirst</div>
-      <p class="d">中日歷史回顧 — China and Japan timelines with relief maps, border states, and cited events. Hub links out only; not hosted on github.io.</p>
-      <dl class="meta">
-        <div>
-          <dt>Live</dt>
-          <dd><a href="https://historyfirst.vercel.app">historyfirst.vercel.app</a></dd>
-        </div>
-      </dl>
-    </article>
+      <li>
+        <article class="project-card" aria-labelledby="title-waiting">
+          <div class="card-top">
+            <a class="mascot-link" href="https://philosopherkk.github.io/waiting/">
+              <img class="mascot" src="hub/icons/waiting.svg" width="96" height="96" alt="Cartoon waiting-room clock with queue of people" />
+            </a>
+            <div class="card-heading">
+              <p class="eyebrow">4 · Hong Kong · waiting</p>
+              <h2 class="project-title" id="title-waiting">Waiting</h2>
+            </div>
+          </div>
+          <p class="blurb">Hospital Authority specialist outpatient waiting times (and related waits) — EN / 繁</p>
+          <dl class="meta">
+            <div class="meta-row">
+              <dt>Work repo</dt>
+              <dd><a href="https://github.com/philosopherkk/hk-hospital-waiting-times">github.com/philosopherkk/hk-hospital-waiting-times</a></dd>
+            </div>
+            <div class="meta-row">
+              <dt>Live</dt>
+              <dd><a href="https://philosopherkk.github.io/waiting/">philosopherkk.github.io/waiting/</a></dd>
+            </div>
+          </dl>
+        </article>
+      </li>
 
-    <article class="card">
-      <div class="k">7 · History · WWII</div>
-      <div class="t">WW2 European</div>
-      <p class="d">Interactive European WWII timeline and map — monthly borders, army movements, and events at three reading levels. Hub links out only; not hosted on github.io.</p>
-      <dl class="meta">
-        <div>
-          <dt>Work repo</dt>
-          <dd><a href="https://github.com/philosopherkk/ww2-european">github.com/philosopherkk/ww2-european</a></dd>
-        </div>
-        <div>
-          <dt>Live</dt>
-          <dd><a href="https://ww2-european.vercel.app">ww2-european.vercel.app</a></dd>
-        </div>
-      </dl>
-    </article>
-  </div>
+      <li>
+        <article class="project-card" aria-labelledby="title-marketdesk">
+          <div class="card-top">
+            <a class="mascot-link" href="https://philosopherkk.github.io/marketdesk/">
+              <img class="mascot" src="hub/icons/marketdesk.svg" width="96" height="96" alt="Cartoon trading desk with rising line chart" />
+            </a>
+            <div class="card-heading">
+              <p class="eyebrow">5 · Trading</p>
+              <h2 class="project-title" id="title-marketdesk">Market Desk</h2>
+            </div>
+          </div>
+          <p class="blurb">US trading desk / charts &amp; journal (native Lightweight Charts; no TradingView).</p>
+          <dl class="meta">
+            <div class="meta-row">
+              <dt>Work repo</dt>
+              <dd><a href="https://github.com/philosopherkk/marketdesk">github.com/philosopherkk/marketdesk</a></dd>
+            </div>
+            <div class="meta-row">
+              <dt>Live</dt>
+              <dd><a href="https://philosopherkk.github.io/marketdesk/">philosopherkk.github.io/marketdesk/</a></dd>
+            </div>
+          </dl>
+        </article>
+      </li>
+
+      <li>
+        <article class="project-card" aria-labelledby="title-historyfirst">
+          <div class="card-top">
+            <a class="mascot-link" href="https://historyfirst.vercel.app">
+              <img class="mascot" src="hub/icons/historyfirst.svg" width="96" height="96" alt="Cartoon relief map beside a vertical timeline scroll" />
+            </a>
+            <div class="card-heading">
+              <p class="eyebrow">6 · History · maps</p>
+              <h2 class="project-title" id="title-historyfirst">HistoryFirst</h2>
+            </div>
+          </div>
+          <p class="blurb">中日歷史回顧 — China and Japan timelines with relief maps, border states, and cited events. Hub links out only; not hosted on github.io.</p>
+          <dl class="meta">
+            <div class="meta-row">
+              <dt>Live</dt>
+              <dd><a href="https://historyfirst.vercel.app">historyfirst.vercel.app</a></dd>
+            </div>
+          </dl>
+        </article>
+      </li>
+
+      <li>
+        <article class="project-card" aria-labelledby="title-ww2">
+          <div class="card-top">
+            <a class="mascot-link" href="https://ww2-european.vercel.app">
+              <img class="mascot" src="hub/icons/ww2-european.svg" width="96" height="96" alt="Cartoon European map with timeline pins and movement arrow" />
+            </a>
+            <div class="card-heading">
+              <p class="eyebrow">7 · History · WWII</p>
+              <h2 class="project-title" id="title-ww2">WW2 European</h2>
+            </div>
+          </div>
+          <p class="blurb">Interactive European WWII timeline and map — monthly borders, army movements, and events at three reading levels. Hub links out only; not hosted on github.io.</p>
+          <dl class="meta">
+            <div class="meta-row">
+              <dt>Work repo</dt>
+              <dd><a href="https://github.com/philosopherkk/ww2-european">github.com/philosopherkk/ww2-european</a></dd>
+            </div>
+            <div class="meta-row">
+              <dt>Live</dt>
+              <dd><a href="https://ww2-european.vercel.app">ww2-european.vercel.app</a></dd>
+            </div>
+          </dl>
+        </article>
+      </li>
+    </ul>
+  </main>
+
+  <footer class="site-footer">
+    <p>philosopherkk.github.io — hub links only</p>
+  </footer>
 </body>
 </html>
