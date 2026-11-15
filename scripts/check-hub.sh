@@ -12,16 +12,18 @@ fail() {
 
 [[ -f "$INDEX" ]] || fail "missing root index.html"
 
-# Hub must list the three GitHub Pages app entry points (paths or full URLs).
-for path in 'transit/' 'purple/' 'outflow/' 'waiting/' 'deid/' 'reportnreferral/'; do
+# Hub must list GitHub Pages app entry points still shown on the hub (paths or full URLs).
+for path in 'purple/' 'outflow/' 'waiting/' 'marketdesk/'; do
   grep -Fq "$path" "$INDEX" || fail "root index.html must link to $path"
 done
 
-# External / pending projects should appear as labeled hub cards.
+# External projects should appear as labeled hub cards.
 grep -Eqi 'EyesInfo' "$INDEX" || fail "root index.html must list EyesInfo"
 grep -Eqi 'eyesinfo\.org' "$INDEX" || fail "root index.html must link out to eyesinfo.org"
-grep -Eqi 'Apex Trace' "$INDEX" || fail "root index.html must list Apex Trace"
-grep -Eqi 'PENDING' "$INDEX" || fail "root index.html must mark Apex Trace as PENDING"
+grep -Eqi 'HistoryFirst' "$INDEX" || fail "root index.html must list HistoryFirst"
+grep -Eqi 'historyfirst\.vercel\.app' "$INDEX" || fail "root index.html must link out to historyfirst.vercel.app"
+grep -Eqi 'WW2 European' "$INDEX" || fail "root index.html must list WW2 European"
+grep -Eqi 'ww2-european\.vercel\.app' "$INDEX" || fail "root index.html must link out to ww2-european.vercel.app"
 
 # Title / branding should read as the hub.
 grep -Eqi 'philosopherkk' "$INDEX" || fail "root index.html should identify philosopherkk hub"
